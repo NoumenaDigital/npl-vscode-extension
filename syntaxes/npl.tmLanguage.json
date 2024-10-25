@@ -1,0 +1,180 @@
+{
+  "scopeName": "source.npl",
+  "patterns": [
+    {
+      "include": "#control-flow-keywords"
+    },
+    {
+      "include": "#user-defined-types-keywords"
+    },
+    {
+      "include": "#permission-obligation-keywords"
+    },
+    {
+      "include": "#state-keywords"
+    },
+    {
+      "include": "#initial-final-keywords"
+    },
+    {
+      "include": "#package-keywords"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#braces"
+    },
+    {
+      "include": "#semicolons"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#function-calls"
+    },
+    {
+      "include": "#type-instantiations"
+    },
+    {
+      "include": "#generic-keywords"
+    }
+  ],
+  "repository": {
+    "control-flow-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.flow.npl",
+          "match": "\\b(if|else|return|become)\\b"
+        }
+      ]
+    },
+    "generic-keywords": {
+        "patterns": [
+            {
+                "name": "keyword.generic.npl",
+                "match": "\\b(private|var|returns|function|const)\\b"
+            }
+        ]
+
+    },
+    "user-defined-types-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.types.npl",
+          "match": "\\b(protocol|struct|enum|union)\\b"
+        }
+      ]
+    },
+    "permission-obligation-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.permission-obligation.npl",
+          "match": "\\b(permission|obligation)\\b"
+        }
+      ]
+    },
+    "state-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.state.npl",
+          "match": "\\b(state)\\b"
+        }
+      ]
+    },
+    "initial-final-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.initial-final.npl",
+          "match": "\\b(initial|final)\\b"
+        }
+      ]
+    },
+    "package-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.package.npl",
+          "match": "\\b(package|use)\\b"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.npl",
+          "begin": "//",
+          "end": "$"
+        },
+        {
+          "name": "comment.block.npl",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.npl",
+          "begin": "\"",
+          "end": "\""
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.npl",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "braces": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.braces.curly.npl",
+          "match": "[{}]"
+        }
+      ]
+    },
+    "semicolons": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.npl",
+          "match": ";"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.npl",
+          "match": "\\b(Number|Text|DateTime|Boolean|List|Map|Set)\\b"
+        }
+      ]
+    },
+    "function-calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.npl",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        }
+      ]
+    },
+    "type-instantiations": {
+      "patterns": [
+        {
+          "name": "entity.name.type.npl",
+          "match": "\\b([A-Z][a-zA-Z0-9_]*)\\s*(?=(\\(|\\[))"
+        }
+      ]
+    }
+  }
+}
