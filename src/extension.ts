@@ -59,7 +59,7 @@ async function startServer(context: vscode.ExtensionContext): Promise<StreamInfo
     throw new Error(`Server binary not found or inaccessible at ${serverPath}`);
   }
 
-  const currentProcess = childProcess.spawn(serverPath, [], {
+  const currentProcess = childProcess.spawn(serverPath, ['--stdio'], {
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: false
   });
