@@ -30,3 +30,12 @@ jobs:
 
     - name: Lint
       run: npm run lint
+
+    - name: Package Extension
+      run: npm run package
+
+    - name: Upload VSIX as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: npl-extension
+        path: "*.vsix"

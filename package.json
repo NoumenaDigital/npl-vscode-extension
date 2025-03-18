@@ -3,8 +3,14 @@
   "displayName": "NPL",
   "description": "Noumena Programming Language support",
   "version": "0.0.1",
+  "publisher": "NoumenaDigitalAG",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noumenadigital/npl-vscode-extension.git"
+  },
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.98.0"
   },
   "categories": [
     "Other"
@@ -44,7 +50,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -54,6 +61,7 @@
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.3.0",
     "eslint": "^9.22.0",
     "glob": "^11.0.1",
     "minimatch": "^10.0.1",
