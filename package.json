@@ -21,12 +21,6 @@
     "Linters"
   ],
   "main": "./out/extension.js",
-  "files": [
-    "server/**",
-    "out/**",
-    "syntaxes/**",
-    "language-configuration.json"
-  ],
   "contributes": {
     "languages": [
       {
