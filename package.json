@@ -12,11 +12,20 @@
   "engines": {
     "vscode": "^1.92.0"
   },
+  "activationEvents": [
+    "onLanguage:npl"
+  ],
   "categories": [
     "Programming Languages",
     "Linters"
   ],
   "main": "./out/extension.js",
+  "files": [
+    "server/**",
+    "out/**",
+    "syntaxes/**",
+    "language-configuration.json"
+  ],
   "contributes": {
     "languages": [
       {
