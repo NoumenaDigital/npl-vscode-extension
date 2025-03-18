@@ -1,7 +1,7 @@
 {
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
-  "description": "Noumena Programming Language (NPL) development support for VS Code",
+  "description": "Noumena Protocol Language (NPL) development support for VS Code",
   "version": "0.0.1",
   "publisher": "noumenadigital",
   "license": "Apache-2.0",
