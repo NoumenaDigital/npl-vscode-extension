@@ -1,7 +1,7 @@
 {
   "name": "npl",
-  "displayName": "NPL",
-  "description": "Noumena Programming Language support",
+  "displayName": "NPL-Dev for VS Code",
+  "description": "Noumena Programming Language (NPL) development support for VS Code",
   "version": "0.0.1",
   "publisher": "NoumenaDigitalAG",
   "license": "Apache-2.0",
