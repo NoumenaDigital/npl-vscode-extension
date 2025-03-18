@@ -15,11 +15,11 @@ let client: LanguageClient;
 let serverProcess: childProcess.ChildProcess | undefined;
 let outputChannel: vscode.OutputChannel;
 
-function log(message: string) {
+export function log(message: string) {
   outputChannel.appendLine(message);
 }
 
-function logError(message: string, error?: any) {
+export function logError(message: string, error?: any) {
   const errorMessage = error ? `${message}: ${error.toString()}` : message;
   outputChannel.appendLine(`ERROR: ${errorMessage}`);
   if (error?.stack) {
@@ -27,7 +27,7 @@ function logError(message: string, error?: any) {
   }
 }
 
-async function connectToServer(): Promise<net.Socket | null> {
+export async function connectToServer(): Promise<net.Socket | null> {
   return new Promise((resolve) => {
     const socket = net.connect({ host: 'localhost', port: 5007 }, () => {
       resolve(socket);
@@ -39,7 +39,7 @@ async function connectToServer(): Promise<net.Socket | null> {
   });
 }
 
-async function startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
+export async function startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
   const socket = await connectToServer();
   if (socket) {
     log('Connected to existing TCP server');
