@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { 
-  LanguageClient, 
-  LanguageClientOptions, 
-  StreamInfo, 
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  StreamInfo,
   ErrorAction,
   CloseAction
 } from 'vscode-languageclient/node';
@@ -32,7 +32,7 @@ export async function connectToServer(): Promise<net.Socket | null> {
     const socket = net.connect({ host: 'localhost', port: 5007 }, () => {
       resolve(socket);
     });
-    
+
     socket.on('error', () => {
       resolve(null);
     });
@@ -45,13 +45,13 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
     log('Connected to existing TCP server');
     return { reader: socket, writer: socket };
   }
-  
+
   const serverPath = path.join(context.extensionPath, 'server', 'language-server');
-  
+
   try {
     const stats = await fs.promises.stat(serverPath);
     const isExecutable = (stats.mode & fs.constants.S_IXUSR) !== 0;
-    
+
     if (!isExecutable) {
       await fs.promises.chmod(serverPath, '755');
     }
@@ -63,7 +63,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: false
   });
-  
+
   serverProcess = currentProcess;
 
   if (!currentProcess.stdout || !currentProcess.stdin) {
@@ -72,17 +72,17 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
 
   let initialized = false;
   let startupError: Error | undefined;
-  
+
   currentProcess.stdout.setEncoding('utf8');
   currentProcess.stderr?.setEncoding('utf8');
-  
+
   currentProcess.stdout.on('data', (data) => {
     const message = data.toString();
     message.split('\r\n').forEach((line: string) => {
       if (line.trim()) {
         try {
           const parsed = JSON.parse(line);
-          if ((parsed.method === 'initialized') || 
+          if ((parsed.method === 'initialized') ||
               (parsed.id === 1 && parsed.result && parsed.result.capabilities)) {
             initialized = true;
           }
@@ -125,7 +125,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
   const content = JSON.stringify(initializeRequest);
   const contentLength = Buffer.byteLength(content, 'utf8');
   const header = `Content-Length: ${contentLength}\r\n\r\n`;
-  
+
   currentProcess.stdin.write(header + content, 'utf8');
 
   return new Promise((resolve, reject) => {
@@ -170,7 +170,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
 
 export async function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel('NPL Language Server');
-  
+
   try {
     const serverOptions = async () => {
       try {
@@ -205,7 +205,7 @@ export async function activate(context: vscode.ExtensionContext) {
       serverOptions,
       clientOptions
     );
-    
+
     await client.start();
     log('NPL Language Server started');
   } catch (err) {
