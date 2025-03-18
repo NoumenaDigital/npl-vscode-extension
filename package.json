@@ -13,16 +13,11 @@
     "vscode": "^1.92.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Linters"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "npl.helloWorld",
-        "title": "Hello World"
-      }
-    ],
     "languages": [
       {
         "id": "npl",
