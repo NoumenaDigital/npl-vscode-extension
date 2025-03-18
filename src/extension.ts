@@ -201,7 +201,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     client = new LanguageClient(
       'nplLanguageServer',
-      'NPL Language Server',
+      'NPL-Dev for VS Code',
       serverOptions,
       clientOptions
     );

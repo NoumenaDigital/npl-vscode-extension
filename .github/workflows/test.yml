@@ -37,5 +37,5 @@ jobs:
     - name: Upload VSIX as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: npl-extension
+        name: npl-dev-vscode-extension
         path: "*.vsix"
