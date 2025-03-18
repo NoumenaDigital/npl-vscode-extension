@@ -17,14 +17,25 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 **/.DS_Store
-node_modules/**
-!node_modules/vscode-languageclient/**
-!node_modules/vscode-languageserver-protocol/**
-!node_modules/vscode-languageserver-types/**
-!node_modules/vscode-languageserver-textdocument/**
-!server/**
+
+# Only exclude dev dependencies
+node_modules/@types/**
+node_modules/typescript/**
+node_modules/@typescript-eslint/**
+node_modules/eslint*/**
+node_modules/mocha/**
+node_modules/sinon/**
+node_modules/@vscode/test-electron/**
+node_modules/@vscode/vsce/**
+node_modules/glob/**
+node_modules/vscode-test/**
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn-integrity
+
+# Make sure server directory is NOT ignored
+!server/
+!server/language-server
