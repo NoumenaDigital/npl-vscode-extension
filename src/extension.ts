@@ -47,27 +47,42 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
   }
 
   const serverPath = path.join(context.extensionPath, 'server', 'language-server');
+  log(`Using server binary at: ${serverPath}`);
 
   try {
     const stats = await fs.promises.stat(serverPath);
+    log(`Server binary exists: ${stats.isFile()}`);
+
     const isExecutable = (stats.mode & fs.constants.S_IXUSR) !== 0;
+    log(`Server binary is executable: ${isExecutable}`);
 
     if (!isExecutable) {
+      log('Setting executable permissions on server binary');
       await fs.promises.chmod(serverPath, '755');
     }
   } catch (err) {
-    throw new Error(`Server binary not found or inaccessible at ${serverPath}`);
+    const errorMsg = `Server binary not found or inaccessible at ${serverPath}`;
+    logError(errorMsg, err);
+    vscode.window.showErrorMessage(`NPL Language Server Error: ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
-  const currentProcess = childProcess.spawn(serverPath, ['--stdio'], {
+  log(`Starting server process: ${serverPath}`);
+
+  const options: childProcess.SpawnOptions = {
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: false
-  });
+  };
+
+  const currentProcess = childProcess.spawn(serverPath, ['--stdio'], options);
 
   serverProcess = currentProcess;
 
   if (!currentProcess.stdout || !currentProcess.stdin) {
-    throw new Error('Failed to create stdio streams for server process');
+    const errorMsg = 'Failed to create stdio streams for server process';
+    logError(errorMsg);
+    vscode.window.showErrorMessage(`NPL Language Server Error: ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   let initialized = false;
@@ -78,6 +93,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
 
   currentProcess.stdout.on('data', (data) => {
     const message = data.toString();
+    log(`Server stdout: ${message}`);
     message.split('\r\n').forEach((line: string) => {
       if (line.trim()) {
         try {
@@ -85,6 +101,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
           if ((parsed.method === 'initialized') ||
               (parsed.id === 1 && parsed.result && parsed.result.capabilities)) {
             initialized = true;
+            log('Server initialized successfully');
           }
         } catch (e) {
           // Not a JSON message, ignore
@@ -100,11 +117,14 @@ export async function startServer(context: vscode.ExtensionContext): Promise<Str
   currentProcess.on('error', (err) => {
     startupError = err;
     logError('Failed to start server process', err);
+    vscode.window.showErrorMessage(`NPL Language Server Error: Failed to start server process - ${err.message}`);
   });
 
   currentProcess.on('exit', (code, signal) => {
+    log(`Server process exited with code ${code} and signal ${signal}`);
     if (!initialized) {
       startupError = new Error(`Server process exited with code ${code} before initialization`);
+      vscode.window.showErrorMessage(`NPL Language Server Error: Server process exited before initialization`);
     }
     if (currentProcess === serverProcess) {
       serverProcess = undefined;
