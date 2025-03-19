@@ -9,14 +9,29 @@ export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
   private logger: Logger;
   private initialized: boolean = false;
+  private readonly DEFAULT_PORT = 5007;
 
   constructor(logger: Logger) {
     this.logger = logger;
   }
 
+  private getServerPort(): number {
+    const envPort = process.env.NPL_SERVER_PORT;
+    if (envPort) {
+      const port = parseInt(envPort);
+      if (!isNaN(port) && port > 0 && port < 65536) {
+        this.logger.log(`Using port from environment variable: ${port}`);
+        return port;
+      }
+      this.logger.log(`Invalid port in environment variable: ${envPort}, using default`);
+    }
+    return this.DEFAULT_PORT;
+  }
+
   async connectToServer(): Promise<net.Socket | null> {
+    const port = this.getServerPort();
     return new Promise((resolve) => {
-      const socket = net.connect({ host: 'localhost', port: 5007 }, () => {
+      const socket = net.connect({ host: 'localhost', port }, () => {
         resolve(socket);
       });
 

@@ -15,7 +15,10 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "${defaultBuildTask}",
+			"env": {
+				"NPL_SERVER_PORT": "5007"
+			}
 		},
 		{
 			"name": "Extension Tests",

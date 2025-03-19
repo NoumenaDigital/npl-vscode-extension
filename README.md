@@ -24,6 +24,15 @@ This extension serves as a client for the NPL language server, providing feature
 3. Press `F5` to open a new VS Code window with the extension loaded
 4. Create or open a file with a `.npl` extension to see the extension in action
 
+## Configuration
+
+### Server Port
+
+The extension  to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
+
+- **Development**: The default port is configured in `.vscode/launch.json`
+- **Production**: Set the `NPL_SERVER_PORT` environment variable before launching VS Code
+
 ## Project Structure
 
 - `src/extension.ts`: Main extension code that initializes the language client
