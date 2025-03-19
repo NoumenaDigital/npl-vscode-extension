@@ -20,7 +20,8 @@ export class ServerManager {
         resolve(socket);
       });
 
-      socket.on('error', () => {
+      socket.on('error', (err) => {
+        this.logger.log(`Failed to connect to existing TCP server: ${err.message}`);
         resolve(null);
       });
     });
