@@ -31,11 +31,21 @@ export class ServerManager {
   async connectToServer(): Promise<net.Socket | null> {
     const port = this.getServerPort();
     return new Promise((resolve) => {
-      const socket = net.connect({ host: 'localhost', port }, () => {
+      let socket: net.Socket;
+
+      const connectionTimeout = setTimeout(() => {
+        this.logger.log('Connection attempt timed out after 5000ms');
+        socket.destroy();
+        resolve(null);
+      }, 5000);
+
+      socket = net.connect({ host: 'localhost', port }, () => {
+        clearTimeout(connectionTimeout);
         resolve(socket);
       });
 
       socket.on('error', (err) => {
+        clearTimeout(connectionTimeout);
         this.logger.log(`Failed to connect to existing TCP server: ${err.message}`);
         resolve(null);
       });
