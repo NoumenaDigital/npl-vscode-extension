@@ -3,8 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-*.js
-*.js.map
+
 src/test/.DS_Store
 /.idea/.gitignore
 /.idea/codeStyles/codeStyleConfig.xml

@@ -2,33 +2,35 @@
 .vscode-test/**
 .github/**
 src/**
-out/test/**
-test/**
+!src/test/**
+out/**
+node_modules/**
 .gitignore
 .pre-commit-config.yaml
 .vscodeignore
 .editorconfig
 .eslintrc.json
 .yarnrc
+esbuild.js
 vsc-extension-quickstart.md
 **/tsconfig.json
-**/eslint.config.mjs
 **/*.map
 **/*.ts
-**/.vscode-test.*
 **/.DS_Store
 
-# Only exclude dev dependencies
-node_modules/@types/**
-node_modules/typescript/**
-node_modules/@typescript-eslint/**
-node_modules/eslint*/**
-node_modules/mocha/**
-node_modules/sinon/**
-node_modules/@vscode/test-electron/**
-node_modules/@vscode/vsce/**
-node_modules/glob/**
-node_modules/vscode-test/**
+# Include dist directory for bundled extension
+!dist/**
+
+# For extension tests
+!out/test/**
+
+# Node modules (as they're bundled)
+node_modules/**
+
+# Only keep production dependencies
+!node_modules/vscode-languageclient/**
+!node_modules/vscode-languageserver/**
+!node_modules/vscode-languageserver-textdocument/**
 
 npm-debug.log*
 yarn-debug.log*
