@@ -22,7 +22,7 @@ export class LanguageClientManager {
   async start(context: vscode.ExtensionContext) {
     const serverOptions = async (): Promise<StreamInfo> => {
       try {
-        return await this.serverManager.startServer(context);
+        return await this.serverManager.getServerConnection(context);
       } catch (err) {
         this.logger.logError('Failed to start server', err);
         throw err;

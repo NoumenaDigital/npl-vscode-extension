@@ -52,13 +52,16 @@ export class ServerManager {
     });
   }
 
-  async startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
+  async connectToExistingServer(): Promise<StreamInfo | null> {
     const socket = await this.connectToServer();
     if (socket) {
       this.logger.log('Connected to existing TCP server');
       return { reader: socket, writer: socket };
     }
+    return null;
+  }
 
+  async startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
     const serverPath = FileUtils.getServerPath(context.extensionPath);
     this.logger.log(`Using server binary at: ${serverPath}`);
 
@@ -66,6 +69,15 @@ export class ServerManager {
 
     this.logger.log(`Starting server process: ${serverPath}`);
     return this.spawnServerProcess(serverPath);
+  }
+
+  async getServerConnection(context: vscode.ExtensionContext): Promise<StreamInfo> {
+    const existingConnection = await this.connectToExistingServer();
+    if (existingConnection) {
+      return existingConnection;
+    }
+
+    return this.startServer(context);
   }
 
   private spawnServerProcess(serverPath: string): Promise<StreamInfo> {
