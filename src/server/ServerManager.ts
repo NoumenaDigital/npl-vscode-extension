@@ -3,13 +3,14 @@ import * as childProcess from 'child_process';
 import { StreamInfo } from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
 import { Logger } from '../utils/Logger';
-import { FileUtils } from '../utils/FileUtils';
+import { FileUtils, ProgressCallback } from '../utils/FileUtils';
 
 export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
   private logger: Logger;
   private initialized: boolean = false;
   private readonly DEFAULT_PORT = 5007;
+  private readonly SERVER_START_TIMEOUT_MS = 15000;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -62,13 +63,31 @@ export class ServerManager {
   }
 
   async startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
-    const serverPath = FileUtils.getServerPath(context.extensionPath);
-    this.logger.log(`Using server binary at: ${serverPath}`);
+    try {
+      // Download or get cached server binary with progress notification
+      const serverPath = await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'NPL Language Server',
+        cancellable: false
+      }, async (progress) => {
+        const progressCallback: ProgressCallback = (info) => {
+          if (info.message) {
+            progress.report({ message: info.message, increment: info.increment });
+          }
+        };
+        
+        return await FileUtils.downloadServerBinary(context.extensionPath, progressCallback);
+      });
 
-    await FileUtils.validateServerBinary(serverPath);
+      this.logger.log(`Using server binary at: ${serverPath}`);
+      await FileUtils.validateServerBinary(serverPath);
 
-    this.logger.log(`Starting server process: ${serverPath}`);
-    return this.spawnServerProcess(serverPath);
+      this.logger.log(`Starting server process: ${serverPath}`);
+      return this.spawnServerProcess(serverPath);
+    } catch (error) {
+      this.logger.logError('Failed to download or start server binary', error);
+      throw error;
+    }
   }
 
   async getServerConnection(context: vscode.ExtensionContext): Promise<StreamInfo> {
@@ -86,14 +105,19 @@ export class ServerManager {
       detached: false
     };
 
-    const currentProcess = childProcess.spawn(serverPath, ['--stdio'], options);
-    this.serverProcess = currentProcess;
+    try {
+      const currentProcess = childProcess.spawn(serverPath, ['--stdio'], options);
+      this.serverProcess = currentProcess;
 
-    if (!currentProcess.stdout || !currentProcess.stdin) {
-      throw new Error('Failed to create stdio streams for server process');
+      if (!currentProcess.stdout || !currentProcess.stdin) {
+        throw new Error('Failed to create stdio streams for server process');
+      }
+
+      return this.initializeServerProcess(currentProcess);
+    } catch (error) {
+      this.logger.logError(`Failed to spawn server process: ${error}`);
+      throw error;
     }
-
-    return this.initializeServerProcess(currentProcess);
   }
 
   private initializeServerProcess(currentProcess: childProcess.ChildProcess): Promise<StreamInfo> {
@@ -165,19 +189,20 @@ export class ServerManager {
     startupError: Error | undefined
   ): Promise<StreamInfo> {
     return new Promise((resolve, reject) => {
-      const timeoutMs = 10000;
       let resolved = false;
 
       const timeout = setTimeout(() => {
         if (!resolved && currentProcess && !currentProcess.killed) {
+          this.logger.logError(`Server initialization timed out after ${this.SERVER_START_TIMEOUT_MS}ms`);
           currentProcess.kill();
-          reject(new Error(`Timeout waiting for server to start after ${timeoutMs}ms`));
+          reject(new Error(`Timeout waiting for server to start after ${this.SERVER_START_TIMEOUT_MS}ms`));
         }
-      }, timeoutMs);
+      }, this.SERVER_START_TIMEOUT_MS);
 
       currentProcess.once('exit', (code) => {
         if (!resolved) {
           clearTimeout(timeout);
+          this.logger.logError(`Server process exited with code ${code} before initialization`);
           reject(new Error(`Server process exited with code ${code} before initialization`));
         }
       });
@@ -186,11 +211,13 @@ export class ServerManager {
         if (startupError) {
           clearTimeout(timeout);
           clearInterval(checkInterval);
+          this.logger.logError(`Server startup error: ${startupError.message}`);
           reject(startupError);
         } else if (this.initialized && currentProcess && !currentProcess.killed) { // Use class property
           resolved = true;
           clearTimeout(timeout);
           clearInterval(checkInterval);
+          this.logger.log('Server initialized successfully, connection established');
           resolve({
             reader: currentProcess.stdout!,
             writer: currentProcess.stdin!
@@ -202,7 +229,12 @@ export class ServerManager {
 
   stopServer() {
     if (this.serverProcess) {
-      this.serverProcess.kill();
+      this.logger.log('Stopping server process');
+      try {
+        this.serverProcess.kill();
+      } catch (error) {
+        this.logger.logError(`Error stopping server process: ${error}`);
+      }
       this.serverProcess = undefined;
     }
   }

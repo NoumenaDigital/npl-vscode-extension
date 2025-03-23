@@ -45,7 +45,22 @@
         "scopeName": "source.npl",
         "path": "./syntaxes/npl.tmLanguage.json"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "NPL",
+      "properties": {
+        "NPL.server.downloadBaseURL": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Base URL for downloading language server binaries"
+        },
+        "NPL.server.forceDownload": {
+          "type": "boolean",
+          "default": true,
+          "description": "Force download of language server binary even if it already exists"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
