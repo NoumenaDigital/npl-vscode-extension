@@ -36,9 +36,25 @@ suite('Extension Test Suite', () => {
 		const document = await vscode.workspace.openTextDocument(syntaxErrorFilePath);
 		await vscode.window.showTextDocument(document);
 
-		await new Promise(resolve => setTimeout(resolve, 2000));
+		// Create a promise that resolves when diagnostics are updated
+		const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
+			const disposable = vscode.languages.onDidChangeDiagnostics(e => {
+				if (e.uris.some(uri => uri.toString() === document.uri.toString())) {
+					const diagnostics = vscode.languages.getDiagnostics(document.uri);
+					if (diagnostics.length > 0) {
+						disposable.dispose();
+						resolve(diagnostics);
+					}
+				}
+			});
 
-		const diagnostics = await waitForDiagnostics(document.uri, 8000);
+			setTimeout(() => {
+				disposable.dispose();
+				resolve(vscode.languages.getDiagnostics(document.uri));
+			}, 8000);
+		});
+
+		const diagnostics = await diagnosticsPromise;
 
 		assert.strictEqual(diagnostics.length > 0, true, 'No diagnostics were reported');
 
@@ -64,7 +80,7 @@ suite('Extension Test Suite', () => {
 		const document = await vscode.workspace.openTextDocument(validFilePath);
 		await vscode.window.showTextDocument(document);
 
-		await new Promise(resolve => setTimeout(resolve, 5000));
+		await new Promise(resolve => setTimeout(resolve, 10000));
 
 		const diagnostics = vscode.languages.getDiagnostics(document.uri);
 
