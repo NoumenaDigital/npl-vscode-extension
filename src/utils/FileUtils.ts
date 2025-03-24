@@ -14,7 +14,16 @@ export interface DownloadProgress {
 
 export type ProgressCallback = (progress: DownloadProgress) => void;
 
+export interface ServerVersion {
+  version: string;
+  downloadUrl: string;
+  installedPath?: string;
+  releaseDate?: string;
+}
+
 export class FileUtils {
+  private static readonly VERSIONS_FILE = 'server-versions.json';
+
   static async validateServerBinary(serverPath: string): Promise<void> {
     try {
       const stats = await fs.promises.stat(serverPath);
@@ -28,10 +37,55 @@ export class FileUtils {
     }
   }
 
-  static getServerPath(extensionPath: string): string {
-    const binDir = path.join(extensionPath, 'bin');
+  static getBinDirectory(extensionPath: string): string {
+    return path.join(extensionPath, 'bin');
+  }
+
+  static getVersionsFilePath(extensionPath: string): string {
+    return path.join(this.getBinDirectory(extensionPath), this.VERSIONS_FILE);
+  }
+
+  static getServerPath(extensionPath: string, version?: string): string {
+    const binDir = this.getBinDirectory(extensionPath);
     const binaryName = this.getServerBinaryName();
-    return path.join(binDir, binaryName);
+
+    if (version && version !== 'latest') {
+      // When a specific version is requested, use the versioned binary name
+      return path.join(binDir, `${binaryName}-${version}`);
+    }
+
+    // For 'latest' or unspecified, check if there's a non-versioned binary
+    const defaultPath = path.join(binDir, binaryName);
+    if (fs.existsSync(defaultPath)) {
+      return defaultPath;
+    }
+
+    // If no default binary exists, try to find the latest installed version
+    try {
+      const versions = this.loadVersionsDataSync(extensionPath);
+      if (versions.length > 0) {
+        // Find the latest installed version by date
+        const latestVersion = versions
+          .filter(v => v.installedPath && fs.existsSync(v.installedPath))
+          .sort((a, b) => {
+            // Sort by release date if available, otherwise by version string
+            if (a.releaseDate && b.releaseDate) {
+              return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+            }
+            return b.version.localeCompare(a.version);
+          })[0];
+
+        if (latestVersion?.installedPath) {
+          return latestVersion.installedPath;
+        }
+      }
+    } catch (error) {
+      // Fall back to default path if there's an error
+      console.error('Error finding latest installed version:', error);
+    }
+
+    // Fall back to the default path if no versioned binary is found
+    return defaultPath;
   }
 
   static getServerBinaryName(): string {
@@ -59,42 +113,54 @@ export class FileUtils {
     return binaryName;
   }
 
-  static getServerDownloadBaseUrl(): string {
-    // First check environment variable
-    if (process.env.NPL_SERVER_DOWNLOAD_URL) {
-      return process.env.NPL_SERVER_DOWNLOAD_URL;
-    }
+  static getServerDownloadBaseUrl(version?: string): string {
+    const repo = this.getGitHubRepo();
 
-    // Then try VSCode configuration
-    try {
-      const config = vscode.workspace.getConfiguration('NPL-dev');
-      const baseUrl = config.get<string>('server.downloadBaseURL');
-      if (baseUrl) {
-        return baseUrl;
-      }
-    } catch (e) {
-      // Ignore errors, fall back to default
+    if (version && version !== 'latest') {
+      // For specific versions
+      return `https://github.com/${repo}/releases/download/${version}`;
+    } else {
+      // For latest version
+      return `https://github.com/${repo}/releases/latest/download`;
     }
-
-    // Default to localhost:8000 for testing
-    return 'http://localhost:8000';
   }
 
-  static shouldForceDownload(): boolean {
-    // First check environment variable
-    if (process.env.NPL_SERVER_FORCE_DOWNLOAD === 'true') {
-      return true;
+  static getGitHubRepo(): string {
+    return 'NoumenaDigital/npl-language-server';
+  }
+
+  static getSelectedVersion(): string {
+    if (process.env.NPL_SERVER_VERSION) {
+      return process.env.NPL_SERVER_VERSION;
     }
 
-    // Then try VSCode configuration
     try {
-      const config = vscode.workspace.getConfiguration('NPL-dev');
-      return config.get<boolean>('server.forceDownload') === true;
+      const config = vscode.workspace.getConfiguration('NPL');
+      const version = config.get<string>('server.version');
+      if (version) {
+        return version;
+      }
     } catch (e) {
-      // Ignore errors, fall back to default
+      // Ignore errors
     }
 
-    return false;
+    return 'latest';
+  }
+
+  static shouldAutoUpdate(): boolean {
+    if (process.env.NPL_SERVER_AUTO_UPDATE === 'false') {
+      return false;
+    }
+
+    try {
+      const config = vscode.workspace.getConfiguration('NPL');
+      const autoUpdate = config.get<boolean>('server.autoUpdate');
+      return autoUpdate !== false; // Default to true
+    } catch (e) {
+      // Ignore errors
+    }
+
+    return true;
   }
 
   static async deleteFileIfExists(filePath: string): Promise<void> {
@@ -108,22 +174,213 @@ export class FileUtils {
     }
   }
 
+  static async loadVersionsData(extensionPath: string): Promise<ServerVersion[]> {
+    const versionsFilePath = this.getVersionsFilePath(extensionPath);
+
+    try {
+      if (fs.existsSync(versionsFilePath)) {
+        const data = await fs.promises.readFile(versionsFilePath, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error(`Failed to load versions data: ${error}`);
+    }
+
+    return [];
+  }
+
+  static async saveVersionsData(extensionPath: string, versions: ServerVersion[]): Promise<void> {
+    const versionsFilePath = this.getVersionsFilePath(extensionPath);
+
+    try {
+      const binDir = this.getBinDirectory(extensionPath);
+      if (!fs.existsSync(binDir)) {
+        await fs.promises.mkdir(binDir, { recursive: true });
+      }
+
+      await fs.promises.writeFile(versionsFilePath, JSON.stringify(versions, null, 2), 'utf8');
+    } catch (error) {
+      console.error(`Failed to save versions data: ${error}`);
+    }
+  }
+
+  static async addVersionToRecord(
+      extensionPath: string,
+      version: string,
+      releaseDate?: string
+  ): Promise<void> {
+    const versions = await this.loadVersionsData(extensionPath);
+    const binaryName = this.getServerBinaryName();
+    const serverPath = this.getServerPath(extensionPath, version);
+
+    // Check if version already exists
+    const existingVersionIndex = versions.findIndex(v => v.version === version);
+
+    if (existingVersionIndex >= 0) {
+      // Update existing record
+      versions[existingVersionIndex].installedPath = serverPath;
+      if (releaseDate) {
+        versions[existingVersionIndex].releaseDate = releaseDate;
+      }
+    } else {
+      // Add new version
+      versions.push({
+        version,
+        downloadUrl: `${this.getServerDownloadBaseUrl(version)}/${binaryName}`,
+        installedPath: serverPath,
+        releaseDate: releaseDate || new Date().toISOString()
+      });
+    }
+
+    await this.saveVersionsData(extensionPath, versions);
+  }
+
+  static async getLatestGithubRelease(): Promise<{version: string, publishedAt: string} | null> {
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: `/repos/${this.getGitHubRepo()}/releases/latest`,
+        headers: {
+          'User-Agent': 'NPL-VSCode-Extension',
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      };
+
+      const req = https.get(options, (res) => {
+        if (res.statusCode === 302 || res.statusCode === 301) {
+          if (res.headers.location) {
+            // Follow redirect
+            https.get(res.headers.location, (redirectRes) => {
+              let data = '';
+
+              redirectRes.on('data', (chunk) => {
+                data += chunk;
+              });
+
+              redirectRes.on('end', () => {
+                try {
+                  const release = JSON.parse(data);
+                  if (release.tag_name) {
+                    resolve({
+                      version: release.tag_name,
+                      publishedAt: release.published_at
+                    });
+                  } else {
+                    resolve(null);
+                  }
+                } catch (e) {
+                  reject(e);
+                }
+              });
+            }).on('error', reject);
+            return;
+          }
+        }
+
+        if (res.statusCode !== 200) {
+          resolve(null);
+          return;
+        }
+
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(data);
+            if (release.tag_name) {
+              resolve({
+                version: release.tag_name,
+                publishedAt: release.published_at
+              });
+            } else {
+              resolve(null);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+
+      req.on('error', (e) => {
+        resolve(null); // Don't reject, just return null on error
+      });
+
+      req.end();
+    });
+  }
+
+  static async checkForUpdates(extensionPath: string): Promise<{hasUpdate: boolean, latestVersion: string | null}> {
+    try {
+      const latestRelease = await this.getLatestGithubRelease();
+      if (!latestRelease) {
+        console.log('No latest release information found');
+        return { hasUpdate: false, latestVersion: null };
+      }
+
+      const versions = await this.loadVersionsData(extensionPath);
+      const latestVersion = latestRelease.version;
+
+      console.log(`Latest version from GitHub: ${latestVersion}`);
+      console.log(`Local versions: ${versions.map(v => v.version).join(', ') || 'none'}`);
+
+      // Check if we already have this version
+      const hasVersion = versions.some(v => {
+        const exists = v.version === latestVersion && v.installedPath && fs.existsSync(v.installedPath);
+        console.log(`Version ${v.version}: installed at ${v.installedPath || 'unknown'}, exists: ${exists}`);
+        return exists;
+      });
+
+      console.log(`Has latest version installed: ${hasVersion}`);
+
+      return {
+        hasUpdate: !hasVersion,
+        latestVersion
+      };
+    } catch (error) {
+      console.error(`Error checking for updates: ${error}`);
+      return { hasUpdate: false, latestVersion: null };
+    }
+  }
+
   static async downloadServerBinary(
-    extensionPath: string,
-    progressCallback?: ProgressCallback
+      extensionPath: string,
+      progressCallback?: ProgressCallback,
+      version?: string
   ): Promise<string> {
-    const binDir = path.join(extensionPath, 'bin');
+    const binDir = this.getBinDirectory(extensionPath);
     if (!fs.existsSync(binDir)) {
       await fs.promises.mkdir(binDir, { recursive: true });
     }
 
-    const binaryName = this.getServerBinaryName();
-    const serverPath = path.join(binDir, binaryName);
+    // Determine which version to download
+    const requestedVersion = version || this.getSelectedVersion();
+    let targetVersion = requestedVersion;
+    let releaseInfo = null;
 
-    // Skip download if the binary already exists unless force download is enabled
-    if (fs.existsSync(serverPath) && !this.shouldForceDownload()) {
-      return serverPath;
+    if (requestedVersion === 'latest') {
+      // Get latest release information from GitHub
+      releaseInfo = await this.getLatestGithubRelease();
+      if (releaseInfo) {
+        console.log(`Latest GitHub release: ${releaseInfo.version}`);
+        targetVersion = releaseInfo.version;
+      }
     }
+
+    // Check if we already have this version cached
+    const versions = await this.loadVersionsData(extensionPath);
+    const existingVersion = versions.find(v => v.version === targetVersion);
+
+    if (existingVersion && existingVersion.installedPath && fs.existsSync(existingVersion.installedPath)) {
+      console.log(`Using existing binary for version ${targetVersion}: ${existingVersion.installedPath}`);
+      return existingVersion.installedPath;
+    }
+
+    const binaryName = this.getServerBinaryName();
+    const serverPath = this.getServerPath(extensionPath, targetVersion);
 
     // If we're redownloading, clean up the old binary first
     if (fs.existsSync(serverPath)) {
@@ -132,17 +389,21 @@ export class FileUtils {
           message: `Removing existing binary...`
         });
       }
+      console.log(`Removing existing binary at ${serverPath}`);
       await this.deleteFileIfExists(serverPath);
     }
 
     if (progressCallback) {
       progressCallback({
-        message: `Downloading ${binaryName}...`
+        message: `Downloading ${binaryName} (${targetVersion})...`
       });
     }
 
-    const baseUrl = this.getServerDownloadBaseUrl();
+    // Determine download URL
+    const baseUrl = this.getServerDownloadBaseUrl(targetVersion);
     const serverUrl = `${baseUrl}/${binaryName}`;
+
+    console.log(`Downloading from URL: ${serverUrl}`);
 
     // Add a temporary download path to avoid issues with partially downloaded files
     const tempDownloadPath = `${serverPath}.download`;
@@ -163,14 +424,22 @@ export class FileUtils {
 
     // Move the temporary file to the final location
     await fs.promises.rename(tempDownloadPath, serverPath);
+    console.log(`Binary saved to ${serverPath}`);
+
+    // Record this version
+    await this.addVersionToRecord(
+        extensionPath,
+        targetVersion,
+        releaseInfo?.publishedAt
+    );
 
     return serverPath;
   }
 
   private static downloadFile(
-    url: string,
-    destination: string,
-    progressCallback?: ProgressCallback
+      url: string,
+      destination: string,
+      progressCallback?: ProgressCallback
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const protocol = url.startsWith('https') ? https : http;
@@ -183,8 +452,8 @@ export class FileUtils {
               progressCallback({ message: 'Following redirect...' });
             }
             return this.downloadFile(response.headers.location, destination, progressCallback)
-              .then(resolve)
-              .catch(reject);
+                .then(resolve)
+                .catch(reject);
           }
           return reject(new Error(`Redirect with no location header: ${response.statusCode}`));
         }
@@ -248,5 +517,21 @@ export class FileUtils {
 
       request.end();
     });
+  }
+
+  // Sync version of loadVersionsData for use in getServerPath
+  static loadVersionsDataSync(extensionPath: string): ServerVersion[] {
+    const versionsFilePath = this.getVersionsFilePath(extensionPath);
+
+    try {
+      if (fs.existsSync(versionsFilePath)) {
+        const data = fs.readFileSync(versionsFilePath, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error(`Failed to load versions data: ${error}`);
+    }
+
+    return [];
   }
 }
