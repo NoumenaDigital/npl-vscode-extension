@@ -3,9 +3,10 @@ import * as childProcess from 'child_process';
 import { StreamInfo } from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
 import { Logger } from '../utils/Logger';
-import { FileUtils, ProgressCallback } from '../utils/FileUtils';
+import { DownloadManager, ProgressCallback } from './binary/DownloadManager';
+import { VersionManager } from './binary/VersionManager';
+import { BinaryManager } from './binary/BinaryManager';
 import * as fs from 'fs';
-import * as https from 'https';
 import * as path from 'path';
 
 export class ServerManager {
@@ -66,14 +67,14 @@ export class ServerManager {
   }
 
   async checkForUpdates(context: vscode.ExtensionContext): Promise<boolean> {
-    if (!FileUtils.shouldAutoUpdate()) {
+    if (!VersionManager.shouldAutoUpdate()) {
       this.logger.log('Auto-update is disabled, skipping update check');
       return false;
     }
 
     try {
       this.logger.log('Checking for language server updates...');
-      const updateInfo = await FileUtils.checkForUpdates(context.extensionPath);
+      const updateInfo = await VersionManager.checkForUpdates(context.extensionPath);
 
       if (updateInfo.hasUpdate && updateInfo.latestVersion) {
         this.logger.log(`New version available: ${updateInfo.latestVersion}`);
@@ -97,7 +98,7 @@ export class ServerManager {
             };
 
             try {
-              await FileUtils.downloadServerBinary(
+              await BinaryManager.downloadServerBinary(
                   context.extensionPath,
                   progressCallback,
                   updateInfo.latestVersion || undefined
@@ -145,7 +146,7 @@ export class ServerManager {
     // No existing server, check if we have any binary version installed
     try {
       // Check versions.json to see if any binaries exist
-      const versions = await FileUtils.loadVersionsData(context.extensionPath);
+      const versions = await VersionManager.loadVersionsData(context.extensionPath);
       this.logger.log(`Found ${versions.length} version(s) in versions.json`);
 
       for (const v of versions) {
@@ -160,7 +161,7 @@ export class ServerManager {
         this.logger.log('Found existing binary versions');
         // Binary exists, check for updates and ask user before downloading
         let updated = false;
-        if (FileUtils.shouldAutoUpdate()) {
+        if (VersionManager.shouldAutoUpdate()) {
           this.logger.log('Auto-update is enabled, checking for updates...');
           updated = await this.checkForUpdates(context);
           this.logger.log(`Update check completed, updated: ${updated}`);
@@ -197,10 +198,10 @@ export class ServerManager {
         };
 
         // Get the selected version or use 'latest'
-        const selectedVersion = FileUtils.getSelectedVersion();
+        const selectedVersion = VersionManager.getSelectedVersion();
         this.logger.log(`Using server version: ${selectedVersion}`);
 
-        return await FileUtils.downloadServerBinary(
+        return await BinaryManager.downloadServerBinary(
             context.extensionPath,
             progressCallback,
             selectedVersion
@@ -208,7 +209,7 @@ export class ServerManager {
       });
 
       this.logger.log(`Using server binary at: ${serverPath}`);
-      await FileUtils.validateServerBinary(serverPath);
+      await BinaryManager.validateServerBinary(serverPath);
 
       this.logger.log(`Starting server process: ${serverPath}`);
       return this.spawnServerProcess(serverPath);
@@ -222,7 +223,7 @@ export class ServerManager {
   async startServerWithExistingBinary(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
       // Find the most recent installed version
-      const versions = await FileUtils.loadVersionsData(context.extensionPath);
+      const versions = await VersionManager.loadVersionsData(context.extensionPath);
       const latestInstalled = versions
         .filter(v => v.installedPath && fs.existsSync(v.installedPath))
         .sort((a, b) => {
@@ -239,7 +240,7 @@ export class ServerManager {
       const serverPath = latestInstalled.installedPath;
       this.logger.log(`Using existing server binary at: ${serverPath} (version ${latestInstalled.version})`);
 
-      await FileUtils.validateServerBinary(serverPath);
+      await BinaryManager.validateServerBinary(serverPath);
       this.logger.log(`Starting server process: ${serverPath}`);
       return this.spawnServerProcess(serverPath);
     } catch (error) {
@@ -396,268 +397,189 @@ export class ServerManager {
     }
   }
 
-  // Add this new method for the version picker
   async showVersionPicker(context: vscode.ExtensionContext): Promise<void> {
     try {
-      // Show progress while fetching versions
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'NPL Language Server',
-        cancellable: false
-      }, async (progress) => {
-        progress.report({ message: 'Fetching available versions...' });
-      });
+      const versions = await VersionManager.getAllGithubReleases();
 
-      // Show the quick pick outside of the progress indicator
-      const allReleases = await this.getAllGithubReleases();
-      const installedVersions = await FileUtils.loadVersionsData(context.extensionPath);
-      const latestRelease = await FileUtils.getLatestGithubRelease();
+      this.logger.log(`Fetched ${versions.length} versions from GitHub`);
 
-      if (!allReleases || allReleases.length === 0) {
-        vscode.window.showErrorMessage('Failed to fetch versions from GitHub');
-        return;
+      // Load all installed versions to check against later
+      const installedVersions = await VersionManager.loadVersionsData(context.extensionPath);
+
+      // Create a map to easily check if a version is installed
+      const installedVersionMap = new Map<string, boolean>();
+      for (const version of installedVersions) {
+        if (version.installedPath && fs.existsSync(version.installedPath)) {
+          installedVersionMap.set(version.version, true);
+        }
       }
 
-      // Create QuickPick items
-      const items = allReleases.map(release => {
-        const isLatest = latestRelease && latestRelease.version === release.version;
-        const isInstalled = installedVersions.some(v =>
-          v.version === release.version && v.installedPath && fs.existsSync(v.installedPath)
-        );
+      // Create quick pick items
+      const quickPickItems: vscode.QuickPickItem[] = [
+        { label: 'latest', description: 'Always use the latest version' }
+      ];
 
-        return {
-          label: `${release.version}${isLatest ? ' (latest)' : ''}`,
-          description: isInstalled ? '✓ Installed' : '',
-          detail: `Released: ${new Date(release.publishedAt).toLocaleDateString()}`,
-          version: release.version,
-          isInstalled
-        };
-      });
+      // Add available versions
+      for (const version of versions) {
+        const date = new Date(version.publishedAt);
+        const formattedDate = date.toLocaleDateString();
 
-      // Add "latest" option at the top
-      items.unshift({
-        label: 'latest',
-        description: 'Always use the latest version',
-        detail: 'The extension will automatically use the most recent version',
-        version: 'latest',
-        isInstalled: true // Consider latest as always "installed" since it's a special case
-      });
+        // Check if this version is already installed
+        const isInstalled = installedVersionMap.has(version.version);
+
+        quickPickItems.push({
+          label: version.version,
+          description: `Released on ${formattedDate}${isInstalled ? ' (installed)' : ''}`
+        });
+      }
 
       // Show quick pick
-      const selectedItem = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select NPL Language Server Version',
-        ignoreFocusOut: true
+      const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
+        placeHolder: 'Select a server version',
+        title: 'NPL Language Server Version'
       });
 
       if (selectedItem) {
-        // Save the selected version in settings
-        await vscode.workspace.getConfiguration('NPL').update(
-          'server.version',
-          selectedItem.version,
-          vscode.ConfigurationTarget.Global
+        this.logger.log(`Selected version: ${selectedItem.label}`);
+
+        // Update configuration
+        const config = vscode.workspace.getConfiguration('NPL');
+        await config.update('server.version', selectedItem.label, vscode.ConfigurationTarget.Global);
+
+        // Handle latest version selection
+        if (selectedItem.label === 'latest') {
+          // Resolve what 'latest' actually is
+          const latestRelease = await VersionManager.getLatestGithubRelease();
+          if (latestRelease) {
+            // Check if we already have this version installed
+            if (installedVersionMap.has(latestRelease.version)) {
+              const message = `Latest version (${latestRelease.version}) is set as active.`;
+              this.logger.log(message);
+              vscode.window.showInformationMessage(
+                message,
+                'Reload Now'
+              ).then(selection => {
+                if (selection === 'Reload Now') {
+                  vscode.commands.executeCommand('workbench.action.reloadWindow');
+                }
+              });
+              return;
+            }
+          }
+        }
+        // Handle specific version selection - Check if it's already installed
+        else if (installedVersionMap.has(selectedItem.label)) {
+          const message = `Version ${selectedItem.label} is set as active.`;
+          this.logger.log(message);
+          vscode.window.showInformationMessage(
+            message,
+            'Reload Now'
+          ).then(selection => {
+            if (selection === 'Reload Now') {
+              vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+          });
+          return;
+        }
+
+        // If we got here, the selected version needs to be downloaded
+        // Ask if user wants to download this version now
+        const downloadNow = await vscode.window.showInformationMessage(
+          `Version set to ${selectedItem.label}. Would you like to download it now?`,
+          'Yes', 'No'
         );
 
-        // If not installed, download it first
-        if (!selectedItem.isInstalled && selectedItem.version !== 'latest') {
-          const shouldDownload = await vscode.window.showInformationMessage(
-            `Version ${selectedItem.version} is not installed yet. Download it now?`,
-            'Download', 'Cancel'
-          );
-
-          if (shouldDownload === 'Download') {
-            await vscode.window.withProgress({
-              location: vscode.ProgressLocation.Notification,
-              title: 'NPL Language Server',
-              cancellable: false
-            }, async (progress) => {
-              const progressCallback: ProgressCallback = (info) => {
-                if (info.message) {
-                  progress.report({ message: info.message, increment: info.increment });
-                }
-              };
-
-              try {
-                await FileUtils.downloadServerBinary(
-                  context.extensionPath,
-                  progressCallback,
-                  selectedItem.version
-                );
-
-                vscode.window.showInformationMessage(
-                  `Successfully downloaded version ${selectedItem.version}. Restart window to use it.`,
-                  'Restart Now'
-                ).then(selection => {
-                  if (selection === 'Restart Now') {
-                    vscode.commands.executeCommand('workbench.action.reloadWindow');
-                  }
-                });
-              } catch (error) {
-                this.logger.logError('Failed to download version', error);
-                vscode.window.showErrorMessage(`Failed to download version: ${error instanceof Error ? error.message : String(error)}`);
+        if (downloadNow === 'Yes') {
+          await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'NPL Language Server',
+            cancellable: false
+          }, async (progress) => {
+            const progressCallback: ProgressCallback = (info) => {
+              if (info.message) {
+                progress.report({ message: info.message, increment: info.increment });
               }
-            });
-            return;
-          }
-        } else {
-          vscode.window.showInformationMessage(
-            `Version set to ${selectedItem.label}. Restart window to apply.`,
-            'Restart Now'
-          ).then(selection => {
-            if (selection === 'Restart Now') {
-              vscode.commands.executeCommand('workbench.action.reloadWindow');
+            };
+
+            try {
+              await BinaryManager.downloadServerBinary(
+                context.extensionPath,
+                progressCallback,
+                selectedItem.label === 'latest' ? undefined : selectedItem.label
+              );
+
+              vscode.window.showInformationMessage(
+                `Successfully downloaded ${selectedItem.label}. Please reload window to use the new version.`,
+                'Reload Now'
+              ).then(selection => {
+                if (selection === 'Reload Now') {
+                  vscode.commands.executeCommand('workbench.action.reloadWindow');
+                }
+              });
+            } catch (error) {
+              this.logger.logError('Failed to download selected version', error);
+              vscode.window.showErrorMessage(`Failed to download: ${error instanceof Error ? error.message : String(error)}`);
             }
           });
         }
       }
     } catch (error) {
-      this.logger.logError('Error showing version picker', error);
-      vscode.window.showErrorMessage(`Failed to show version picker: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.logError('Error fetching versions', error);
+      vscode.window.showErrorMessage(`Failed to fetch versions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  // Helper method to get all GitHub releases
-  private async getAllGithubReleases(): Promise<Array<{version: string, publishedAt: string}>> {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${FileUtils.getGitHubRepo()}/releases`,
-        headers: {
-          'User-Agent': 'NPL-VSCode-Extension',
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      };
-
-      const req = https.get(options, (res) => {
-        if (res.statusCode !== 200) {
-          resolve([]);
-          return;
-        }
-
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const releases = JSON.parse(data);
-            if (Array.isArray(releases)) {
-              const mapped = releases.map(release => ({
-                version: release.tag_name,
-                publishedAt: release.published_at
-              }));
-              resolve(mapped);
-            } else {
-              resolve([]);
-            }
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-
-      req.on('error', (e) => {
-        resolve([]); // Don't reject, just return empty array on error
-      });
-
-      req.end();
-    });
-  }
-
-  // Clean all server files and configurations
   async cleanServerFiles(context: vscode.ExtensionContext): Promise<void> {
     try {
-      // Show confirmation dialog
-      const confirm = await vscode.window.showWarningMessage(
-        'This will delete all downloaded language server binaries and reset configurations. Continue?',
+      const result = await vscode.window.showWarningMessage(
+        'Are you sure you want to clean all server files? This will remove all downloaded language server binaries.',
         { modal: true },
-        'Yes, Clean Everything', 'Cancel'
+        'Yes', 'No'
       );
 
-      if (confirm !== 'Yes, Clean Everything') {
-        return;
-      }
+      if (result === 'Yes') {
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: 'Cleaning server files',
+          cancellable: false
+        }, async (progress) => {
+          try {
+            progress.report({ message: 'Cleaning server files...' });
 
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Cleaning NPL Language Server Files',
-        cancellable: false
-      }, async (progress) => {
-        // Step 1: Load version data to know what to clean
-        progress.report({ message: 'Finding files to clean...' });
-        const binDir = FileUtils.getBinDirectory(context.extensionPath);
-        const versionsFile = FileUtils.getVersionsFilePath(context.extensionPath);
-        const versions = await FileUtils.loadVersionsData(context.extensionPath);
+            // Clean unused binaries
+            const removedFiles = await BinaryManager.cleanUnusedBinaries(context.extensionPath);
 
-        // Step 2: Delete each binary
-        let deletedCount = 0;
-        if (versions.length > 0) {
-          progress.report({ message: `Deleting ${versions.length} server binaries...` });
-
-          for (const version of versions) {
-            if (version.installedPath && fs.existsSync(version.installedPath)) {
-              this.logger.log(`Deleting binary: ${version.installedPath}`);
-              await FileUtils.deleteFileIfExists(version.installedPath);
-              deletedCount++;
+            // Clear version data
+            const versions = await VersionManager.loadVersionsData(context.extensionPath);
+            for (const version of versions) {
+              if (version.installedPath) {
+                await BinaryManager.deleteFileIfExists(version.installedPath);
+              }
             }
+
+            // Reset versions file
+            await VersionManager.saveVersionsData(context.extensionPath, []);
+
+            const binDir = VersionManager.getBinDirectory(context.extensionPath);
+            this.logger.log(`Cleaned server files in ${binDir}`);
+
+            vscode.window.showInformationMessage(
+              'Successfully cleaned all server files. The next time you open an NPL file, the server will be downloaded again.',
+              'Reload Now'
+            ).then(selection => {
+              if (selection === 'Reload Now') {
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
+              }
+            });
+          } catch (error) {
+            this.logger.logError('Failed to clean server files', error);
+            vscode.window.showErrorMessage(`Failed to clean server files: ${error instanceof Error ? error.message : String(error)}`);
           }
-        }
-
-        // Step 3: Delete versions file
-        if (fs.existsSync(versionsFile)) {
-          progress.report({ message: 'Deleting versions database...' });
-          await FileUtils.deleteFileIfExists(versionsFile);
-        }
-
-        // Step 4: Delete any other files in bin directory
-        if (fs.existsSync(binDir)) {
-          progress.report({ message: 'Checking for other files...' });
-          const files = fs.readdirSync(binDir);
-          for (const file of files) {
-            const filePath = path.join(binDir, file);
-            if (fs.statSync(filePath).isFile()) {
-              this.logger.log(`Deleting additional file: ${filePath}`);
-              await FileUtils.deleteFileIfExists(filePath);
-              deletedCount++;
-            }
-          }
-
-          // Try to remove the bin directory if empty
-          const remainingFiles = fs.readdirSync(binDir);
-          if (remainingFiles.length === 0) {
-            try {
-              fs.rmdirSync(binDir);
-            } catch (e) {
-              // Non-critical if this fails
-              this.logger.log(`Could not remove bin directory: ${e}`);
-            }
-          }
-        }
-
-        // Step 5: Reset version setting to 'latest'
-        progress.report({ message: 'Resetting version settings...' });
-        await vscode.workspace.getConfiguration('NPL').update(
-          'server.version',
-          'latest',
-          vscode.ConfigurationTarget.Global
-        );
-
-        progress.report({ message: `Clean complete! ${deletedCount} files removed.` });
-      });
-
-      // Final notification
-      const restart = await vscode.window.showInformationMessage(
-        'All NPL Language Server files have been cleaned. It is recommended to restart VS Code.',
-        'Restart Now', 'Later'
-      );
-
-      if (restart === 'Restart Now') {
-        vscode.commands.executeCommand('workbench.action.reloadWindow');
+        });
       }
     } catch (error) {
-      this.logger.logError('Error cleaning server files', error);
-      vscode.window.showErrorMessage(`Failed to clean server files: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.logError('Error in cleanServerFiles', error);
+      vscode.window.showErrorMessage(`Error cleaning server files: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
