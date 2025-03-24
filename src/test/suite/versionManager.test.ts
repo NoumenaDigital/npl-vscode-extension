@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as path from 'path';
 import { VersionManager, ServerVersion } from '../../server/binary/VersionManager';
+import * as vscode from 'vscode';
 
 suite('VersionManager Test Suite', () => {
   let sandbox: sinon.SinonSandbox;
@@ -27,21 +28,48 @@ suite('VersionManager Test Suite', () => {
     assert.strictEqual(result, expected);
   });
 
-  test('getSelectedVersion uses environment variable when available', () => {
-    const originalEnv = process.env.NPL_SERVER_VERSION;
+  test('getSelectedVersion uses VS Code settings', () => {
+    // Mock vs code configuration
+    const mockConfig = {
+      get: sandbox.stub().returns('test-version')
+    };
+    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfig as any);
 
-    try {
-      process.env.NPL_SERVER_VERSION = 'test-version';
-      const result = VersionManager.getSelectedVersion();
-      assert.strictEqual(result, 'test-version');
-    } finally {
-      // Restore original env
-      if (originalEnv === undefined) {
-        delete process.env.NPL_SERVER_VERSION;
-      } else {
-        process.env.NPL_SERVER_VERSION = originalEnv;
-      }
-    }
+    const result = VersionManager.getSelectedVersion();
+    assert.strictEqual(result, 'test-version');
+    assert.strictEqual(mockConfig.get.calledWith('server.version'), true);
+  });
+
+  test('getSelectedVersion returns "latest" as default', () => {
+    // Mock vs code configuration to return nothing
+    const mockConfig = {
+      get: sandbox.stub().returns(undefined)
+    };
+    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfig as any);
+
+    const result = VersionManager.getSelectedVersion();
+    assert.strictEqual(result, 'latest');
+  });
+
+  test('shouldAutoUpdate uses VS Code settings', () => {
+    // Test with autoUpdate enabled
+    const mockConfigEnabled = {
+      get: sandbox.stub().returns(true)
+    };
+    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfigEnabled as any);
+
+    assert.strictEqual(VersionManager.shouldAutoUpdate(), true);
+
+    // Reset stub for the second test
+    sandbox.restore();
+
+    // Test with autoUpdate disabled
+    const mockConfigDisabled = {
+      get: sandbox.stub().returns(false)
+    };
+    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfigDisabled as any);
+
+    assert.strictEqual(VersionManager.shouldAutoUpdate(), false);
   });
 
   test('getServerPath returns correct path for specific version', () => {
@@ -75,25 +103,5 @@ suite('VersionManager Test Suite', () => {
     // Test undefined (should default to latest)
     result = VersionManager.getServerDownloadBaseUrl();
     assert.strictEqual(result, 'https://github.com/test-org/test-repo/releases/latest/download');
-  });
-
-  test('shouldAutoUpdate respects environment variable', () => {
-    const originalEnv = process.env.NPL_SERVER_AUTO_UPDATE;
-
-    try {
-      process.env.NPL_SERVER_AUTO_UPDATE = 'false';
-      assert.strictEqual(VersionManager.shouldAutoUpdate(), false);
-
-      process.env.NPL_SERVER_AUTO_UPDATE = 'true';
-      // Note: This doesn't test the VS Code configuration part, which would require more mocking
-      assert.strictEqual(VersionManager.shouldAutoUpdate(), true);
-    } finally {
-      // Restore original env
-      if (originalEnv === undefined) {
-        delete process.env.NPL_SERVER_AUTO_UPDATE;
-      } else {
-        process.env.NPL_SERVER_AUTO_UPDATE = originalEnv;
-      }
-    }
   });
 });

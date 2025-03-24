@@ -3,11 +3,10 @@ import * as childProcess from 'child_process';
 import { StreamInfo } from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
 import { Logger } from '../utils/Logger';
-import { DownloadManager, ProgressCallback } from './binary/DownloadManager';
+import { ProgressCallback } from './binary/DownloadManager';
 import { VersionManager } from './binary/VersionManager';
 import { BinaryManager } from './binary/BinaryManager';
 import * as fs from 'fs';
-import * as path from 'path';
 
 export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
@@ -21,15 +20,17 @@ export class ServerManager {
   }
 
   private getServerPort(): number {
-    const envPort = process.env.NPL_SERVER_PORT;
-    if (envPort) {
-      const port = parseInt(envPort);
-      if (!isNaN(port) && port > 0 && port < 65536) {
-        this.logger.log(`Using port from environment variable: ${port}`);
+    try {
+      const config = vscode.workspace.getConfiguration('NPL');
+      const port = config.get<number>('server.port');
+      if (port && !isNaN(port) && port > 0 && port < 65536) {
+        this.logger.log(`Using port from settings: ${port}`);
         return port;
       }
-      this.logger.log(`Invalid port in environment variable: ${envPort}, using default`);
+    } catch (e) {
+      // Ignore errors
     }
+
     return this.DEFAULT_PORT;
   }
 

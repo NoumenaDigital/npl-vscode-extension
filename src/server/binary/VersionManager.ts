@@ -97,10 +97,6 @@ export class VersionManager {
   }
 
   static getSelectedVersion(): string {
-    if (process.env.NPL_SERVER_VERSION) {
-      return process.env.NPL_SERVER_VERSION;
-    }
-
     try {
       const config = vscode.workspace.getConfiguration('NPL');
       const version = config.get<string>('server.version');
@@ -269,10 +265,6 @@ export class VersionManager {
   }
 
   static shouldAutoUpdate(): boolean {
-    if (process.env.NPL_SERVER_AUTO_UPDATE === 'false') {
-      return false;
-    }
-
     try {
       const config = vscode.workspace.getConfiguration('NPL');
       const autoUpdate = config.get<boolean>('server.autoUpdate');
