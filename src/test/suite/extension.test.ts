@@ -64,8 +64,7 @@ suite('Extension Test Suite', () => {
 		const document = await vscode.workspace.openTextDocument(validFilePath);
 		await vscode.window.showTextDocument(document);
 
-		await new Promise(resolve => setTimeout(resolve, 2000));
-		await new Promise(resolve => setTimeout(resolve, 3000));
+		await new Promise(resolve => setTimeout(resolve, 5000));
 
 		const diagnostics = vscode.languages.getDiagnostics(document.uri);
 

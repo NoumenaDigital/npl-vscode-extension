@@ -75,15 +75,15 @@ export class ServerManager {
             progress.report({ message: info.message, increment: info.increment });
           }
         };
-        
+
         return await FileUtils.downloadServerBinary(context.extensionPath, progressCallback);
       });
 
       this.logger.log(`Using server binary at: ${serverPath}`);
       await FileUtils.validateServerBinary(serverPath);
 
-      this.logger.log(`Starting server process: ${serverPath}`);
-      return this.spawnServerProcess(serverPath);
+    this.logger.log(`Starting server process: ${serverPath}`);
+    return this.spawnServerProcess(serverPath);
     } catch (error) {
       this.logger.logError('Failed to download or start server binary', error);
       throw error;
@@ -109,11 +109,11 @@ export class ServerManager {
       const currentProcess = childProcess.spawn(serverPath, ['--stdio'], options);
       this.serverProcess = currentProcess;
 
-      if (!currentProcess.stdout || !currentProcess.stdin) {
-        throw new Error('Failed to create stdio streams for server process');
-      }
+    if (!currentProcess.stdout || !currentProcess.stdin) {
+      throw new Error('Failed to create stdio streams for server process');
+    }
 
-      return this.initializeServerProcess(currentProcess);
+    return this.initializeServerProcess(currentProcess);
     } catch (error) {
       this.logger.logError(`Failed to spawn server process: ${error}`);
       throw error;
@@ -189,6 +189,7 @@ export class ServerManager {
     startupError: Error | undefined
   ): Promise<StreamInfo> {
     return new Promise((resolve, reject) => {
+      const timeoutMs = 10000;
       let resolved = false;
 
       const timeout = setTimeout(() => {

@@ -37,9 +37,9 @@ export class FileUtils {
   static getServerBinaryName(): string {
     const platform = os.platform();
     const arch = os.arch();
-    
+
     let binaryName = 'language-server';
-    
+
     if (platform === 'linux') {
       if (arch === 'arm64') {
         binaryName = 'language-server-linux-aarch64';
@@ -55,7 +55,7 @@ export class FileUtils {
     } else if (platform === 'win32') {
       binaryName = 'language-server-windows-x86_64.exe';
     }
-    
+
     return binaryName;
   }
 
@@ -64,7 +64,7 @@ export class FileUtils {
     if (process.env.NPL_SERVER_DOWNLOAD_URL) {
       return process.env.NPL_SERVER_DOWNLOAD_URL;
     }
-    
+
     // Then try VSCode configuration
     try {
       const config = vscode.workspace.getConfiguration('NPL-dev');
@@ -75,7 +75,7 @@ export class FileUtils {
     } catch (e) {
       // Ignore errors, fall back to default
     }
-    
+
     // Default to localhost:8000 for testing
     return 'http://localhost:8000';
   }
@@ -85,7 +85,7 @@ export class FileUtils {
     if (process.env.NPL_SERVER_FORCE_DOWNLOAD === 'true') {
       return true;
     }
-    
+
     // Then try VSCode configuration
     try {
       const config = vscode.workspace.getConfiguration('NPL-dev');
@@ -93,7 +93,7 @@ export class FileUtils {
     } catch (e) {
       // Ignore errors, fall back to default
     }
-    
+
     return false;
   }
 
@@ -109,7 +109,7 @@ export class FileUtils {
   }
 
   static async downloadServerBinary(
-    extensionPath: string, 
+    extensionPath: string,
     progressCallback?: ProgressCallback
   ): Promise<string> {
     const binDir = path.join(extensionPath, 'bin');
@@ -119,7 +119,7 @@ export class FileUtils {
 
     const binaryName = this.getServerBinaryName();
     const serverPath = path.join(binDir, binaryName);
-    
+
     // Skip download if the binary already exists unless force download is enabled
     if (fs.existsSync(serverPath) && !this.shouldForceDownload()) {
       return serverPath;
@@ -128,53 +128,53 @@ export class FileUtils {
     // If we're redownloading, clean up the old binary first
     if (fs.existsSync(serverPath)) {
       if (progressCallback) {
-        progressCallback({ 
-          message: `Removing existing binary...` 
+        progressCallback({
+          message: `Removing existing binary...`
         });
       }
       await this.deleteFileIfExists(serverPath);
     }
 
     if (progressCallback) {
-      progressCallback({ 
-        message: `Downloading ${binaryName}...` 
+      progressCallback({
+        message: `Downloading ${binaryName}...`
       });
     }
 
     const baseUrl = this.getServerDownloadBaseUrl();
     const serverUrl = `${baseUrl}/${binaryName}`;
-    
+
     // Add a temporary download path to avoid issues with partially downloaded files
     const tempDownloadPath = `${serverPath}.download`;
     await this.deleteFileIfExists(tempDownloadPath);
-    
+
     await this.downloadFile(serverUrl, tempDownloadPath, progressCallback);
-    
+
     if (progressCallback) {
-      progressCallback({ 
-        message: `Making ${binaryName} executable...` 
+      progressCallback({
+        message: `Making ${binaryName} executable...`
       });
     }
-    
+
     // Make the temporary binary executable
     if (os.platform() !== 'win32') {
       await fs.promises.chmod(tempDownloadPath, '755');
     }
-    
+
     // Move the temporary file to the final location
     await fs.promises.rename(tempDownloadPath, serverPath);
-    
+
     return serverPath;
   }
 
   private static downloadFile(
-    url: string, 
-    destination: string, 
+    url: string,
+    destination: string,
     progressCallback?: ProgressCallback
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const protocol = url.startsWith('https') ? https : http;
-      
+
       const request = protocol.get(url, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Handle redirects
@@ -188,27 +188,27 @@ export class FileUtils {
           }
           return reject(new Error(`Redirect with no location header: ${response.statusCode}`));
         }
-        
+
         if (response.statusCode !== 200) {
           return reject(new Error(`Failed to download file, status code: ${response.statusCode}`));
         }
-        
+
         const contentLength = parseInt(response.headers['content-length'] || '0', 10);
         let downloadedBytes = 0;
-        
+
         if (progressCallback && contentLength > 0) {
-          progressCallback({ 
+          progressCallback({
             message: 'Starting download...',
             total: contentLength,
             current: 0
           });
         }
-        
+
         const file = fs.createWriteStream(destination);
-        
+
         response.on('data', (chunk) => {
           downloadedBytes += chunk.length;
-          
+
           if (progressCallback && contentLength > 0) {
             const percent = Math.round((downloadedBytes / contentLength) * 100);
             progressCallback({
@@ -219,33 +219,33 @@ export class FileUtils {
             });
           }
         });
-        
+
         response.pipe(file);
-        
+
         file.on('finish', () => {
           file.close();
           if (progressCallback) {
-            progressCallback({ 
-              message: 'Download complete', 
+            progressCallback({
+              message: 'Download complete',
               current: contentLength,
               total: contentLength
             });
           }
           resolve();
         });
-        
+
         file.on('error', (err) => {
           file.close();
           fs.unlink(destination, () => {});
           reject(err);
         });
       });
-      
+
       request.on('error', (err) => {
         fs.unlink(destination, () => {});
         reject(err);
       });
-      
+
       request.end();
     });
   }
