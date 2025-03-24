@@ -80,10 +80,33 @@ suite('Extension Test Suite', () => {
 		const document = await vscode.workspace.openTextDocument(validFilePath);
 		await vscode.window.showTextDocument(document);
 
-		await new Promise(resolve => setTimeout(resolve, 10000));
+		// For valid files, we need to wait a reasonable time to ensure no diagnostics appear
+		// Use a promise that resolves after a timeout or when diagnostics change
+		const result = await new Promise<boolean>(resolve => {
+			let hasDiagnostics = false;
+
+			const disposable = vscode.languages.onDidChangeDiagnostics(e => {
+				if (e.uris.some(uri => uri.toString() === document.uri.toString())) {
+					const diagnostics = vscode.languages.getDiagnostics(document.uri);
+					if (diagnostics.length > 0) {
+						hasDiagnostics = true;
+						disposable.dispose();
+						resolve(false);
+					}
+				}
+			});
+
+			// After a reasonable wait time, if no diagnostics appeared, the test passes
+			setTimeout(() => {
+				disposable.dispose();
+				resolve(!hasDiagnostics);
+			}, 5000);
+		});
+
+		// If result is false, diagnostics were found
+		assert.strictEqual(result, true, 'Unexpected diagnostics were reported for valid file');
 
 		const diagnostics = vscode.languages.getDiagnostics(document.uri);
-
 		assert.strictEqual(diagnostics.length, 0,
 			`Expected no diagnostics, but found ${diagnostics.length}: ${diagnostics.map(d => d.message).join(', ')}`);
 	});
