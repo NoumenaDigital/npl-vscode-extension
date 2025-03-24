@@ -28,7 +28,7 @@ This extension serves as a client for the NPL language server, providing feature
 
 ### Server Port
 
-The extension  to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
+The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
 
 - **Development**: The default port is configured in `.vscode/launch.json`
 - **Production**: Set the `NPL_SERVER_PORT` environment variable before launching VS Code
