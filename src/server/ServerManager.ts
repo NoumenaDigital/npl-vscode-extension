@@ -135,6 +135,16 @@ export class ServerManager {
 
   async getServerConnection(context: vscode.ExtensionContext): Promise<StreamInfo> {
     // First try to connect to an existing server
+    const existingConnection = await this.tryConnectToExistingServer(context);
+    if (existingConnection) {
+      return existingConnection;
+    }
+
+    // No existing server, start new one
+    return this.startNewServerInstance(context);
+  }
+
+  private async tryConnectToExistingServer(context: vscode.ExtensionContext): Promise<StreamInfo | null> {
     const existingConnection = await this.connectToExistingServer();
     if (existingConnection) {
       // We have an existing connection, check for updates in the background
@@ -143,35 +153,16 @@ export class ServerManager {
       });
       return existingConnection;
     }
+    return null;
+  }
 
-    // No existing server, check if we have any binary version installed
+  private async startNewServerInstance(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
-      // Check versions.json to see if any binaries exist
-      const versions = await VersionManager.loadVersionsData(context.extensionPath);
-      this.logger.log(`Found ${versions.length} version(s) in versions.json`);
-
-      for (const v of versions) {
-        this.logger.log(`Version: ${v.version}, Path: ${v.installedPath}, Exists: ${v.installedPath ? fs.existsSync(v.installedPath) : false}`);
-      }
-
-      const anyBinaryExists = versions.length > 0 && versions.some(v =>
-        v.installedPath && fs.existsSync(v.installedPath)
-      );
+      // Check if we have any binary version installed
+      const anyBinaryExists = await this.checkExistingBinaries(context);
 
       if (anyBinaryExists) {
-        this.logger.log('Found existing binary versions');
-        // Binary exists, check for updates and ask user before downloading
-        let updated = false;
-        if (VersionManager.shouldAutoUpdate()) {
-          this.logger.log('Auto-update is enabled, checking for updates...');
-          updated = await this.checkForUpdates(context);
-          this.logger.log(`Update check completed, updated: ${updated}`);
-        } else {
-          this.logger.log('Auto-update is disabled, skipping update check');
-        }
-
-        // Start the server using the existing binary - DO NOT trigger a download here
-        return await this.startServerWithExistingBinary(context);
+        return await this.handleExistingBinaryScenario(context);
       } else {
         // No binary exists, automatically download without asking
         this.logger.log('No language server binary found, downloading automatically...');
@@ -183,32 +174,40 @@ export class ServerManager {
     }
   }
 
+  private async checkExistingBinaries(context: vscode.ExtensionContext): Promise<boolean> {
+    // Check versions.json to see if any binaries exist
+    const versions = await VersionManager.loadVersionsData(context.extensionPath);
+    this.logger.log(`Found ${versions.length} version(s) in versions.json`);
+
+    for (const v of versions) {
+      this.logger.log(`Version: ${v.version}, Path: ${v.installedPath}, Exists: ${v.installedPath ? fs.existsSync(v.installedPath) : false}`);
+    }
+
+    return versions.length > 0 && versions.some(v =>
+      v.installedPath && fs.existsSync(v.installedPath)
+    );
+  }
+
+  private async handleExistingBinaryScenario(context: vscode.ExtensionContext): Promise<StreamInfo> {
+    this.logger.log('Found existing binary versions');
+    // Binary exists, check for updates and ask user before downloading
+    let updated = false;
+    if (VersionManager.shouldAutoUpdate()) {
+      this.logger.log('Auto-update is enabled, checking for updates...');
+      updated = await this.checkForUpdates(context);
+      this.logger.log(`Update check completed, updated: ${updated}`);
+    } else {
+      this.logger.log('Auto-update is disabled, skipping update check');
+    }
+
+    // Start the server using the existing binary - DO NOT trigger a download here
+    return await this.startServerWithExistingBinary(context);
+  }
+
   // This version will download if necessary
   async startServerWithDownload(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
-      // Download or get cached server binary with progress notification
-      const serverPath = await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'NPL Language Server',
-        cancellable: false
-      }, async (progress) => {
-        const progressCallback: ProgressCallback = (info) => {
-          if (info.message) {
-            progress.report({ message: info.message, increment: info.increment });
-          }
-        };
-
-        // Get the selected version or use 'latest'
-        const selectedVersion = VersionManager.getSelectedVersion();
-        this.logger.log(`Using server version: ${selectedVersion}`);
-
-        return await BinaryManager.downloadServerBinary(
-            context.extensionPath,
-            progressCallback,
-            selectedVersion
-        );
-      });
-
+      const serverPath = await this.downloadServerBinaryWithProgress(context);
       this.logger.log(`Using server binary at: ${serverPath}`);
       await BinaryManager.validateServerBinary(serverPath);
 
@@ -220,26 +219,35 @@ export class ServerManager {
     }
   }
 
+  private async downloadServerBinaryWithProgress(context: vscode.ExtensionContext): Promise<string> {
+    return await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'NPL Language Server',
+      cancellable: false
+    }, async (progress) => {
+      const progressCallback: ProgressCallback = (info) => {
+        if (info.message) {
+          progress.report({ message: info.message, increment: info.increment });
+        }
+      };
+
+      // Get the selected version or use 'latest'
+      const selectedVersion = VersionManager.getSelectedVersion();
+      this.logger.log(`Using server version: ${selectedVersion}`);
+
+      return await BinaryManager.downloadServerBinary(
+        context.extensionPath,
+        progressCallback,
+        selectedVersion
+      );
+    });
+  }
+
   // This version will use an existing binary without triggering a download
   async startServerWithExistingBinary(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
-      // Find the most recent installed version
-      const versions = await VersionManager.loadVersionsData(context.extensionPath);
-      const latestInstalled = versions
-        .filter(v => v.installedPath && fs.existsSync(v.installedPath))
-        .sort((a, b) => {
-          if (a.releaseDate && b.releaseDate) {
-            return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-          }
-          return b.version.localeCompare(a.version);
-        })[0];
-
-      if (!latestInstalled || !latestInstalled.installedPath) {
-        throw new Error('No installed binary found');
-      }
-
-      const serverPath = latestInstalled.installedPath;
-      this.logger.log(`Using existing server binary at: ${serverPath} (version ${latestInstalled.version})`);
+      const serverPath = await this.findLatestInstalledBinary(context);
+      this.logger.log(`Using existing server binary at: ${serverPath}`);
 
       await BinaryManager.validateServerBinary(serverPath);
       this.logger.log(`Starting server process: ${serverPath}`);
@@ -250,6 +258,25 @@ export class ServerManager {
       this.logger.log('Falling back to download');
       return this.startServerWithDownload(context);
     }
+  }
+
+  private async findLatestInstalledBinary(context: vscode.ExtensionContext): Promise<string> {
+    // Find the most recent installed version
+    const versions = await VersionManager.loadVersionsData(context.extensionPath);
+    const latestInstalled = versions
+      .filter(v => v.installedPath && fs.existsSync(v.installedPath))
+      .sort((a, b) => {
+        if (a.releaseDate && b.releaseDate) {
+          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+        }
+        return b.version.localeCompare(a.version);
+      })[0];
+
+    if (!latestInstalled || !latestInstalled.installedPath) {
+      throw new Error('No installed binary found');
+    }
+
+    return latestInstalled.installedPath;
   }
 
   // Original startServer method is deprecated, use startServerWithDownload or startServerWithExistingBinary
@@ -510,7 +537,7 @@ export class ServerManager {
               );
 
               vscode.window.showInformationMessage(
-                `Successfully downloaded ${selectedItem.label}. Please reload window to use the new version.`,
+                `Successfully downloaded version ${selectedItem.label}. Please reload window to use the new version.`,
                 'Reload Now'
               ).then(selection => {
                 if (selection === 'Reload Now') {
@@ -518,15 +545,15 @@ export class ServerManager {
                 }
               });
             } catch (error) {
-              this.logger.logError('Failed to download selected version', error);
-              vscode.window.showErrorMessage(`Failed to download: ${error instanceof Error ? error.message : String(error)}`);
+              this.logger.logError('Failed to download version', error);
+              vscode.window.showErrorMessage(`Failed to download version: ${error instanceof Error ? error.message : String(error)}`);
             }
           });
         }
       }
     } catch (error) {
-      this.logger.logError('Error fetching versions', error);
-      vscode.window.showErrorMessage(`Failed to fetch versions: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.logError('Failed to show version picker', error);
+      vscode.window.showErrorMessage(`Failed to show version picker: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
