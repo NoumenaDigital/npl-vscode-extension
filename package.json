@@ -1,0 +1,81 @@
+{
+  "name": "npl-dev-vscode-extension",
+  "displayName": "NPL-Dev for VS Code",
+  "description": "Noumena Protocol Language (NPL) development support for VS Code",
+  "version": "0.0.1",
+  "icon": "icon.png",
+  "publisher": "noumenadigital",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noumenadigital/npl-vscode-extension.git"
+  },
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "activationEvents": [
+    "onLanguage:npl"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "npl",
+        "aliases": [
+          "NPL",
+          "npl"
+        ],
+        "extensions": [
+          ".npl"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "icon.png",
+          "dark": "icon_dark.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "npl",
+        "scopeName": "source.npl",
+        "path": "./syntaxes/npl.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.13.10",
+    "@types/sinon": "^17.0.4",
+    "@types/vscode": "^1.92.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.3.0",
+    "eslint": "^9.22.0",
+    "glob": "^11.0.1",
+    "minimatch": "^10.0.1",
+    "mocha": "^11.1.0",
+    "sinon": "^19.0.2",
+    "typescript": "^5.8.2",
+    "vscode-test": "^1.6.1"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  }
+}
