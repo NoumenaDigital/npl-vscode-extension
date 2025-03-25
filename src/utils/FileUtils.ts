@@ -2,20 +2,49 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export class FileUtils {
-  static async validateServerBinary(serverPath: string): Promise<void> {
-    try {
-      const stats = await fs.promises.stat(serverPath);
-      const isExecutable = (stats.mode & fs.constants.S_IXUSR) !== 0;
-
-      if (!isExecutable) {
-        await fs.promises.chmod(serverPath, '755');
-      }
-    } catch (err) {
-      throw new Error(`Server binary not found or inaccessible at ${serverPath}`);
+  static async ensureDirectoryExists(dirPath: string): Promise<void> {
+    if (!fs.existsSync(dirPath)) {
+      await fs.promises.mkdir(dirPath, { recursive: true });
     }
   }
 
-  static getServerPath(extensionPath: string): string {
-    return path.join(extensionPath, 'server', 'language-server');
+  static async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.promises.access(filePath, fs.constants.F_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static async isExecutable(filePath: string): Promise<boolean> {
+    try {
+      await fs.promises.access(filePath, fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static async copyFile(source: string, destination: string): Promise<void> {
+    await fs.promises.copyFile(source, destination);
+  }
+
+  static async writeFile(filePath: string, data: string): Promise<void> {
+    const dir = path.dirname(filePath);
+    await this.ensureDirectoryExists(dir);
+    await fs.promises.writeFile(filePath, data, 'utf8');
+  }
+
+  static async readFile(filePath: string): Promise<string> {
+    return await fs.promises.readFile(filePath, 'utf8');
+  }
+
+  static async listFiles(dirPath: string): Promise<string[]> {
+    if (!await this.fileExists(dirPath)) {
+      return [];
+    }
+
+    return await fs.promises.readdir(dirPath);
   }
 }

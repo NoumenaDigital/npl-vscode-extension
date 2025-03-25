@@ -36,6 +36,5 @@ yarn-error.log*
 .npm
 .yarn-integrity
 
-# Make sure server directory is NOT ignored
-!server/
-!server/language-server
+# Make sure we don't include downloaded server binaries
+bin/**

@@ -2,7 +2,7 @@
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
   "description": "Noumena Protocol Language (NPL) development support for VS Code",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "icon": "icon.png",
   "publisher": "noumenadigital",
   "license": "Apache-2.0",
@@ -44,6 +44,30 @@
         "language": "npl",
         "scopeName": "source.npl",
         "path": "./syntaxes/npl.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "NPL",
+      "properties": {
+        "NPL.server.version": {
+          "type": "string",
+          "default": "latest",
+          "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "npl.selectServerVersion",
+        "title": "NPL: Select Language Server Version"
+      },
+      {
+        "command": "npl.openVersionSettings",
+        "title": "NPL: Open Server Version Settings"
+      },
+      {
+        "command": "npl.cleanServerFiles",
+        "title": "NPL: Clean Language Server Files and Reset"
       }
     ]
   },

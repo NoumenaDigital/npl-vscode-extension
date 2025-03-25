@@ -14,3 +14,4 @@ src/test/.DS_Store
 /.idea/codeStyles/Project.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
+bin/
