@@ -264,18 +264,6 @@ export class VersionManager {
     }
   }
 
-  static shouldAutoUpdate(): boolean {
-    try {
-      const config = vscode.workspace.getConfiguration('NPL');
-      const autoUpdate = config.get<boolean>('server.autoUpdate');
-      return autoUpdate !== false; // Default to true
-    } catch (e) {
-      // Ignore errors
-    }
-
-    return true;
-  }
-
   static getServerBinaryName(): string {
     const platform = process.platform;
     const arch = process.arch;

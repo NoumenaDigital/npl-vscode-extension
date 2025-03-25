@@ -51,27 +51,6 @@ suite('VersionManager Test Suite', () => {
     assert.strictEqual(result, 'latest');
   });
 
-  test('shouldAutoUpdate uses VS Code settings', () => {
-    // Test with autoUpdate enabled
-    const mockConfigEnabled = {
-      get: sandbox.stub().returns(true)
-    };
-    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfigEnabled as any);
-
-    assert.strictEqual(VersionManager.shouldAutoUpdate(), true);
-
-    // Reset stub for the second test
-    sandbox.restore();
-
-    // Test with autoUpdate disabled
-    const mockConfigDisabled = {
-      get: sandbox.stub().returns(false)
-    };
-    sandbox.stub(vscode.workspace, 'getConfiguration').returns(mockConfigDisabled as any);
-
-    assert.strictEqual(VersionManager.shouldAutoUpdate(), false);
-  });
-
   test('getServerPath returns correct path for specific version', () => {
     const version = 'v1.0.0';
     const binaryName = 'language-server-mock';

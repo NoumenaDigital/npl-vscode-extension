@@ -68,11 +68,6 @@ export class ServerManager {
   }
 
   async checkForUpdates(context: vscode.ExtensionContext): Promise<boolean> {
-    if (!VersionManager.shouldAutoUpdate()) {
-      this.logger.log('Auto-update is disabled, skipping update check');
-      return false;
-    }
-
     try {
       this.logger.log('Checking for language server updates...');
       const updateInfo = await VersionManager.checkForUpdates(context.extensionPath);
@@ -190,17 +185,12 @@ export class ServerManager {
 
   private async handleExistingBinaryScenario(context: vscode.ExtensionContext): Promise<StreamInfo> {
     this.logger.log('Found existing binary versions');
-    // Binary exists, check for updates and ask user before downloading
-    let updated = false;
-    if (VersionManager.shouldAutoUpdate()) {
-      this.logger.log('Auto-update is enabled, checking for updates...');
-      updated = await this.checkForUpdates(context);
-      this.logger.log(`Update check completed, updated: ${updated}`);
-    } else {
-      this.logger.log('Auto-update is disabled, skipping update check');
-    }
+    // Always check for updates when we have existing binaries
+    this.logger.log('Checking for updates...');
+    const updated = await this.checkForUpdates(context);
+    this.logger.log(`Update check completed, updated: ${updated}`);
 
-    // Start the server using the existing binary - DO NOT trigger a download here
+    // Start the server using the existing binary
     return await this.startServerWithExistingBinary(context);
   }
 

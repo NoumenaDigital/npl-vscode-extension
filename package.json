@@ -53,11 +53,6 @@
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
-        },
-        "NPL.server.autoUpdate": {
-          "type": "boolean",
-          "default": true,
-          "description": "Check for language server updates on startup"
         }
       }
     },
