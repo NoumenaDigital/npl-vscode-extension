@@ -4,6 +4,7 @@ import { ServerManager } from './server/ServerManager';
 import { LanguageClientManager } from './client/LanguageClientManager';
 import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
+import { HttpClientFactory } from './utils/HttpClient';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -16,6 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize managers with the same logger
   BinaryManager.setLogger(logger);
   VersionManager.setLogger(logger);
+  HttpClientFactory.setLogger(logger);
 
   try {
     // Register commands

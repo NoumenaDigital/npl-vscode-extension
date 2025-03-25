@@ -1,14 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as https from 'https';
 import { Logger } from '../../utils/Logger';
+import { HttpClientFactory } from '../../utils/HttpClient';
 
 export interface ServerVersion {
   version: string;
   downloadUrl: string;
   installedPath?: string;
   releaseDate?: string;
+}
+
+export interface GithubRelease {
+  tag_name: string;
+  published_at: string;
+  [key: string]: any;
 }
 
 export class VersionManager {
@@ -20,6 +26,8 @@ export class VersionManager {
    */
   static setLogger(logger: Logger): void {
     this._logger = logger;
+    // Also set the logger for the HttpClient
+    HttpClientFactory.setLogger(logger);
   }
 
   static getVersionsFilePath(extensionPath: string): string {
@@ -154,100 +162,35 @@ export class VersionManager {
   }
 
   static async getLatestGithubRelease(): Promise<{version: string, publishedAt: string} | null> {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${this.getGitHubRepo()}/releases/latest`,
-        headers: {
-          'User-Agent': 'NPL-dev-vscode',
-          'Accept': 'application/vnd.github.v3+json'
-        }
+    try {
+      const url = `https://api.github.com/repos/${this.getGitHubRepo()}/releases/latest`;
+      const httpClient = HttpClientFactory.getInstance();
+
+      const release = await httpClient.get<GithubRelease>(url);
+      return {
+        version: release.tag_name,
+        publishedAt: release.published_at
       };
-
-      const req = https.get(options, (res) => {
-        if (res.statusCode === 302 || res.statusCode === 301) {
-          // Handle redirect
-          if (res.headers.location) {
-            https.get(res.headers.location, (redirectRes) => {
-              let data = '';
-              redirectRes.on('data', (chunk) => data += chunk);
-              redirectRes.on('end', () => {
-                try {
-                  const release = JSON.parse(data);
-                  resolve({
-                    version: release.tag_name,
-                    publishedAt: release.published_at
-                  });
-                } catch (err) {
-                  reject(err);
-                }
-              });
-            }).on('error', reject);
-          } else {
-            this._logger?.logError(`GitHub API redirect without location header. Status code: ${res.statusCode}`) ||
-              console.error('GitHub API redirect without location header. Status code:', res.statusCode);
-            reject(new Error('Redirect with no location header'));
-          }
-          return;
-        }
-
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const release = JSON.parse(data);
-            resolve({
-              version: release.tag_name,
-              publishedAt: release.published_at
-            });
-          } catch (err) {
-            reject(err);
-          }
-        });
-      });
-
-      req.on('error', (err) => {
-        reject(err);
-      });
-
-      req.end();
-    });
+    } catch (error) {
+      this._logger?.logError('Failed to get latest GitHub release', error);
+      return null;
+    }
   }
 
   static async getAllGithubReleases(): Promise<Array<{version: string, publishedAt: string}>> {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${this.getGitHubRepo()}/releases`,
-        headers: {
-          'User-Agent': 'NPL-dev-vscode',
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      };
+    try {
+      const url = `https://api.github.com/repos/${this.getGitHubRepo()}/releases`;
+      const httpClient = HttpClientFactory.getInstance();
 
-      const req = https.get(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const releases = JSON.parse(data);
-            const result = releases.map((release: any) => ({
-              version: release.tag_name,
-              publishedAt: release.published_at
-            }));
-            resolve(result);
-          } catch (err) {
-            reject(err);
-          }
-        });
-      });
-
-      req.on('error', (err) => {
-        reject(err);
-      });
-
-      req.end();
-    });
+      const releases = await httpClient.get<GithubRelease[]>(url);
+      return releases.map(release => ({
+        version: release.tag_name,
+        publishedAt: release.published_at
+      }));
+    } catch (error) {
+      this._logger?.logError('Failed to get GitHub releases', error);
+      return [];
+    }
   }
 
   static getGitHubRepo(): string {
