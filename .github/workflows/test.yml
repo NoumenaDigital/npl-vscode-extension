@@ -2,40 +2,102 @@ name: Run Tests
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: macos-latest # TODO: should probably run on all platforms, eventually. Using the bundled binary for now.
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu
+            runner: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu
+            runner: linux-arm-64
+            arch: aarch64
+          - os: macos
+            runner: macos-13
+            arch: x86_64
+          - os: macos
+            runner: macos-latest
+            arch: aarch64
+          - os: windows
+            runner: windows-latest
+            arch: x86_64
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    name: Test on ${{ matrix.os }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python for pre-commit
+        uses: actions/setup-python@v3
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Xvfb on Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Run tests
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          xvfb-run --auto-servernum npm test
+
+      - name: Run tests (non-Linux)
+        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Package Extension
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: Setup Python for pre-commit
-      uses: actions/setup-python@v3
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run pre-commit
-      uses: pre-commit/action@v3.0.1
+      - name: Package Extension
+        run: npm run package
 
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run tests
-      run: npm test
-
-    - name: Lint
-      run: npm run lint
-
-    - name: Package Extension
-      run: npm run package
-
-    - name: Upload VSIX as Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: npl-dev-vscode-extension
-        path: "*.vsix"
+      - name: Upload VSIX as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npl-dev-vscode-extension
+          path: "*.vsix"
