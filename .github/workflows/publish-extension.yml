@@ -1,0 +1,61 @@
+name: Publish Extension
+
+on:
+  push:
+    branches: [ master ]
+
+concurrency:
+  group: "publish"
+  cancel-in-progress: false
+
+jobs:
+  publish-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check if should publish
+        id: check-publish
+        run: |
+          PUBLISH_FLAG=$(.github/scripts/check-publish-flag.sh | grep should_publish | cut -d= -f2)
+          echo "PUBLISH_FLAG=$PUBLISH_FLAG" >> $GITHUB_OUTPUT
+
+      - name: Get package version
+        id: get-version
+        if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Package Extension
+        if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
+        run: npx vsce package
+
+      - name: Publish to Visual Studio Marketplace
+        if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
+        run: npx vsce publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Create GitHub Release
+        if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.get-version.outputs.version }}
+          name: Release v${{ steps.get-version.outputs.version }}
+          body: "VS Code Extension Release ${{ steps.get-version.outputs.version }}"
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          artifacts: "*.vsix"
+          artifactErrorsFailBuild: true
