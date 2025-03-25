@@ -66,6 +66,20 @@ Available commands can be accessed by pressing `Cmd+Shift+P` and typing "NPL".
 - Run tests with `npm run test`
 - Tests are located in `src/test/` with filenames matching the pattern `**.test.ts`
 
+### E2E Tests and GitHub Rate Limiting
+
+The extension's E2E tests communicate with the GitHub API to download the latest language server binary. Without authentication, you may encounter rate limiting errors, especially in CI environments.
+
+To avoid this, set a GitHub token in your environment:
+
+```bash
+export GITHUB_TOKEN=your_github_token
+# or
+export GH_TOKEN=your_github_token
+```
+
+If you encounter `Failed to fetch latest version information` errors in tests, this is likely due to GitHub API rate limiting.
+
 ## Build and Package
 
 - Run `npm run compile` or `npm run vscode:prepublish` to compile the extension
