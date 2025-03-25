@@ -93,7 +93,7 @@ suite('DownloadManager Test Suite', () => {
       get: sandbox.stub()
     } as IHttpClient & sinon.SinonStubbedInstance<IHttpClient>;
 
-    downloadManager = new DownloadManager(mockFs, mockHttp, mockHttps);
+    downloadManager = new DownloadManager(mockFs, mockHttps);
   });
 
   teardown(() => {
@@ -109,7 +109,7 @@ suite('DownloadManager Test Suite', () => {
     const mockWriteStream = createMockWriteStream();
     mockFs.createWriteStream.returns(mockWriteStream);
 
-    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+    mockHttps.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
       callback(mockResponse);
       return createMockClientRequest();
     });
@@ -137,7 +137,7 @@ suite('DownloadManager Test Suite', () => {
     const mockWriteStream = createMockWriteStream();
     mockFs.createWriteStream.returns(mockWriteStream);
 
-    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+    mockHttps.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
       callback(mockResponse);
       return createMockClientRequest();
     });
@@ -169,7 +169,7 @@ suite('DownloadManager Test Suite', () => {
       headers: {}
     });
 
-    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+    mockHttps.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
       callback(mockResponse);
       return createMockClientRequest();
     });
@@ -188,7 +188,7 @@ suite('DownloadManager Test Suite', () => {
 
   test('should handle download errors', async () => {
     const mockError = new Error('Network error');
-    mockHttp.get.callsFake((_url: string, _callback: (response: http.IncomingMessage) => void) => {
+    mockHttps.get.callsFake((_url: string, _callback: (response: http.IncomingMessage) => void) => {
       const req = createMockClientRequest();
       (req.on as sinon.SinonStub).withArgs('error').callsFake((_event: string, callback: (error: Error) => void) => {
         callback(mockError);
@@ -229,7 +229,7 @@ suite('DownloadManager Test Suite', () => {
       return mockWriteStream;
     });
 
-    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+    mockHttps.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
       callback(mockResponse);
       return createMockClientRequest();
     });

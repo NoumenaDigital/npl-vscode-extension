@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as https from 'https';
-import * as http from 'http';
+import { IncomingMessage, ClientRequest } from 'http';
 import * as path from 'path';
 
 export interface DownloadProgress {
@@ -20,13 +20,12 @@ export interface IFileSystem {
 }
 
 export interface IHttpClient {
-  get(url: string, callback: (response: http.IncomingMessage) => void): http.ClientRequest;
+  get(url: string, callback: (response: IncomingMessage) => void): ClientRequest;
 }
 
 export class DownloadManager {
   constructor(
     private readonly fs: IFileSystem,
-    private readonly http: IHttpClient,
     private readonly https: IHttpClient
   ) {}
 
@@ -42,9 +41,8 @@ export class DownloadManager {
       }
 
       const writeStream = this.fs.createWriteStream(destination);
-      const protocol = url.startsWith('https') ? this.https : this.http;
 
-      const req = protocol.get(url, (response) => {
+      const req = this.https.get(url, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Handle redirects
           if (response.headers.location) {
@@ -80,7 +78,7 @@ export class DownloadManager {
 
         response.pipe(writeStream);
 
-        response.on('data', (chunk) => {
+        response.on('data', (chunk: Buffer) => {
           downloadedSize += chunk.length;
 
           if (progressCallback && totalSize > 0) {
@@ -115,12 +113,12 @@ export class DownloadManager {
         });
       });
 
-      req.on('error', (err) => {
+      req.on('error', (err: Error) => {
         this.fs.unlink(destination, () => {}); // Delete the file if download fails
         reject(err);
       });
 
-      writeStream.on('error', (err) => {
+      writeStream.on('error', (err: Error) => {
         this.fs.unlink(destination, () => {}); // Delete the file if writing fails
         reject(err);
       });
@@ -137,7 +135,6 @@ export class DownloadManagerFactory {
         createWriteStream: (path: string) => fs.createWriteStream(path),
         unlink: fs.unlink
       },
-      http,
       https
     );
   }
