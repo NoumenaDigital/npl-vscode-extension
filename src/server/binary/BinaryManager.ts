@@ -1,10 +1,24 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ProgressCallback, DownloadManagerFactory } from './DownloadManager';
+import { ProgressCallback, DownloadManagerFactory, DownloadManager } from './DownloadManager';
 import { VersionManager } from './VersionManager';
 
 export class BinaryManager {
-  private static downloadManager = DownloadManagerFactory.create();
+  private static _downloadManager = DownloadManagerFactory.create();
+
+  /**
+   * Gets the current download manager instance
+   */
+  static get downloadManager(): DownloadManager {
+    return this._downloadManager;
+  }
+
+  /**
+   * Sets a custom download manager (primarily for testing)
+   */
+  static set downloadManager(manager: DownloadManager) {
+    this._downloadManager = manager;
+  }
 
   static async validateServerBinary(serverPath: string): Promise<void> {
     try {
