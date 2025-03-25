@@ -143,39 +143,53 @@ export class BinaryManager {
         return existingVersion.installedPath;
       }
 
-      const binaryName = VersionManager.getServerBinaryName();
+      try {
+        const binaryName = VersionManager.getServerBinaryName();
 
-      if (progressCallback) {
-        progressCallback({
-          message: `Determined binary for platform: ${binaryName}`,
-          increment: 10
-        });
+        if (progressCallback) {
+          progressCallback({
+            message: `Determined binary for platform: ${binaryName}`,
+            increment: 10
+          });
+        }
+
+        const downloadUrl = `${VersionManager.getServerDownloadBaseUrl(targetVersion)}/${binaryName}`;
+        const serverPath = VersionManager.getServerPath(extensionPath, targetVersion);
+
+        if (progressCallback) {
+          progressCallback({
+            message: 'Starting download...',
+            increment: 5
+          });
+        }
+
+        const serverDir = path.dirname(serverPath);
+        if (!fs.existsSync(serverDir)) {
+          await fs.promises.mkdir(serverDir, { recursive: true });
+        }
+
+        await this.deleteFileIfExists(serverPath);
+
+        await this.downloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
+
+        await this.validateServerBinary(serverPath);
+
+        await VersionManager.addVersionToRecord(extensionPath, targetVersion, releaseDate);
+
+        return serverPath;
+      } catch (e) {
+        // Check if this is a platform compatibility error
+        if (e instanceof Error && e.message.includes('Unsupported platform/architecture')) {
+          const platform = process.platform;
+          const arch = process.arch;
+          throw new Error(
+            `This extension doesn't support your platform (${platform}/${arch}). ` +
+            `Currently supported platforms are: Windows (x64), macOS (x64/arm64), and Linux (x64/arm64).`
+          );
+        }
+        // If it's another type of error, rethrow it
+        throw e;
       }
-
-      const downloadUrl = `${VersionManager.getServerDownloadBaseUrl(targetVersion)}/${binaryName}`;
-      const serverPath = VersionManager.getServerPath(extensionPath, targetVersion);
-
-      if (progressCallback) {
-        progressCallback({
-          message: 'Starting download...',
-          increment: 5
-        });
-      }
-
-      const serverDir = path.dirname(serverPath);
-      if (!fs.existsSync(serverDir)) {
-        await fs.promises.mkdir(serverDir, { recursive: true });
-      }
-
-      await this.deleteFileIfExists(serverPath);
-
-      await this.downloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
-
-      await this.validateServerBinary(serverPath);
-
-      await VersionManager.addVersionToRecord(extensionPath, targetVersion, releaseDate);
-
-      return serverPath;
     } catch (error) {
       this._logger?.logError('Error downloading server binary', error) || console.error('Error downloading server binary:', error);
       throw new Error(`Failed to download server binary: ${error instanceof Error ? error.message : String(error)}`);

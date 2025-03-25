@@ -210,25 +210,23 @@ export class VersionManager {
     const platform = process.platform;
     const arch = process.arch;
 
-    let binaryName = 'language-server';
-
     if (platform === 'linux') {
       if (arch === 'arm64') {
-        binaryName = 'language-server-linux-aarch64';
+        return 'language-server-linux-aarch64';
       } else if (arch === 'x64') {
-        binaryName = 'language-server-linux-x86_64';
+        return 'language-server-linux-x86_64';
       }
     } else if (platform === 'darwin') {
       if (arch === 'arm64') {
-        binaryName = 'language-server-macos-aarch64';
+        return 'language-server-macos-aarch64';
       } else if (arch === 'x64') {
-        binaryName = 'language-server-macos-x86_64';
+        return 'language-server-macos-x86_64';
       }
     } else if (platform === 'win32') {
-      binaryName = 'language-server-windows-x86_64.exe';
+      return 'language-server-windows-x86_64.exe';
     }
 
-    return binaryName;
+    throw new Error(`Unsupported platform/architecture combination: ${platform}/${arch}. Please use a supported environment.`);
   }
 
   static async checkForUpdates(extensionPath: string): Promise<{hasUpdate: boolean, latestVersion: string | null}> {
