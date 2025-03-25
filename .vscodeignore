@@ -37,4 +37,4 @@ yarn-error.log*
 .yarn-integrity
 
 # Make sure we don't include downloaded server binaries
-!bin/**
+bin/**
