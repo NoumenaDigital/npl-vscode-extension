@@ -2,7 +2,10 @@ name: Run Tests
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - opened
+      - synchronize
+      - reopened
   workflow_dispatch:
 
 concurrency:
@@ -35,40 +38,40 @@ jobs:
     name: Test on ${{ matrix.os }}-${{ matrix.arch }}
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: Setup Python for pre-commit
-      uses: actions/setup-python@v3
+      - name: Setup Python for pre-commit
+        uses: actions/setup-python@v3
 
-    - name: Run pre-commit
-      uses: pre-commit/action@v3.0.1
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Install Xvfb on Linux
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb
+      - name: Install Xvfb on Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
 
-    - name: Run tests
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        xvfb-run --auto-servernum npm test
+      - name: Run tests
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          xvfb-run --auto-servernum npm test
 
-    - name: Run tests (non-Linux)
-      if: ${{ !startsWith(matrix.os, 'ubuntu') }}
-      run: npm test
+      - name: Run tests (non-Linux)
+        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        run: npm test
 
-    - name: Lint
-      run: npm run lint
+      - name: Lint
+        run: npm run lint
 
   package:
     needs: test
@@ -76,22 +79,22 @@ jobs:
     name: Package Extension
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Package Extension
-      run: npm run package
+      - name: Package Extension
+        run: npm run package
 
-    - name: Upload VSIX as Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: npl-dev-vscode-extension
-        path: "*.vsix"
+      - name: Upload VSIX as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npl-dev-vscode-extension
+          path: "*.vsix"

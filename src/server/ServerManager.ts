@@ -75,7 +75,6 @@ export class ServerManager {
       if (updateInfo.hasUpdate && updateInfo.latestVersion) {
         this.logger.log(`New version available: ${updateInfo.latestVersion}`);
 
-        // Ask user if they want to update
         const updateNow = await vscode.window.showInformationMessage(
             `A new version of the NPL Language Server is available (${updateInfo.latestVersion}). Would you like to update now?`,
             'Update Now', 'Later'
@@ -129,13 +128,11 @@ export class ServerManager {
   }
 
   async getServerConnection(context: vscode.ExtensionContext): Promise<StreamInfo> {
-    // First try to connect to an existing server
     const existingConnection = await this.tryConnectToExistingServer(context);
     if (existingConnection) {
       return existingConnection;
     }
 
-    // No existing server, start new one
     return this.startNewServerInstance(context);
   }
 
@@ -153,13 +150,11 @@ export class ServerManager {
 
   private async startNewServerInstance(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
-      // Check if we have any binary version installed
       const anyBinaryExists = await this.checkExistingBinaries(context);
 
       if (anyBinaryExists) {
         return await this.handleExistingBinaryScenario(context);
       } else {
-        // No binary exists, automatically download without asking
         this.logger.log('No language server binary found, downloading automatically...');
         return await this.startServerWithDownload(context);
       }
@@ -170,7 +165,6 @@ export class ServerManager {
   }
 
   private async checkExistingBinaries(context: vscode.ExtensionContext): Promise<boolean> {
-    // Check versions.json to see if any binaries exist
     const versions = await VersionManager.loadVersionsData(context.extensionPath);
     this.logger.log(`Found ${versions.length} version(s) in versions.json`);
 
@@ -190,11 +184,9 @@ export class ServerManager {
     const updated = await this.checkForUpdates(context);
     this.logger.log(`Update check completed, updated: ${updated}`);
 
-    // Start the server using the existing binary
     return await this.startServerWithExistingBinary(context);
   }
 
-  // This version will download if necessary
   async startServerWithDownload(context: vscode.ExtensionContext): Promise<StreamInfo> {
     try {
       const serverPath = await this.downloadServerBinaryWithProgress(context);
@@ -210,14 +202,14 @@ export class ServerManager {
   }
 
   private async downloadServerBinaryWithProgress(context: vscode.ExtensionContext): Promise<string> {
-    return await vscode.window.withProgress({
+    return vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'NPL Language Server',
       cancellable: false
     }, async (progress) => {
       const progressCallback: ProgressCallback = (info) => {
         if (info.message) {
-          progress.report({ message: info.message, increment: info.increment });
+          progress.report({message: info.message, increment: info.increment});
         }
       };
 
@@ -226,9 +218,9 @@ export class ServerManager {
       this.logger.log(`Using server version: ${selectedVersion}`);
 
       return await BinaryManager.downloadServerBinary(
-        context.extensionPath,
-        progressCallback,
-        selectedVersion
+          context.extensionPath,
+          progressCallback,
+          selectedVersion
       );
     });
   }
@@ -244,35 +236,17 @@ export class ServerManager {
       return this.spawnServerProcess(serverPath);
     } catch (error) {
       this.logger.logError('Failed to start server with existing binary', error);
-      // Fall back to download if using existing binary fails
       this.logger.log('Falling back to download');
       return this.startServerWithDownload(context);
     }
   }
 
   private async findLatestInstalledBinary(context: vscode.ExtensionContext): Promise<string> {
-    // Find the most recent installed version
-    const versions = await VersionManager.loadVersionsData(context.extensionPath);
-    const latestInstalled = versions
-      .filter(v => v.installedPath && fs.existsSync(v.installedPath))
-      .sort((a, b) => {
-        if (a.releaseDate && b.releaseDate) {
-          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-        }
-        return b.version.localeCompare(a.version);
-      })[0];
-
-    if (!latestInstalled || !latestInstalled.installedPath) {
+    const latestVersion = VersionManager.findLatestInstalledVersion(context.extensionPath);
+    if (!latestVersion?.installedPath) {
       throw new Error('No installed binary found');
     }
-
-    return latestInstalled.installedPath;
-  }
-
-  // Original startServer method is deprecated, use startServerWithDownload or startServerWithExistingBinary
-  async startServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
-    this.logger.log('WARNING: Using deprecated startServer method, please update code to use startServerWithDownload');
-    return this.startServerWithDownload(context);
+    return latestVersion.installedPath;
   }
 
   private spawnServerProcess(serverPath: string): Promise<StreamInfo> {
@@ -421,7 +395,6 @@ export class ServerManager {
 
       this.logger.log(`Fetched ${versions.length} versions from GitHub`);
 
-      // Load all installed versions to check against later
       const installedVersions = await VersionManager.loadVersionsData(context.extensionPath);
 
       // Create a map to easily check if a version is installed
@@ -432,17 +405,14 @@ export class ServerManager {
         }
       }
 
-      // Create quick pick items
       const quickPickItems: vscode.QuickPickItem[] = [
         { label: 'latest', description: 'Always use the latest version' }
       ];
 
-      // Add available versions
       for (const version of versions) {
         const date = new Date(version.publishedAt);
         const formattedDate = date.toLocaleDateString();
 
-        // Check if this version is already installed
         const isInstalled = installedVersionMap.has(version.version);
 
         quickPickItems.push({
@@ -451,7 +421,6 @@ export class ServerManager {
         });
       }
 
-      // Show quick pick
       const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
         placeHolder: 'Select a server version',
         title: 'NPL Language Server Version'
@@ -460,16 +429,12 @@ export class ServerManager {
       if (selectedItem) {
         this.logger.log(`Selected version: ${selectedItem.label}`);
 
-        // Update configuration
         const config = vscode.workspace.getConfiguration('NPL');
         await config.update('server.version', selectedItem.label, vscode.ConfigurationTarget.Global);
 
-        // Handle latest version selection
         if (selectedItem.label === 'latest') {
-          // Resolve what 'latest' actually is
           const latestRelease = await VersionManager.getLatestGithubRelease();
           if (latestRelease) {
-            // Check if we already have this version installed
             if (installedVersionMap.has(latestRelease.version)) {
               const message = `Latest version (${latestRelease.version}) is set as active.`;
               this.logger.log(message);
@@ -485,7 +450,6 @@ export class ServerManager {
             }
           }
         }
-        // Handle specific version selection - Check if it's already installed
         else if (installedVersionMap.has(selectedItem.label)) {
           const message = `Version ${selectedItem.label} is set as active.`;
           this.logger.log(message);
@@ -564,10 +528,8 @@ export class ServerManager {
           try {
             progress.report({ message: 'Cleaning server files...' });
 
-            // Clean unused binaries
-            const removedFiles = await BinaryManager.cleanUnusedBinaries(context.extensionPath);
+            await BinaryManager.cleanUnusedBinaries(context.extensionPath);
 
-            // Clear version data
             const versions = await VersionManager.loadVersionsData(context.extensionPath);
             for (const version of versions) {
               if (version.installedPath) {

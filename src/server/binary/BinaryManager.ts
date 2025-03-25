@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { DownloadManager, ProgressCallback } from './DownloadManager';
 import { VersionManager } from './VersionManager';
 
@@ -24,24 +23,20 @@ export class BinaryManager {
     const removed: string[] = [];
 
     try {
-      // Get all files in the bin directory
       const files = await fs.promises.readdir(binDir);
 
       for (const file of files) {
         const fullPath = path.join(binDir, file);
 
-        // Skip version data file
         if (file === VersionManager.VERSIONS_FILE) {
           continue;
         }
 
-        // Skip if it's a directory
         const stats = await fs.promises.stat(fullPath);
         if (stats.isDirectory()) {
           continue;
         }
 
-        // Check if this binary is in our versions list
         const isTracked = versions.some(v => v.installedPath === fullPath);
 
         if (!isTracked) {
@@ -121,7 +116,6 @@ export class BinaryManager {
         return existingVersion.installedPath;
       }
 
-      // Determine the binary name for the current platform
       const binaryName = VersionManager.getServerBinaryName();
 
       if (progressCallback) {
@@ -131,7 +125,6 @@ export class BinaryManager {
         });
       }
 
-      // Determine the download URL and local server path
       const downloadUrl = `${VersionManager.getServerDownloadBaseUrl(targetVersion)}/${binaryName}`;
       const serverPath = VersionManager.getServerPath(extensionPath, targetVersion);
 
@@ -142,22 +135,17 @@ export class BinaryManager {
         });
       }
 
-      // Create the containing directory if it doesn't exist
       const serverDir = path.dirname(serverPath);
       if (!fs.existsSync(serverDir)) {
         await fs.promises.mkdir(serverDir, { recursive: true });
       }
 
-      // Delete existing file if it exists
       await this.deleteFileIfExists(serverPath);
 
-      // Download the binary
       await DownloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
 
-      // Make it executable
       await this.validateServerBinary(serverPath);
 
-      // Record this version in our versions database
       await VersionManager.addVersionToRecord(extensionPath, targetVersion, releaseDate);
 
       return serverPath;

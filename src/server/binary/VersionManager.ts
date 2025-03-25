@@ -74,17 +74,14 @@ export class VersionManager {
     const versions = await this.loadVersionsData(extensionPath);
     const serverPath = this.getServerPath(extensionPath, version);
 
-    // Check if version already exists
     const existingVersionIndex = versions.findIndex(v => v.version === version);
 
     if (existingVersionIndex >= 0) {
-      // Update existing record
       versions[existingVersionIndex].installedPath = serverPath;
       if (releaseDate) {
         versions[existingVersionIndex].releaseDate = releaseDate;
       }
     } else {
-      // Add new version
       versions.push({
         version,
         downloadUrl: `${this.getServerDownloadBaseUrl(version)}/${this.getServerBinaryName()}`,
@@ -114,23 +111,24 @@ export class VersionManager {
     const binDir = this.getBinDirectory(extensionPath);
     const binaryName = this.getServerBinaryName();
 
-    if (version && version !== 'latest') {
-      // When a specific version is requested, use the versioned binary name
-      return path.join(binDir, `${binaryName}-${version}`);
+    if (!version || version === 'latest') {
+      const latestVersion = this.findLatestInstalledVersion(extensionPath);
+      if (latestVersion?.installedPath) {
+        return latestVersion.installedPath;
+      }
+      // Return a path that will trigger a download of the latest version
+      // Note: This path is never used to save a binary, it's just a trigger
+      return path.join(binDir, `${binaryName}-latest`);
     }
 
-    // For 'latest' or unspecified, check if there's a non-versioned binary
-    const defaultPath = path.join(binDir, binaryName);
-    if (fs.existsSync(defaultPath)) {
-      return defaultPath;
-    }
+    return path.join(binDir, `${binaryName}-${version}`);
+  }
 
-    // If no default binary exists, try to find the latest installed version
+  static findLatestInstalledVersion(extensionPath: string): ServerVersion | undefined {
     try {
       const versions = this.loadVersionsDataSync(extensionPath);
       if (versions.length > 0) {
-        // Find the latest installed version by date
-        const latestVersion = versions
+        return versions
           .filter(v => v.installedPath && fs.existsSync(v.installedPath))
           .sort((a, b) => {
             // Sort by release date if available, otherwise by version string
@@ -139,18 +137,11 @@ export class VersionManager {
             }
             return b.version.localeCompare(a.version);
           })[0];
-
-        if (latestVersion?.installedPath) {
-          return latestVersion.installedPath;
-        }
       }
     } catch (error) {
-      // Fall back to default path if there's an error
       console.error('Error finding latest installed version:', error);
     }
-
-    // Fall back to the default path if no versioned binary is found
-    return defaultPath;
+    return undefined;
   }
 
   static async getLatestGithubRelease(): Promise<{version: string, publishedAt: string} | null> {
@@ -159,7 +150,7 @@ export class VersionManager {
         hostname: 'api.github.com',
         path: `/repos/${this.getGitHubRepo()}/releases/latest`,
         headers: {
-          'User-Agent': 'NPL-VSCode-Extension',
+          'User-Agent': 'NPL-dev-vscode',
           'Accept': 'application/vnd.github.v3+json'
         }
       };
@@ -218,7 +209,7 @@ export class VersionManager {
         hostname: 'api.github.com',
         path: `/repos/${this.getGitHubRepo()}/releases`,
         headers: {
-          'User-Agent': 'NPL-VSCode-Extension',
+          'User-Agent': 'NPL-dev-vscode',
           'Accept': 'application/vnd.github.v3+json'
         }
       };
@@ -254,12 +245,9 @@ export class VersionManager {
 
   static getServerDownloadBaseUrl(version?: string): string {
     const repo = this.getGitHubRepo();
-
     if (version && version !== 'latest') {
-      // For specific versions
       return `https://github.com/${repo}/releases/download/${version}`;
     } else {
-      // For latest version
       return `https://github.com/${repo}/releases/latest/download`;
     }
   }
@@ -291,17 +279,14 @@ export class VersionManager {
 
   static async checkForUpdates(extensionPath: string): Promise<{hasUpdate: boolean, latestVersion: string | null}> {
     try {
-      // Get latest available version
       const latestRelease = await this.getLatestGithubRelease();
 
       if (!latestRelease) {
         return { hasUpdate: false, latestVersion: null };
       }
 
-      // Load installed versions
       const versions = await this.loadVersionsData(extensionPath);
 
-      // Check if the latest release is already installed
       const isInstalled = versions.some(v =>
         v.version === latestRelease.version &&
         v.installedPath &&

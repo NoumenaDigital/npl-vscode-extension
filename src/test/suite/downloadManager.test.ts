@@ -1,9 +1,6 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import * as path from 'path';
-import { DownloadManager, DownloadProgress, ProgressCallback } from '../../server/binary/DownloadManager';
 
-// Create mock module objects instead of stubbing the modules directly
 const mockFs = {
   createWriteStream: sinon.stub(),
   mkdirSync: sinon.stub(),
@@ -21,7 +18,7 @@ const mockHttps = {
 
 // Mock the imports directly on the DownloadManager module
 // This requires modifying the DownloadManager to accept injected dependencies for testing
-// For this test example, we'll simulate testing without actually modifying the module
+// For this test example, we simulate testing without actually modifying the module
 
 suite('DownloadManager Test Suite', () => {
   let sandbox: sinon.SinonSandbox;

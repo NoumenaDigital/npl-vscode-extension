@@ -19,7 +19,6 @@ export class DownloadManager {
     progressCallback?: ProgressCallback
   ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      // Ensure the directory exists
       const dir = path.dirname(destination);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -67,7 +66,6 @@ export class DownloadManager {
         response.on('data', (chunk) => {
           downloadedSize += chunk.length;
 
-          // Report progress, but not too frequently
           if (progressCallback && totalSize > 0) {
             const currentProgress = Math.floor((downloadedSize / totalSize) * 100);
 
