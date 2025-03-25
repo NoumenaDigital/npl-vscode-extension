@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { Logger } from './utils/Logger';
 import { ServerManager } from './server/ServerManager';
 import { LanguageClientManager } from './client/LanguageClientManager';
+import { BinaryManager } from './server/binary/BinaryManager';
+import { VersionManager } from './server/binary/VersionManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -10,6 +12,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const logger = new Logger('NPL Language Server');
   serverManager = new ServerManager(logger);
   clientManager = new LanguageClientManager(logger, serverManager);
+
+  // Initialize managers with the same logger
+  BinaryManager.setLogger(logger);
+  VersionManager.setLogger(logger);
 
   try {
     // Register commands

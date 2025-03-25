@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as https from 'https';
 import { IncomingMessage, ClientRequest } from 'http';
 import * as path from 'path';
+import { Logger } from '../../utils/Logger';
 
 export interface DownloadProgress {
   message?: string;
@@ -26,7 +27,8 @@ export interface IHttpClient {
 export class DownloadManager {
   constructor(
     private readonly fs: IFileSystem,
-    private readonly https: IHttpClient
+    private readonly https: IHttpClient,
+    private readonly logger?: Logger
   ) {}
 
   async downloadFile(
@@ -114,12 +116,15 @@ export class DownloadManager {
       });
 
       req.on('error', (err: Error) => {
-        this.fs.unlink(destination, () => {}); // Delete the file if download fails
+        this.logger?.logError(`Download error: ${err.message}`, err) || console.error(`Download error: ${err.message}`, err);
+        writeStream.close();
+        this.fs.unlink(destination, () => {});
         reject(err);
       });
 
       writeStream.on('error', (err: Error) => {
-        this.fs.unlink(destination, () => {}); // Delete the file if writing fails
+        this.logger?.logError(`File write error: ${err.message}`, err) || console.error(`File write error: ${err.message}`, err);
+        this.fs.unlink(destination, () => {});
         reject(err);
       });
     });
@@ -127,6 +132,16 @@ export class DownloadManager {
 }
 
 export class DownloadManagerFactory {
+  // Static reference to the logger that will be shared
+  private static _logger: Logger | undefined;
+
+  /**
+   * Sets the logger for all download managers
+   */
+  static setLogger(logger: Logger): void {
+    this._logger = logger;
+  }
+
   static create(): DownloadManager {
     return new DownloadManager(
       {
@@ -135,7 +150,8 @@ export class DownloadManagerFactory {
         createWriteStream: (path: string) => fs.createWriteStream(path),
         unlink: fs.unlink
       },
-      https
+      https,
+      this._logger
     );
   }
 }

@@ -2,9 +2,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ProgressCallback, DownloadManagerFactory, DownloadManager } from './DownloadManager';
 import { VersionManager } from './VersionManager';
+import { Logger } from '../../utils/Logger';
 
 export class BinaryManager {
   private static _downloadManager = DownloadManagerFactory.create();
+  private static _logger: Logger | undefined;
+
+  /**
+   * Sets the logger for the BinaryManager
+   */
+  static setLogger(logger: Logger): void {
+    this._logger = logger;
+    // Pass the logger to the DownloadManagerFactory
+    DownloadManagerFactory.setLogger(logger);
+  }
 
   /**
    * Gets the current download manager instance
@@ -63,7 +74,7 @@ export class BinaryManager {
 
       return removed;
     } catch (error) {
-      console.error('Error cleaning binaries:', error);
+      this._logger?.logError('Error cleaning binaries', error) || console.error('Error cleaning binaries:', error);
       return [];
     }
   }
@@ -74,7 +85,7 @@ export class BinaryManager {
         await fs.promises.unlink(filePath);
       }
     } catch (error) {
-      console.error(`Failed to delete file: ${error}`);
+      this._logger?.logError(`Failed to delete file: ${filePath}`, error) || console.error(`Failed to delete file: ${error}`);
     }
   }
 
@@ -166,7 +177,7 @@ export class BinaryManager {
 
       return serverPath;
     } catch (error) {
-      console.error('Error downloading server binary:', error);
+      this._logger?.logError('Error downloading server binary', error) || console.error('Error downloading server binary:', error);
       throw new Error(`Failed to download server binary: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

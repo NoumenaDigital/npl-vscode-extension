@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as https from 'https';
+import { Logger } from '../../utils/Logger';
 
 export interface ServerVersion {
   version: string;
@@ -12,6 +13,14 @@ export interface ServerVersion {
 
 export class VersionManager {
   static readonly VERSIONS_FILE = 'server-versions.json';
+  private static _logger: Logger | undefined;
+
+  /**
+   * Sets the logger for the VersionManager
+   */
+  static setLogger(logger: Logger): void {
+    this._logger = logger;
+  }
 
   static getVersionsFilePath(extensionPath: string): string {
     return path.join(this.getBinDirectory(extensionPath), this.VERSIONS_FILE);
@@ -30,7 +39,7 @@ export class VersionManager {
         return JSON.parse(data);
       }
     } catch (error) {
-      console.error(`Failed to load versions data: ${error}`);
+      this._logger?.logError('Failed to load versions data', error) || console.error(`Failed to load versions data: ${error}`);
     }
 
     return [];
@@ -45,7 +54,7 @@ export class VersionManager {
         return JSON.parse(data);
       }
     } catch (error) {
-      console.error(`Failed to load versions data: ${error}`);
+      this._logger?.logError('Failed to load versions data', error) || console.error(`Failed to load versions data: ${error}`);
     }
 
     return [];
@@ -62,7 +71,7 @@ export class VersionManager {
 
       await fs.promises.writeFile(versionsFilePath, JSON.stringify(versions, null, 2), 'utf8');
     } catch (error) {
-      console.error(`Failed to save versions data: ${error}`);
+      this._logger?.logError('Failed to save versions data', error) || console.error(`Failed to save versions data: ${error}`);
     }
   }
 
@@ -101,7 +110,7 @@ export class VersionManager {
         return version;
       }
     } catch (e) {
-      console.error('Error reading server version from configuration:', e);
+      this._logger?.logError('Error reading server version from configuration', e) || console.error('Error reading server version from configuration:', e);
     }
 
     return 'latest';
@@ -139,7 +148,7 @@ export class VersionManager {
           })[0];
       }
     } catch (error) {
-      console.error('Error finding latest installed version:', error);
+      this._logger?.logError('Error finding latest installed version', error) || console.error('Error finding latest installed version:', error);
     }
     return undefined;
   }
@@ -175,7 +184,8 @@ export class VersionManager {
               });
             }).on('error', reject);
           } else {
-            console.error('GitHub API redirect without location header. Status code:', res.statusCode);
+            this._logger?.logError(`GitHub API redirect without location header. Status code: ${res.statusCode}`) ||
+              console.error('GitHub API redirect without location header. Status code:', res.statusCode);
             reject(new Error('Redirect with no location header'));
           }
           return;
@@ -299,7 +309,7 @@ export class VersionManager {
         latestVersion: latestRelease.version
       };
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      this._logger?.logError('Error checking for updates', error) || console.error('Error checking for updates:', error);
       return { hasUpdate: false, latestVersion: null };
     }
   }
