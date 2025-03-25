@@ -1,9 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DownloadManager, ProgressCallback } from './DownloadManager';
+import { ProgressCallback, DownloadManagerFactory } from './DownloadManager';
 import { VersionManager } from './VersionManager';
 
 export class BinaryManager {
+  private static downloadManager = DownloadManagerFactory.create();
+
   static async validateServerBinary(serverPath: string): Promise<void> {
     try {
       const stats = await fs.promises.stat(serverPath);
@@ -142,7 +144,7 @@ export class BinaryManager {
 
       await this.deleteFileIfExists(serverPath);
 
-      await DownloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
+      await this.downloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
 
       await this.validateServerBinary(serverPath);
 

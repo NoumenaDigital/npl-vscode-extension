@@ -1,121 +1,273 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
+import { DownloadManager, IFileSystem, IHttpClient } from '../../server/binary/DownloadManager';
+import * as http from 'http';
+import * as fs from 'fs';
 
-const mockFs = {
-  createWriteStream: sinon.stub(),
-  mkdirSync: sinon.stub(),
-  existsSync: sinon.stub(),
-  unlink: sinon.stub()
-};
+function createMockResponse(options: {
+  statusCode: number;
+  headers: http.IncomingHttpHeaders;
+}): http.IncomingMessage {
+  const callbacks: Record<string, Array<(...args: any[]) => void>> = {};
 
-const mockHttp = {
-  get: sinon.stub()
-};
+  const mockResponse = {
+    statusCode: options.statusCode,
+    headers: options.headers,
+    on: function(event: string, callback: (...args: any[]) => void) {
+      callbacks[event] = callbacks[event] || [];
+      callbacks[event].push(callback);
+      return this;
+    },
+    emit: function(event: string, ...args: any[]) {
+      const eventCallbacks = callbacks[event] || [];
+      eventCallbacks.forEach(callback => callback(...args));
+      return true;
+    },
+    pipe: function(destination: any) {
+      // Simulate piping behavior by triggering the destination's finish event
+      if (destination && typeof destination.emit === 'function') {
+        setImmediate(() => {
+          destination.emit('finish');
+        });
+      }
+      return destination;
+    }
+  } as unknown as http.IncomingMessage;
 
-const mockHttps = {
-  get: sinon.stub()
-};
+  return mockResponse;
+}
 
-// Mock the imports directly on the DownloadManager module
-// This requires modifying the DownloadManager to accept injected dependencies for testing
-// For this test example, we simulate testing without actually modifying the module
+function createMockClientRequest(): http.ClientRequest {
+  return {
+    on: sinon.stub(),
+    abort: sinon.stub()
+  } as unknown as http.ClientRequest;
+}
+
+function createMockWriteStream(): fs.WriteStream {
+  // Create a more sophisticated mock of WriteStream
+  const callbacks: Record<string, Array<(...args: any[]) => void>> = {};
+
+  const mockWriteStream = {
+    on: function(event: string, callback: (...args: any[]) => void) {
+      callbacks[event] = callbacks[event] || [];
+      callbacks[event].push(callback);
+      return this;
+    },
+    emit: function(event: string, ...args: any[]) {
+      const eventCallbacks = callbacks[event] || [];
+      eventCallbacks.forEach(callback => callback(...args));
+      return true;
+    },
+    close: sinon.stub(),
+    write: sinon.stub().returns(true)
+  } as unknown as fs.WriteStream;
+
+  return mockWriteStream;
+}
 
 suite('DownloadManager Test Suite', () => {
   let sandbox: sinon.SinonSandbox;
+  let mockFs: IFileSystem & sinon.SinonStubbedInstance<IFileSystem>;
+  let mockHttp: IHttpClient & sinon.SinonStubbedInstance<IHttpClient>;
+  let mockHttps: IHttpClient & sinon.SinonStubbedInstance<IHttpClient>;
+  let downloadManager: DownloadManager;
 
   setup(() => {
     sandbox = sinon.createSandbox();
 
-    // Reset all mocks
-    mockFs.createWriteStream.reset();
-    mockFs.mkdirSync.reset();
-    mockFs.existsSync.reset();
-    mockFs.unlink.reset();
-    mockHttp.get.reset();
-    mockHttps.get.reset();
+    // Create mock filesystem
+    mockFs = {
+      existsSync: sandbox.stub().returns(false),
+      mkdirSync: sandbox.stub(),
+      createWriteStream: sandbox.stub().returns(createMockWriteStream()),
+      unlink: sandbox.stub()
+    } as IFileSystem & sinon.SinonStubbedInstance<IFileSystem>;
 
-    // Setup default behavior
-    mockFs.unlink.callsFake((path, callback) => callback(null));
+    // Create mock HTTP clients
+    mockHttp = {
+      get: sandbox.stub()
+    } as IHttpClient & sinon.SinonStubbedInstance<IHttpClient>;
+
+    mockHttps = {
+      get: sandbox.stub()
+    } as IHttpClient & sinon.SinonStubbedInstance<IHttpClient>;
+
+    downloadManager = new DownloadManager(mockFs, mockHttp, mockHttps);
   });
 
   teardown(() => {
     sandbox.restore();
   });
 
-  // Since we can't easily test the actual DownloadManager implementation without refactoring
-  // for better testability, let's create a unit test for the core download logic
-
-  test('should handle download progress correctly', () => {
-    const progressSpy = sandbox.spy();
-    const totalSize = 100;
-    let downloadedSize = 0;
-
-    // Function that simulates what DownloadManager does with progress
-    function simulateDownloadProgress(chunk: Buffer) {
-      downloadedSize += chunk.length;
-      const currentProgress = Math.floor((downloadedSize / totalSize) * 100);
-
-      // Calculate increment since last report (simplified)
-      const increment = 20; // Each chunk represents 20% progress
-
-      progressSpy({
-        message: `Downloading... ${currentProgress}%`,
-        current: downloadedSize,
-        total: totalSize,
-        increment
-      });
-    }
-
-    // Initial progress
-    progressSpy({
-      message: 'Download started...',
-      current: 0,
-      total: totalSize,
-      increment: 0
+  test('should create directory if it does not exist', async () => {
+    const mockResponse = createMockResponse({
+      statusCode: 200,
+      headers: { 'content-length': '100' }
     });
 
-    // Simulate 5 chunks of 20 bytes each
-    for (let i = 0; i < 5; i++) {
-      simulateDownloadProgress(Buffer.alloc(20));
-    }
+    const mockWriteStream = createMockWriteStream();
+    mockFs.createWriteStream.returns(mockWriteStream);
 
-    // Final progress
-    progressSpy({
-      message: 'Download completed',
-      current: totalSize,
-      total: totalSize,
-      increment: 0
+    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+      callback(mockResponse);
+      return createMockClientRequest();
     });
 
-    // Verify progress reporting
-    assert.strictEqual(progressSpy.callCount, 7); // Initial + 5 chunks + completion
+    // Create a promise to be resolved when download completes
+    const downloadPromise = downloadManager.downloadFile('http://example.com/file', '/path/to/file');
 
-    // Verify initial call
-    assert.strictEqual(progressSpy.getCall(0).args[0].message, 'Download started...');
-    assert.strictEqual(progressSpy.getCall(0).args[0].current, 0);
+    // Simulate stream events
+    setImmediate(() => {
+      (mockResponse as any).emit('end');
+      (mockWriteStream as any).emit('finish');
+    });
 
-    // Verify one of the progress updates
-    assert.strictEqual(progressSpy.getCall(3).args[0].message, 'Downloading... 60%');
-    assert.strictEqual(progressSpy.getCall(3).args[0].current, 60);
-
-    // Verify final call
-    assert.strictEqual(progressSpy.getCall(6).args[0].message, 'Download completed');
-    assert.strictEqual(progressSpy.getCall(6).args[0].current, 100);
+    await downloadPromise;
+    assert.strictEqual(mockFs.mkdirSync.calledWith('/path/to', { recursive: true }), true);
   });
 
-  test('should handle download logic properly', () => {
-    // This is a more conceptual test that demonstrates what we would test
-    // if we refactored DownloadManager for better testability
+  test('should handle successful download with progress', async () => {
+    const progressCallback = sandbox.stub();
+    const mockResponse = createMockResponse({
+      statusCode: 200,
+      headers: { 'content-length': '100' }
+    });
 
-    // 1. Test redirects (302/301 responses)
-    // 2. Test error conditions (non-200 responses)
-    // 3. Test successful downloads
-    // 4. Test directory creation
+    const mockWriteStream = createMockWriteStream();
+    mockFs.createWriteStream.returns(mockWriteStream);
 
-    // These would be covered by unit tests if we refactored DownloadManager
-    // to accept injected dependencies for fs, http and https
+    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+      callback(mockResponse);
+      return createMockClientRequest();
+    });
 
-    // For now, just demonstrate a passing test
-    assert.strictEqual(true, true);
+    // Create a promise to be resolved when download completes
+    const downloadPromise = downloadManager.downloadFile('http://example.com/file', '/path/to/file', progressCallback);
+
+    // Simulate stream events
+    setImmediate(() => {
+      (mockResponse as any).emit('data', Buffer.from('test data'));
+      (mockResponse as any).emit('end');
+      (mockWriteStream as any).emit('finish');
+    });
+
+    await downloadPromise;
+    assert.strictEqual(progressCallback.called, true);
+    const progressCall = progressCallback.getCall(0);
+    assert.deepStrictEqual(progressCall.args[0], {
+      message: 'Download started...',
+      current: 0,
+      total: 100,
+      increment: 0
+    });
+  });
+
+  test('should handle non-200 responses', async () => {
+    const mockResponse = createMockResponse({
+      statusCode: 404,
+      headers: {}
+    });
+
+    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+      callback(mockResponse);
+      return createMockClientRequest();
+    });
+
+    try {
+      await downloadManager.downloadFile('http://example.com/file', '/path/to/file');
+      assert.fail('Should have thrown an error');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        assert.strictEqual(error.message, 'Failed to download, status code: 404');
+      } else {
+        assert.fail('Error should be an instance of Error');
+      }
+    }
+  });
+
+  test('should handle download errors', async () => {
+    const mockError = new Error('Network error');
+    mockHttp.get.callsFake((_url: string, _callback: (response: http.IncomingMessage) => void) => {
+      const req = createMockClientRequest();
+      (req.on as sinon.SinonStub).withArgs('error').callsFake((_event: string, callback: (error: Error) => void) => {
+        callback(mockError);
+        return req;
+      });
+      return req;
+    });
+
+    try {
+      await downloadManager.downloadFile('http://example.com/file', '/path/to/file');
+      assert.fail('Should have thrown an error');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        assert.strictEqual(error, mockError);
+      } else {
+        assert.fail('Error should be an instance of Error');
+      }
+    }
+
+    assert.strictEqual(mockFs.unlink.called, true);
+  });
+
+  test('should handle file write errors', async function() {
+    // Increase timeout for this test
+    this.timeout(5000);
+
+    const mockResponse = createMockResponse({
+      statusCode: 200,
+      headers: { 'content-length': '100' }
+    });
+
+    const mockWriteStream = createMockWriteStream();
+    const mockError = new Error('Write error');
+
+    // Don't initialize the writeStream in the mock yet
+    mockFs.createWriteStream.callsFake(() => {
+      // We'll get a reference to the writeStream directly
+      return mockWriteStream;
+    });
+
+    mockHttp.get.callsFake((_url: string, callback: (response: http.IncomingMessage) => void) => {
+      callback(mockResponse);
+      return createMockClientRequest();
+    });
+
+    // Set up a promise that we'll use to wait until pipe has been called
+    let resolvePipePromise: () => void;
+    const pipePromise = new Promise<void>(resolve => {
+      resolvePipePromise = resolve;
+    });
+
+    // Override the pipe method to detect when it's called
+    (mockResponse as any).pipe = function(destination: any) {
+      if (destination === mockWriteStream) {
+        // Signal that pipe has been called
+        process.nextTick(resolvePipePromise);
+      }
+      return destination;
+    };
+
+    // Start the download
+    const downloadPromise = downloadManager.downloadFile('http://example.com/file', '/path/to/file');
+
+    // Wait until pipe has been called
+    await pipePromise;
+
+    // Now trigger the error
+    process.nextTick(() => {
+      (mockWriteStream as any).emit('error', mockError);
+    });
+
+    // Now await and expect it to throw our error
+    try {
+      await downloadPromise;
+      assert.fail('Download should have failed');
+    } catch (error) {
+      assert.strictEqual(error, mockError, 'Error should be the mock error we created');
+    }
+
+    assert.strictEqual(mockFs.unlink.called, true, 'File should be cleaned up');
   });
 });

@@ -25,7 +25,7 @@ suite('BinaryManager Test Suite', () => {
     sandbox.stub(VersionManager, 'getBinDirectory').returns(path.join(mockExtensionPath, 'bin'));
 
     // Stub the DownloadManager
-    sandbox.stub(DownloadManager, 'downloadFile').resolves();
+    sandbox.stub(DownloadManager.prototype, 'downloadFile').resolves();
 
     // Stub BinaryManager's own methods that would call fs
     sandbox.stub(BinaryManager, 'validateServerBinary').resolves();

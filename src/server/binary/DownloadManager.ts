@@ -12,27 +12,44 @@ export interface DownloadProgress {
 
 export type ProgressCallback = (progress: DownloadProgress) => void;
 
+export interface IFileSystem {
+  existsSync(path: string): boolean;
+  mkdirSync(path: string, options?: fs.MakeDirectoryOptions): void;
+  createWriteStream(path: string): fs.WriteStream;
+  unlink(path: string, callback: (err: NodeJS.ErrnoException | null) => void): void;
+}
+
+export interface IHttpClient {
+  get(url: string, callback: (response: http.IncomingMessage) => void): http.ClientRequest;
+}
+
 export class DownloadManager {
-  static async downloadFile(
+  constructor(
+    private readonly fs: IFileSystem,
+    private readonly http: IHttpClient,
+    private readonly https: IHttpClient
+  ) {}
+
+  async downloadFile(
     url: string,
     destination: string,
     progressCallback?: ProgressCallback
   ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const dir = path.dirname(destination);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      if (!this.fs.existsSync(dir)) {
+        this.fs.mkdirSync(dir, { recursive: true });
       }
 
-      const file = fs.createWriteStream(destination);
-      const protocol = url.startsWith('https') ? https : http;
+      const file = this.fs.createWriteStream(destination);
+      const protocol = url.startsWith('https') ? this.https : this.http;
 
       const req = protocol.get(url, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Handle redirects
           if (response.headers.location) {
             file.close();
-            fs.unlink(destination, () => {
+            this.fs.unlink(destination, () => {
               this.downloadFile(response.headers.location!, destination, progressCallback)
                 .then(resolve)
                 .catch(reject);
@@ -99,14 +116,29 @@ export class DownloadManager {
       });
 
       req.on('error', (err) => {
-        fs.unlink(destination, () => {}); // Delete the file if download fails
+        this.fs.unlink(destination, () => {}); // Delete the file if download fails
         reject(err);
       });
 
       file.on('error', (err) => {
-        fs.unlink(destination, () => {}); // Delete the file if writing fails
+        this.fs.unlink(destination, () => {}); // Delete the file if writing fails
         reject(err);
       });
     });
+  }
+}
+
+export class DownloadManagerFactory {
+  static create(): DownloadManager {
+    return new DownloadManager(
+      {
+        existsSync: fs.existsSync,
+        mkdirSync: fs.mkdirSync,
+        createWriteStream: (path: string) => fs.createWriteStream(path),
+        unlink: fs.unlink
+      },
+      http,
+      https
+    );
   }
 }
