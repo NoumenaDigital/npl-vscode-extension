@@ -72,9 +72,6 @@ Available commands can be accessed by pressing `Cmd+Shift+P` and typing "NPL".
   - This generates JavaScript files in the `out/` directory (notably `out/extension.js`)
 - Run `npm run package` to create a .vsix file for distribution
 
-## TODO
+## Contributing
 
-- For improved performance and smaller package size:
-  - Consider bundling the extension using webpack or esbuild
-  - Follow the [bundling guide](https://code.visualstudio.com/api/working-with-extensions/bundling-extension)
-- Follow VS Code's [publishing guidelines](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) to publish to the marketplace
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
