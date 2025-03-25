@@ -112,7 +112,9 @@ export class BinaryManager {
       if (targetVersion === 'latest') {
         const latestRelease = await VersionManager.getLatestGithubRelease();
         if (!latestRelease) {
-          throw new Error('Failed to fetch latest version information');
+          const error = new Error('Failed to fetch latest version information');
+          this._logger?.logError('Failed to fetch latest version information', error);
+          throw error;
         }
         targetVersion = latestRelease.version;
         releaseDate = latestRelease.publishedAt;
@@ -170,7 +172,18 @@ export class BinaryManager {
 
         await this.deleteFileIfExists(serverPath);
 
-        await this.downloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
+        try {
+          await this.downloadManager.downloadFile(downloadUrl, serverPath, progressCallback);
+        } catch (downloadError) {
+          const detailedError = new Error(`Failed to download binary from ${downloadUrl} for version ${targetVersion}. Platform: ${process.platform}/${process.arch}. Error: ${downloadError instanceof Error ? downloadError.message : String(downloadError)}`);
+          this._logger?.logError('Binary download failed with detailed information', detailedError, {
+            url: downloadUrl,
+            version: targetVersion,
+            platform: process.platform,
+            architecture: process.arch
+          });
+          throw detailedError;
+        }
 
         await this.validateServerBinary(serverPath);
 
@@ -191,8 +204,15 @@ export class BinaryManager {
         throw e;
       }
     } catch (error) {
-      this._logger?.logError('Error downloading server binary', error) || console.error('Error downloading server binary:', error);
-      throw new Error(`Failed to download server binary: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this._logger?.logError('Error downloading server binary', error, {
+        extensionPath,
+        version: version || 'undefined',
+        selectedVersion: version || VersionManager.getSelectedVersion(),
+        platform: process.platform,
+        architecture: process.arch
+      }) || console.error('Error downloading server binary:', errorMessage);
+      throw new Error(`Failed to download server binary: ${errorMessage}`);
     }
   }
 }

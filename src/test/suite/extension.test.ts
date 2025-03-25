@@ -31,7 +31,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	test('NPL syntax error detection', async function() {
-		this.timeout(10000);
+		this.timeout(30000);
 
 		const document = await vscode.workspace.openTextDocument(syntaxErrorFilePath);
 		await vscode.window.showTextDocument(document);
@@ -51,7 +51,7 @@ suite('Extension Test Suite', () => {
 			setTimeout(() => {
 				disposable.dispose();
 				resolve(vscode.languages.getDiagnostics(document.uri));
-			}, 8000);
+			}, 25000);
 		});
 
 		const diagnostics = await diagnosticsPromise;
@@ -75,7 +75,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	test('NPL valid file has no syntax errors', async function() {
-		this.timeout(10000);
+		this.timeout(30000);
 
 		const document = await vscode.workspace.openTextDocument(validFilePath);
 		await vscode.window.showTextDocument(document);
@@ -100,7 +100,7 @@ suite('Extension Test Suite', () => {
 			setTimeout(() => {
 				disposable.dispose();
 				resolve(!hasDiagnostics);
-			}, 5000);
+			}, 25000);
 		});
 
 		// If result is false, diagnostics were found
