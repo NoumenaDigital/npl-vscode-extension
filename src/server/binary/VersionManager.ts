@@ -175,6 +175,7 @@ export class VersionManager {
               });
             }).on('error', reject);
           } else {
+            console.error('GitHub API redirect without location header. Status code:', res.statusCode);
             reject(new Error('Redirect with no location header'));
           }
           return;
