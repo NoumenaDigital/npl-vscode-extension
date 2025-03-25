@@ -166,13 +166,30 @@ export class VersionManager {
       const url = `https://api.github.com/repos/${this.getGitHubRepo()}/releases/latest`;
       const httpClient = HttpClientFactory.getInstance();
 
-      const release = await httpClient.get<GithubRelease>(url);
+      // Use GitHub auth token if available
+      const headers: Record<string, string> = {};
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (token) {
+        headers.Authorization = `token ${token}`;
+        this._logger?.log('Using GitHub token for API authentication');
+      }
+
+      const release = await httpClient.get<GithubRelease>(url, headers);
       return {
         version: release.tag_name,
         publishedAt: release.published_at
       };
     } catch (error) {
-      this._logger?.logError('Failed to get latest GitHub release', error);
+      // Log more detailed error information
+      if (error instanceof Error) {
+        this._logger?.logError('Failed to get latest GitHub release', error, {
+          errorMessage: error.message,
+          stack: error.stack,
+          rateLimit: true
+        });
+      } else {
+        this._logger?.logError('Failed to get latest GitHub release', error);
+      }
       return null;
     }
   }
@@ -182,13 +199,29 @@ export class VersionManager {
       const url = `https://api.github.com/repos/${this.getGitHubRepo()}/releases`;
       const httpClient = HttpClientFactory.getInstance();
 
-      const releases = await httpClient.get<GithubRelease[]>(url);
+      // Use GitHub auth token if available
+      const headers: Record<string, string> = {};
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (token) {
+        headers.Authorization = `token ${token}`;
+      }
+
+      const releases = await httpClient.get<GithubRelease[]>(url, headers);
       return releases.map(release => ({
         version: release.tag_name,
         publishedAt: release.published_at
       }));
     } catch (error) {
-      this._logger?.logError('Failed to get GitHub releases', error);
+      // Log more detailed error information
+      if (error instanceof Error) {
+        this._logger?.logError('Failed to get GitHub releases', error, {
+          errorMessage: error.message,
+          stack: error.stack,
+          rateLimit: true
+        });
+      } else {
+        this._logger?.logError('Failed to get GitHub releases', error);
+      }
       return [];
     }
   }

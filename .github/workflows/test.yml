@@ -35,8 +35,11 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.runner }}
-    name: Test on ${{ matrix.os }}-${{ matrix.arch }}
 
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    name: Test on ${{ matrix.os }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
