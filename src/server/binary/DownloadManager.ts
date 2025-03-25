@@ -41,14 +41,14 @@ export class DownloadManager {
         this.fs.mkdirSync(dir, { recursive: true });
       }
 
-      const file = this.fs.createWriteStream(destination);
+      const writeStream = this.fs.createWriteStream(destination);
       const protocol = url.startsWith('https') ? this.https : this.http;
 
       const req = protocol.get(url, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Handle redirects
           if (response.headers.location) {
-            file.close();
+            writeStream.close();
             this.fs.unlink(destination, () => {
               this.downloadFile(response.headers.location!, destination, progressCallback)
                 .then(resolve)
@@ -78,7 +78,7 @@ export class DownloadManager {
           });
         }
 
-        response.pipe(file);
+        response.pipe(writeStream);
 
         response.on('data', (chunk) => {
           downloadedSize += chunk.length;
@@ -101,8 +101,8 @@ export class DownloadManager {
           }
         });
 
-        file.on('finish', () => {
-          file.close();
+        writeStream.on('finish', () => {
+          writeStream.close();
           if (progressCallback) {
             progressCallback({
               message: 'Download completed',
@@ -120,7 +120,7 @@ export class DownloadManager {
         reject(err);
       });
 
-      file.on('error', (err) => {
+      writeStream.on('error', (err) => {
         this.fs.unlink(destination, () => {}); // Delete the file if writing fails
         reject(err);
       });
