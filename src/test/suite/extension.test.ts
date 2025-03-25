@@ -111,18 +111,3 @@ suite('Extension Test Suite', () => {
 			`Expected no diagnostics, but found ${diagnostics.length}: ${diagnostics.map(d => d.message).join(', ')}`);
 	});
 });
-
-async function waitForDiagnostics(uri: vscode.Uri, timeout = 5000): Promise<vscode.Diagnostic[]> {
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		const diagnostics = vscode.languages.getDiagnostics(uri);
-		if (diagnostics.length > 0) {
-			return diagnostics;
-		}
-
-		await new Promise(resolve => setTimeout(resolve, 100));
-	}
-
-	return vscode.languages.getDiagnostics(uri);
-}
