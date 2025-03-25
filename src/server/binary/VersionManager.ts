@@ -101,7 +101,7 @@ export class VersionManager {
         return version;
       }
     } catch (e) {
-      // Ignore errors
+      console.error('Error reading server version from configuration:', e);
     }
 
     return 'latest';

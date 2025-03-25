@@ -28,7 +28,7 @@ export class ServerManager {
         return port;
       }
     } catch (e) {
-      // Ignore errors
+      this.logger.logError('Error reading server port from configuration:', e);
     }
 
     return this.DEFAULT_PORT;
