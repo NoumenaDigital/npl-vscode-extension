@@ -38,3 +38,6 @@ yarn-error.log*
 
 # Make sure we don't include downloaded server binaries
 bin/**
+
+DEVELOPING.md
+CONTRIBUTING.md
