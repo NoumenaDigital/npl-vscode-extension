@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - This changelog
 
+### Removed
+
+- Folding from language-configuration.json. This will be added back in a future release.
+
 ## [1.0.0] - 2025-03-25
 
 ### Added
