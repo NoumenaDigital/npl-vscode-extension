@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- The `Publish` commit message trailer – publication occurs when the `version` in `package.json` is changed instead
 - Folding support. This will be added back in a future release.
 
 ## [1.0.0] - 2025-03-25

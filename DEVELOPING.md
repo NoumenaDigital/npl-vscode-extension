@@ -53,6 +53,14 @@ If you encounter `Failed to fetch latest version information` errors in tests, t
   - This generates JavaScript files in the `out/` directory (notably `out/extension.js`)
 - Run `npm run package` to create a .vsix file for distribution
 
+## Versioning and Publishing
+
+When you want to publish a new version of the extension:
+
+1. Update the `version` field in `package.json`
+2. Create a PR with your changes
+3. When merged to master, the CI will automatically detect the version change and publish the extension
+
 ## Server Configuration
 
 The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
