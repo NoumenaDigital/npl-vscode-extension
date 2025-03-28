@@ -44,3 +44,11 @@ The extension can be configured through VS Code settings:
 
 - `NPL.server.version`: Version of the language server to use. Use 'latest' for the most recent version, or run the
   'NPL: Select Language Server Version' command for a visual picker with auto-download.
+
+## Installation from VSIX
+
+Some VS Code forks (like Cursor) have outdated extension marketplaces. In this case, you can install the extension
+manually using the VSIX file. Instructions can be found [here](https://www.cursor.com/how-to-install-extension).
+
+The VSIX file can also be downloaded from our
+[GitHub releases](https://github.com/NoumenaDigital/npl-vscode-extension/releases).
