@@ -53,8 +53,11 @@ limiting.
 When you want to publish a new version of the extension:
 
 1. Update the `version` field in `package.json`
-2. Create a PR with your changes
-3. When merged to master, the CI will automatically detect the version change and publish the extension
+2. Move all changes from the `[Unreleased]` section in `CHANGELOG.md` to a new version section with the current date.
+   Make sure the new section contains all the user-facing changes since the last release.
+3. Create a PR with these changes (can be part of a feature PR, in which case you should make sure its features are also
+   included)
+4. When merged to master, the CI will automatically detect the version change and publish the extension
 
 ## Server Configuration
 
