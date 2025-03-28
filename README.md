@@ -6,11 +6,16 @@ A VS Code extension providing support for the Noumena Protocol Language (NPL), w
 
 This extension provides support for the Noumena Protocol Language (NPL) in VS Code (and VS Code forks such as Cursor).
 
+Available for installation from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=noumenadigital.npl-dev-vscode-extension), or
+manually using the VSIX file (see [below](#installation-from-vsix)).
+
 ## Features
 
 - **Syntax highlighting** Out-of-the-box support for `.npl` files with custom syntax highlighting.
 
-- **Language Server support** Integrates seamlessly with the NPL Language Server for real-time feedback
+- **Language Server support** Integrates seamlessly with the
+  [NPL Language Server](https://github.com/NoumenaDigital/npl-language-server) for real-time feedback
 
 ### Error and Warning Diagnostics
 
