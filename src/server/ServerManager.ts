@@ -128,24 +128,12 @@ export class ServerManager {
   }
 
   async getServerConnection(context: vscode.ExtensionContext): Promise<StreamInfo> {
-    const existingConnection = await this.tryConnectToExistingServer(context);
+    const existingConnection = await this.connectToExistingServer();
     if (existingConnection) {
       return existingConnection;
     }
 
     return this.startNewServerInstance(context);
-  }
-
-  private async tryConnectToExistingServer(context: vscode.ExtensionContext): Promise<StreamInfo | null> {
-    const existingConnection = await this.connectToExistingServer();
-    if (existingConnection) {
-      // We have an existing connection, check for updates in the background
-      this.checkForUpdates(context).catch(err => {
-        this.logger.logError('Error checking for updates in background', err);
-      });
-      return existingConnection;
-    }
-    return null;
   }
 
   private async startNewServerInstance(context: vscode.ExtensionContext): Promise<StreamInfo> {
@@ -311,27 +299,8 @@ export class ServerManager {
       }
     });
 
-    this.sendInitializeRequest(currentProcess);
-
+    // Let the language client handle initialization
     return this.waitForServerInitialization(currentProcess, startupError);
-  }
-
-  private sendInitializeRequest(currentProcess: childProcess.ChildProcess) {
-    const initializeRequest = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        processId: process.pid,
-        clientInfo: { name: 'vscode' },
-        rootUri: null,
-        capabilities: {}
-      }
-    };
-    const content = JSON.stringify(initializeRequest);
-    const contentLength = Buffer.byteLength(content, 'utf8');
-    const header = `Content-Length: ${contentLength}\r\n\r\n`;
-    currentProcess.stdin!.write(header + content, 'utf8');
   }
 
   private waitForServerInitialization(
