@@ -35,14 +35,19 @@ export class LanguageClientManager {
     const testSourcesSetting = vscode.workspace.getConfiguration('NPL').get<string>('testSources');
 
     // Create the main workspace folder from sourcesSetting if available
-    let primaryWorkspaceFolder: vscode.WorkspaceFolder | undefined;
+    let sourcesFolder: vscode.WorkspaceFolder | undefined;
     if (sourcesSetting && sourcesSetting.length > 0) {
-      primaryWorkspaceFolder = {
+      sourcesFolder = {
         uri: vscode.Uri.file(sourcesSetting),
         name: 'NPL Sources',
         index: 0
       };
       this.logger.log(`Using custom workspace folder for sources: ${sourcesSetting}`);
+    } else {
+      // the client takes a single workspace folder, so we use the first one;
+      // in the future, we might want to pass in all the workspace folders
+      // and allow the user to configure multiple workspace folders
+      sourcesFolder = vscode.workspace.workspaceFolders?.[0];
     }
 
     // Test sources will be passed in initializationOptions
@@ -63,12 +68,8 @@ export class LanguageClientManager {
       connectionOptions: {
         maxRestartCount: 3
       },
-      // Set main workspace folder if available
-      workspaceFolder: primaryWorkspaceFolder,
-      // Pass test sources as initialization option with same type
-      initializationOptions: {
-        testSources: testSourcesFolder
-      },
+      workspaceFolder: sourcesFolder,
+      initializationOptions: { testSources: testSourcesFolder },
       errorHandler: {
         error: (error, message) => {
           this.logger.logError(`Language client error: ${message}`, error);
@@ -80,7 +81,7 @@ export class LanguageClientManager {
       }
     };
 
-    this.logger.log(`Initialization setup - Main workspace: ${primaryWorkspaceFolder?.uri.fsPath || 'none'}, Test sources: ${testSourcesFolder?.uri.fsPath || 'none'}`);
+    this.logger.log(`Initialization setup - Main workspace: ${sourcesFolder?.uri.fsPath || 'none'}, Test sources: ${testSourcesFolder?.uri.fsPath || 'none'}`);
 
     this.client = new LanguageClient(
       'nplLanguageServer',
