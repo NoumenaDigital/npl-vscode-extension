@@ -44,21 +44,13 @@ export class LanguageClientManager {
       };
       this.logger.log(`Using custom workspace folder for sources: ${sourcesSetting}`);
     } else {
-      // the client takes a single workspace folder, so we use the first one;
-      // in the future, we might want to pass in all the workspace folders
-      // and allow the user to configure multiple workspace folders
       sourcesFolder = vscode.workspace.workspaceFolders?.[0];
     }
 
-    // Test sources will be passed in initializationOptions
-    let testSourcesFolder: vscode.WorkspaceFolder | undefined;
+    let testSourcesUri: string | undefined;
     if (testSourcesSetting && testSourcesSetting.length > 0) {
-      testSourcesFolder = {
-        uri: vscode.Uri.file(testSourcesSetting),
-        name: 'NPL Test Sources',
-        index: 1
-      };
-      this.logger.log(`Added test sources folder: ${testSourcesSetting}`);
+      testSourcesUri = vscode.Uri.file(testSourcesSetting).toString();
+      this.logger.log(`Added test sources: ${testSourcesSetting}`);
     }
 
     const clientOptions: LanguageClientOptions = {
@@ -69,7 +61,7 @@ export class LanguageClientManager {
         maxRestartCount: 3
       },
       workspaceFolder: sourcesFolder,
-      initializationOptions: { testSources: testSourcesFolder },
+      initializationOptions: { testSourcesUri },
       errorHandler: {
         error: (error, message) => {
           this.logger.logError(`Language client error: ${message}`, error);
@@ -81,7 +73,7 @@ export class LanguageClientManager {
       }
     };
 
-    this.logger.log(`Initialization setup - Main workspace: ${sourcesFolder?.uri.fsPath || 'none'}, Test sources: ${testSourcesFolder?.uri.fsPath || 'none'}`);
+    this.logger.log(`Initialization setup - Main workspace: ${sourcesFolder?.uri.fsPath || 'none'}, Test sources: ${testSourcesUri || 'none'}`);
 
     this.client = new LanguageClient(
       'nplLanguageServer',
