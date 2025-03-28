@@ -4,7 +4,7 @@ A VS Code extension providing support for the Noumena Protocol Language (NPL), w
 
 ## Overview
 
-This extension provides support for the Noumena Protocol Language (NPL) in VS Code.
+This extension provides support for the Noumena Protocol Language (NPL) in VS Code (and VS Code forks such as Cursor).
 
 ## Features
 
