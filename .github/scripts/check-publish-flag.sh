@@ -1,17 +1,24 @@
 #!/bin/bash
 set -e
 
-# Get the commit message
-COMMIT_MSG=$(git log -1 --pretty=%B)
+BASE_BRANCH="master"
 
-# Check for Publish trailer
-if [[ "$COMMIT_MSG" == *"Publish: true"* ]]; then
+CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+# Checkout the base branch temporarily to compare version
+git fetch origin $BASE_BRANCH --quiet
+git checkout FETCH_HEAD -- package.json --quiet
+
+PREVIOUS_VERSION=$(node -p "require('./package.json').version")
+
+# Restore the working copy package.json
+git checkout HEAD -- package.json --quiet
+
+# Check if version has changed
+if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
   echo "should_publish=true"
-  echo "Publish: true found in commit message"
-elif [[ "$COMMIT_MSG" == *"Publish: false"* ]]; then
-  echo "should_publish=false"
-  echo "Publish: false found in commit message - skipping publication"
+  echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION - will publish"
 else
   echo "should_publish=false"
-  echo "No Publish trailer found in commit message - skipping publication"
+  echo "Version unchanged ($CURRENT_VERSION) - skipping publication"
 fi

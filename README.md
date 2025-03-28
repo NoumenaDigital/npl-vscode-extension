@@ -4,88 +4,56 @@ A VS Code extension providing support for the Noumena Protocol Language (NPL), w
 
 ## Overview
 
-This extension serves as a client for the NPL language server, providing features such as:
+This extension provides support for the Noumena Protocol Language (NPL) in VS Code (and VS Code forks such as Cursor).
 
-- Syntax highlighting for `.npl` files
-- Language server integration for code intelligence
-- Error reporting and diagnostics
+Available for installation from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=noumenadigital.npl-dev-vscode-extension), or
+manually using the VSIX file (see [below](#installation-from-vsix)).
 
-## Development Setup
+## Features
 
-### Prerequisites
+- **Syntax highlighting** Out-of-the-box support for `.npl` files with custom syntax highlighting.
 
-- VS Code
-- Node.js and npm
+- **Language Server support** Integrates seamlessly with the
+  [NPL Language Server](https://github.com/NoumenaDigital/npl-language-server) for real-time feedback
 
-### Getting Started
+### Error and Warning Diagnostics
 
-1. Clone this repository
-2. Run `npm install` to install dependencies
-3. Press `F5` to open a new VS Code window with the extension loaded
-4. Create or open a file with a `.npl` extension to see the extension in action
+<img src="img/error.png" alt="Error Example" width="50%" />
+<img src="img/warning.png" alt="Warning Example" width="50%" />
 
-## Configuration
+Detailed diagnostics are provided via the NPL Language Server, including inline errors and warnings during development.
+These are the same errors and warnings you would get when compiling your NPL code.
 
-### Server Port
+### Version Management
 
-The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
+<img alt="Selecting the language server version" src="img.png" width="50%"/>
 
-- **Development**: The default port is configured in `.vscode/launch.json`
-- **Production**: Set the `NPL_SERVER_PORT` environment variable before launching VS Code
+You can easily switch between different versions of the NPL Language Server to match your project's needs (e.g. using
+deprecated syntax). The versions correspond to Noumena Platform releases.
 
-## Project Structure
-
-- `src/extension.ts`: Main extension code that initializes the language client
-- `server/language-server`: Binary executable for the NPL language server
-- `syntaxes/`: Contains TextMate grammar for syntax highlighting
-- `out/`: Compiled JavaScript output
-- `src/test/`: Tests for the extension
-
-## How It Works
-
-The extension activates when a `.npl` file is opened and:
-
-1. Starts the NPL Language Server as a child process
-2. Establishes communication with the server using stdin/stdout pipes
-3. Processes language features like diagnostics, code completion, etc.
+You can access this feature by running the command `NPL: Select Language Server Version` from the Command Palette
+(`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS).
 
 ## Commands
 
-Available commands can be accessed by pressing `Cmd+Shift+P` and typing "NPL".
+Available commands can be accessed by opening the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on
+macOS) and typing "NPL":
 
-## Development Workflow
+- `NPL: Select Language Server Version` - Choose which version of the language server to use
+- `NPL: Clean Language Server Files and Reset` - Clean up language server files and reset to default state
 
-- Make changes to the extension code in `src/extension.ts`
-- Press `Cmd+R` to reload the VS Code window with your changes
-- Debug your extension by setting breakpoints in `src/extension.ts`
-- View extension output in the Debug Console
+## Configuration
 
-## Testing
+The extension can be configured through VS Code settings:
 
-- Run `npm run watch` to start the TypeScript compiler in watch mode (needed to automatically compile code changes before testing)
-- Run tests with `npm run test`
-- Tests are located in `src/test/` with filenames matching the pattern `**.test.ts`
+- `NPL.server.version`: Version of the language server to use. Use 'latest' for the most recent version, or run the
+  'NPL: Select Language Server Version' command for a visual picker with auto-download.
 
-### E2E Tests and GitHub Rate Limiting
+## Installation from VSIX
 
-The extension's E2E tests communicate with the GitHub API to download the latest language server binary. Without authentication, you may encounter rate limiting errors, especially in CI environments.
+Some VS Code forks (like Cursor) have outdated extension marketplaces. In this case, you can install the extension
+manually using the VSIX file. Instructions can be found [here](https://www.cursor.com/how-to-install-extension).
 
-To avoid this, set a GitHub token in your environment:
-
-```bash
-export GITHUB_TOKEN=your_github_token
-# or
-export GH_TOKEN=your_github_token
-```
-
-If you encounter `Failed to fetch latest version information` errors in tests, this is likely due to GitHub API rate limiting.
-
-## Build and Package
-
-- Run `npm run compile` or `npm run vscode:prepublish` to compile the extension
-  - This generates JavaScript files in the `out/` directory (notably `out/extension.js`)
-- Run `npm run package` to create a .vsix file for distribution
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+The VSIX file can also be downloaded from our
+[GitHub releases](https://github.com/NoumenaDigital/npl-vscode-extension/releases).

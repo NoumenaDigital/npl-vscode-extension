@@ -20,18 +20,10 @@ export async function activate(context: vscode.ExtensionContext) {
   HttpClientFactory.setLogger(logger);
 
   try {
-    // Register commands
     context.subscriptions.push(
       vscode.commands.registerCommand('npl.selectServerVersion', () => {
         serverManager.showVersionPicker(context);
       }),
-
-      // Command to open settings to the version selection
-      vscode.commands.registerCommand('npl.openVersionSettings', () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.server.version');
-      }),
-
-      // Command to clean server files
       vscode.commands.registerCommand('npl.cleanServerFiles', () => {
         serverManager.cleanServerFiles(context);
       })

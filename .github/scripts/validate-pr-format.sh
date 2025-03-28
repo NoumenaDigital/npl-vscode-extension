@@ -19,17 +19,5 @@ if echo "$PR_BODY" | grep -q "Ticket:"; then
   fi
 fi
 
-# Check Publish value
-# Remove carriage returns before checking
-PR_BODY_UNIX=$(echo "$PR_BODY" | tr -d '\r')
-if echo "$PR_BODY_UNIX" | grep -q "^Publish: true$" || echo "$PR_BODY_UNIX" | grep -q "^Publish: false$"; then
-  # Valid format found
-  :
-else
-  echo "Error: PR description must include a line with exactly 'Publish: true' or 'Publish: false'."
-  echo "Note: Make sure there are no trailing whitespace characters after 'true' or 'false'."
-  exit 1
-fi
-
 echo "PR validation passed!"
 exit 0

@@ -20,7 +20,9 @@ All contributions should be submitted as pull requests. To ensure your PR is acc
 2. **Include Complete PR Description** - Replace the placeholder comment with a description of the diff, and set the
    `Publish:` trailer to `true` or `false` depending on if it should be published to the marketplace or not
 3. **Include Test Coverage** - All new or modified functionality must include appropriate test coverage
-4. **Pass All Tests** - Your changes must pass all the tests, see [README.md](README.md)
+4. **Pass All Tests** - Your changes must pass all the tests, see [DEVELOPING.md](DEVELOPING.md)
+5. **Update the changelog** – If the diff added, changed, or removed user-facing features, add them to the
+   [CHANGELOG.md](CHANGELOG.md). See also [Versioning and Publishing](DEVELOPING.md#versioning-and-publishing).
 
 ### PR Validation
 
