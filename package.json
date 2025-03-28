@@ -62,10 +62,6 @@
         "title": "NPL: Select Language Server Version"
       },
       {
-        "command": "npl.openVersionSettings",
-        "title": "NPL: Open Server Version Settings"
-      },
-      {
         "command": "npl.cleanServerFiles",
         "title": "NPL: Clean Language Server Files and Reset"
       }

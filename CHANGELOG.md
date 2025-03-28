@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The `Publish` commit message trailer – publication occurs when the `version` in `package.json` is changed instead
 - Folding support. This will be added back in a future release.
+- The `NPL: Open Server Version Settings` command. This is already handled by the `NPL: Select Language Server Version`
+  command, which is more user-friendly and provides a visual picker.
 
 ## [1.0.0] - 2025-03-25
 
