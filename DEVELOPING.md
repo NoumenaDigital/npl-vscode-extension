@@ -29,13 +29,15 @@
 
 ## Testing
 
-- Run `npm run watch` to start the TypeScript compiler in watch mode (needed to automatically compile code changes before testing)
+- Run `npm run watch` to start the TypeScript compiler in watch mode (needed to automatically compile code changes
+  before testing)
 - Run tests with `npm run test`
 - Tests are located in `src/test/` with filenames matching the pattern `**.test.ts`
 
 ### E2E Tests and GitHub Rate Limiting
 
-The extension's E2E tests communicate with the GitHub API to download the latest language server binary. Without authentication, you may encounter rate limiting errors, especially in CI environments.
+The extension's E2E tests communicate with the GitHub API to download the latest language server binary. Without
+authentication, you may encounter rate limiting errors, especially in CI environments.
 
 To avoid this, set a GitHub token in your environment:
 
@@ -45,7 +47,8 @@ export GITHUB_TOKEN=your_github_token
 export GH_TOKEN=your_github_token
 ```
 
-If you encounter `Failed to fetch latest version information` errors in tests, this is likely due to GitHub API rate limiting.
+If you encounter `Failed to fetch latest version information` errors in tests, this is likely due to GitHub API rate
+limiting.
 
 ## Build and Package
 
@@ -63,11 +66,13 @@ When you want to publish a new version of the extension:
 
 ## Server Configuration
 
-The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is currently primarily intended for development.
+The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is
+currently primarily intended for development.
 
 - **Development**: The default port is configured in `.vscode/launch.json`
 - **Production**: Set the `NPL_SERVER_PORT` environment variable before launching VS Code
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this
+project.

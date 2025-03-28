@@ -12,7 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Moved developer-relevant parts of the README into DEVELOPING.md, such that the README is more suitable for the marketplace page
+- Moved developer-relevant parts of the README into DEVELOPING.md, such that the README is more suitable for the
+  marketplace page
 
 ### Removed
 
