@@ -67,10 +67,8 @@ When you want to publish a new version of the extension:
 ## Server Configuration
 
 The extension attempts to connect to an NPL language server on port 5007 before starting its own server. The TCP mode is
-currently primarily intended for development.
-
-- **Development**: The default port is configured in `.vscode/launch.json`
-- **Production**: Set the `NPL_SERVER_PORT` environment variable before launching VS Code
+currently primarily intended for development. If no server is found, the extension will start its own server in STDIO
+mode.
 
 ## Contributing
 
