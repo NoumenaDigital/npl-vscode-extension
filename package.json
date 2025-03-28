@@ -13,9 +13,6 @@
   "engines": {
     "vscode": "^1.92.0"
   },
-  "activationEvents": [
-    "onLanguage:npl"
-  ],
   "categories": [
     "Programming Languages",
     "Linters"
@@ -53,6 +50,16 @@
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
+        },
+        "NPL.sources": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the NPL sources. Leave empty to use the current workspace root."
+        },
+        "NPL.testSources": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the NPL test sources. Leave empty to use the current workspace root."
         }
       }
     },
@@ -68,6 +75,14 @@
       {
         "command": "npl.cleanServerFiles",
         "title": "NPL: Clean Language Server Files and Reset"
+      },
+      {
+        "command": "npl.selectSources",
+        "title": "NPL: Select NPL Sources"
+      },
+      {
+        "command": "npl.selectTestSources",
+        "title": "NPL: Select NPL Test Sources"
       }
     ]
   },
