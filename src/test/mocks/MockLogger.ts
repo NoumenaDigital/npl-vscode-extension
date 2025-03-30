@@ -25,8 +25,8 @@ export class MockLogger {
 
   logError(message: string, error?: any, metadata?: Record<string, any>): void {
     this.errors.push(message);
-    if (error) this.errors.push(error.toString());
-    if (metadata) this.errors.push(JSON.stringify(metadata));
+    if (error) {this.errors.push(error.toString());}
+    if (metadata) {this.errors.push(JSON.stringify(metadata));}
   }
 
   getOutputChannel(): vscode.OutputChannel {

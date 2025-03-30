@@ -62,24 +62,6 @@ suite('BinaryManager Test Suite', () => {
     sandbox.restore();
   });
 
-  test('downloadServerBinary invocation - simple test', async () => {
-    // This is a simplified test to check invocation only
-    const progressSpy = sandbox.spy();
-
-    // Skip the actual implementation by stubbing downloadServerBinary
-    const downloadStub = sandbox.stub(BinaryManager, 'downloadServerBinary').resolves('/mock/binary/path');
-
-    await BinaryManager.downloadServerBinary(
-      mockExtensionPath,
-      progressSpy as unknown as ProgressCallback
-    );
-
-    // Verify it was called with the expected arguments
-    assert.strictEqual(downloadStub.calledOnce, true);
-    assert.strictEqual(downloadStub.firstCall.args[0], mockExtensionPath);
-    assert.strictEqual(downloadStub.firstCall.args[1], progressSpy);
-  });
-
   test('validateServerBinary mocked behavior', async () => {
     // Since we can't directly stub fs.constants and fs.promises.stat,
     // we'll just verify that our stub was called
