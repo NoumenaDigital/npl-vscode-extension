@@ -11,7 +11,6 @@ import * as fs from 'fs';
 export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
   private logger: Logger;
-  private initialized: boolean = false;
   private readonly DEFAULT_PORT = 5007;
   private readonly SERVER_START_TIMEOUT_MS = 15000;
 
@@ -267,20 +266,6 @@ export class ServerManager {
     currentProcess.stdout!.on('data', (data) => {
       const message = data.toString();
       this.logger.log(`Server stdout: ${message}`);
-      message.split('\r\n').forEach((line: string) => {
-        if (line.trim()) {
-          try {
-            const parsed = JSON.parse(line);
-            if ((parsed.method === 'initialized') ||
-                (parsed.id === 1 && parsed.result && parsed.result.capabilities)) {
-              this.initialized = true; // Update class property
-              this.logger.log('Server initialized successfully');
-            }
-          } catch (e) {
-            // Not a JSON message, ignore
-          }
-        }
-      });
     });
 
     currentProcess.stderr?.on('data', (data) => {
@@ -294,8 +279,9 @@ export class ServerManager {
 
     currentProcess.on('exit', (code, signal) => {
       this.logger.log(`Server process exited with code ${code} and signal ${signal}`);
-      if (!this.initialized && currentProcess === this.serverProcess) {
-        this.serverProcess = undefined;
+      // Reset serverProcess if it exits unexpectedly before client connects
+      if (currentProcess === this.serverProcess) {
+         this.serverProcess = undefined;
       }
     });
 
@@ -308,41 +294,66 @@ export class ServerManager {
       startupError: Error | undefined
   ): Promise<StreamInfo> {
     return new Promise((resolve, reject) => {
-      let resolved = false;
+      let processExited = false;
+      let processError: Error | undefined = startupError;
 
       const timeout = setTimeout(() => {
-        if (!resolved && currentProcess && !currentProcess.killed) {
+        if (!processExited && currentProcess && !currentProcess.killed) {
           this.logger.logError(`Server initialization timed out after ${this.SERVER_START_TIMEOUT_MS}ms`);
           currentProcess.kill();
           reject(new Error(`Timeout waiting for server to start after ${this.SERVER_START_TIMEOUT_MS}ms`));
         }
       }, this.SERVER_START_TIMEOUT_MS);
 
-      currentProcess.once('exit', (code) => {
-        if (!resolved) {
-          clearTimeout(timeout);
-          this.logger.logError(`Server process exited with code ${code} before initialization`);
-          reject(new Error(`Server process exited with code ${code} before initialization`));
+      const onExit = (code: number | null) => {
+        processExited = true;
+        clearTimeout(timeout);
+        if (code !== 0 && code !== null) {
+           const exitMsg = `Server process exited prematurely with code ${code}`;
+           this.logger.logError(exitMsg);
+           reject(new Error(exitMsg));
+        } else {
+            // Process exited cleanly before we could resolve, likely an issue
+            const exitMsg = `Server process exited prematurely without error code before connection established`;
+            this.logger.logError(exitMsg);
+            reject(new Error(exitMsg));
         }
-      });
+      };
 
-      const checkInterval = setInterval(() => {
-        if (startupError) {
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          this.logger.logError(`Server startup error: ${startupError.message}`);
-          reject(startupError);
-        } else if (this.initialized && currentProcess && !currentProcess.killed) { // Use class property
-          resolved = true;
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          this.logger.log('Server initialized successfully, connection established');
-          resolve({
-            reader: currentProcess.stdout!,
-            writer: currentProcess.stdin!
-          });
-        }
-      }, 100);
+      const onError = (err: Error) => {
+        processError = err;
+        processExited = true; // Treat error as a form of exit for rejection logic
+        clearTimeout(timeout);
+        this.logger.logError(`Server process error: ${err.message}`);
+        reject(err);
+      };
+
+      currentProcess.once('exit', onExit);
+      currentProcess.once('error', onError);
+
+      // Check if streams are available. If they are, resolve.
+      // The LanguageClient will handle the actual LSP initialization handshake.
+      if (currentProcess.stdout && currentProcess.stdin) {
+        this.logger.log('Server process started, streams available. Handing over to LanguageClient.');
+        clearTimeout(timeout);
+        // Remove listeners we added to prevent leaks if client takes over
+        currentProcess.removeListener('exit', onExit);
+        currentProcess.removeListener('error', onError);
+        resolve({
+          reader: currentProcess.stdout,
+          writer: currentProcess.stdin
+        });
+      } else if (processError) {
+        // Reject immediately if a startup error was already caught
+        clearTimeout(timeout);
+        this.logger.logError(`Server startup error before streams available: ${processError.message}`);
+        reject(processError);
+      } else if (processExited) {
+        // Reject if the process exited before streams were confirmed
+        clearTimeout(timeout);
+        reject(new Error('Server process exited before streams could be confirmed.'));
+      }
+      // If streams aren't ready yet, the timeout or exit/error listeners will handle rejection.
     });
   }
 

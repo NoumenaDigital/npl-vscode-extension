@@ -31,26 +31,53 @@ export class LanguageClientManager {
     };
 
     // Get workspace folder settings from configuration
-    const sourcesSetting = vscode.workspace.getConfiguration('NPL').get<string>('sources');
-    const testSourcesSetting = vscode.workspace.getConfiguration('NPL').get<string>('testSources');
+    const config = vscode.workspace.getConfiguration('NPL');
+    const sourcesSetting = config.get<string>('sources');
+    const testSourcesSetting = config.get<string>('testSources');
 
-    // Create the main workspace folder from sourcesSetting if available
-    let sourcesFolder: vscode.WorkspaceFolder | undefined;
-    if (sourcesSetting && sourcesSetting.length > 0) {
-      sourcesFolder = {
+    const workspaceFolders: vscode.WorkspaceFolder[] = [];
+
+    // Determine main source folders
+    if (sourcesSetting && sourcesSetting.trim().length > 0) {
+      workspaceFolders.push({
         uri: vscode.Uri.file(sourcesSetting),
         name: 'NPL Sources',
-        index: 0
-      };
+        index: workspaceFolders.length // Assign index sequentially
+      });
       this.logger.log(`Using custom workspace folder for sources: ${sourcesSetting}`);
-    } else {
-      sourcesFolder = vscode.workspace.workspaceFolders?.[0];
+    } else if (vscode.workspace.workspaceFolders) {
+      // Use VS Code's workspace folders if no custom setting
+      vscode.workspace.workspaceFolders.forEach((folder, index) => {
+        workspaceFolders.push({
+          uri: folder.uri,
+          name: folder.name,
+          index: index // Preserve original index if possible, though LSP server might re-index
+        });
+      });
+      this.logger.log(`Using VS Code workspace folders: ${workspaceFolders.map(f => f.uri.fsPath).join(', ')}`);
     }
 
-    let testSourcesUri: string | undefined;
-    if (testSourcesSetting && testSourcesSetting.length > 0) {
-      testSourcesUri = vscode.Uri.file(testSourcesSetting).toString();
-      this.logger.log(`Added test sources: ${testSourcesSetting}`);
+    // Add test sources folder if configured
+    if (testSourcesSetting && testSourcesSetting.trim().length > 0) {
+       const testSourceUri = vscode.Uri.file(testSourcesSetting);
+       // Ensure we don't add duplicates if test sources are inside main sources/workspace
+       if (!workspaceFolders.some(wf => wf.uri.fsPath === testSourceUri.fsPath)) {
+         workspaceFolders.push({
+           uri: testSourceUri,
+           name: 'NPL Test Sources',
+           index: workspaceFolders.length // Assign index sequentially
+         });
+         this.logger.log(`Added test sources folder: ${testSourcesSetting}`);
+       } else {
+          this.logger.log(`Test sources folder (${testSourcesSetting}) is already included in the workspace folders.`);
+       }
+    }
+
+    // If no folders are determined, we might need a fallback or error handling
+    if (workspaceFolders.length === 0) {
+      this.logger.log('Warning: No workspace folders determined for the NPL Language Server. The server might not function correctly.');
+      // Depending on server requirements, you might want to throw an error here
+      // or provide a default (e.g., based on the first opened file later)
     }
 
     const clientOptions: LanguageClientOptions = {
@@ -60,20 +87,28 @@ export class LanguageClientManager {
       connectionOptions: {
         maxRestartCount: 3
       },
-      workspaceFolder: sourcesFolder,
-      initializationOptions: { testSourcesUri },
+      // Let the client handle standard workspace folders based on VS Code's state.
+      // Pass the *effective* list, including custom paths, via initializationOptions.
+      initializationOptions: {
+        effectiveWorkspaceFolders: workspaceFolders.map(wf => ({ uri: wf.uri.toString(), name: wf.name }))
+      },
       errorHandler: {
         error: (error, message) => {
-          this.logger.logError(`Language client error: ${message}`, error);
+          this.logger.logError(`Language client error`, error);
+          if (message) {
+            this.logger.logError(`  Message: ${message.jsonrpc}`);
+          }
           return { action: ErrorAction.Continue };
         },
         closed: () => {
+          // Attempt to restart on closed connection, respecting maxRestartCount
+          this.logger.log('Language client connection closed.');
           return { action: CloseAction.DoNotRestart };
         }
       }
     };
 
-    this.logger.log(`Initialization setup - Main workspace: ${sourcesFolder?.uri.fsPath || 'none'}, Test sources: ${testSourcesUri || 'none'}`);
+    this.logger.log(`LanguageClient initialized with workspace folders: ${workspaceFolders.map(f => `${f.name} (${f.uri.fsPath})`).join(', ')}`);
 
     this.client = new LanguageClient(
       'nplLanguageServer',
