@@ -4,7 +4,8 @@ import {
   LanguageClientOptions,
   StreamInfo,
   ErrorAction,
-  CloseAction
+  CloseAction,
+  Trace
 } from 'vscode-languageclient/node';
 import { Logger } from '../utils/Logger';
 import { ServerManager } from '../server/ServerManager';
@@ -35,55 +36,19 @@ export class LanguageClientManager {
     const sourcesSetting = config.get<string>('sources');
     const testSourcesSetting = config.get<string>('testSources');
 
-    const workspaceFolders: vscode.WorkspaceFolder[] = [];
+    // Build the list of workspace folders to process
+    const workspaceFolders: vscode.WorkspaceFolder[] = this.buildWorkspaceFoldersList(
+      sourcesSetting,
+      testSourcesSetting,
+      vscode.workspace.workspaceFolders
+    );
 
-    // Determine main source folders
-    if (sourcesSetting && sourcesSetting.trim().length > 0) {
-      workspaceFolders.push({
-        uri: vscode.Uri.file(sourcesSetting),
-        name: 'NPL Sources',
-        index: workspaceFolders.length // Assign index sequentially
-      });
-      this.logger.log(`Using custom workspace folder for sources: ${sourcesSetting}`);
-    } else if (vscode.workspace.workspaceFolders) {
-      // Use VS Code's workspace folders if no custom setting
-      vscode.workspace.workspaceFolders.forEach((folder, index) => {
-        workspaceFolders.push({
-          uri: folder.uri,
-          name: folder.name,
-          index: index // Preserve original index if possible, though LSP server might re-index
-        });
-      });
-      this.logger.log(`Using VS Code workspace folders: ${workspaceFolders.map(f => f.uri.fsPath).join(', ')}`);
-    }
-
-    // Add test sources folder if configured
-    if (testSourcesSetting && testSourcesSetting.trim().length > 0) {
-       const testSourceUri = vscode.Uri.file(testSourcesSetting);
-       // Ensure we don't add duplicates if test sources are inside main sources/workspace
-       if (!workspaceFolders.some(wf => wf.uri.fsPath === testSourceUri.fsPath)) {
-         workspaceFolders.push({
-           uri: testSourceUri,
-           name: 'NPL Test Sources',
-           index: workspaceFolders.length // Assign index sequentially
-         });
-         this.logger.log(`Added test sources folder: ${testSourcesSetting}`);
-       } else {
-          this.logger.log(`Test sources folder (${testSourcesSetting}) is already included in the workspace folders.`);
-       }
-    }
-
-    // If no folders are determined, we might need a fallback or error handling
-    if (workspaceFolders.length === 0) {
-      this.logger.log('Warning: No workspace folders determined for the NPL Language Server. The server might not function correctly.');
-      // Depending on server requirements, you might want to throw an error here
-      // or provide a default (e.g., based on the first opened file later)
-    }
+    // Check if trace is enabled (minimal logging)
+    const traceEnabled = config.get<boolean>('NPL.server.trace.enabled', false);
 
     const clientOptions: LanguageClientOptions = {
       documentSelector: [{ scheme: 'file', language: 'npl' }],
       outputChannel: this.logger.getOutputChannel(),
-      traceOutputChannel: this.logger.getOutputChannel(),
       connectionOptions: {
         maxRestartCount: 3
       },
@@ -95,7 +60,7 @@ export class LanguageClientManager {
       errorHandler: {
         error: (error, message) => {
           this.logger.logError(`Language client error`, error);
-          if (message) {
+          if (message && traceEnabled) {
             this.logger.logError(`  Message: ${message.jsonrpc}`);
           }
           return { action: ErrorAction.Continue };
@@ -105,7 +70,7 @@ export class LanguageClientManager {
           this.logger.log('Language client connection closed.');
           return { action: CloseAction.DoNotRestart };
         }
-      }
+      },
     };
 
     this.logger.log(`LanguageClient initialized with workspace folders: ${workspaceFolders.map(f => `${f.name} (${f.uri.fsPath})`).join(', ')}`);
@@ -116,6 +81,12 @@ export class LanguageClientManager {
       serverOptions,
       clientOptions
     );
+
+    // Configure trace level based on settings
+    if (traceEnabled) {
+      this.client.setTrace(Trace.Verbose);
+      this.logger.log('Language server trace enabled (verbose mode)');
+    }
 
     this.configChangeListener = vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('NPL.sources') || e.affectsConfiguration('NPL.testSources')) {
@@ -148,5 +119,58 @@ export class LanguageClientManager {
       this.client = undefined;
     }
     this.serverManager.stopServer();
+  }
+
+  private buildWorkspaceFoldersList(
+    sourcesSetting: string | undefined,
+    testSourcesSetting: string | undefined,
+    vscodeWorkspaceFolders: readonly vscode.WorkspaceFolder[] | undefined
+  ): vscode.WorkspaceFolder[] {
+    const result: vscode.WorkspaceFolder[] = [];
+
+    // Determine main source folders
+    if (sourcesSetting && sourcesSetting.trim().length > 0) {
+      result.push({
+        uri: vscode.Uri.file(sourcesSetting),
+        name: 'NPL Sources',
+        index: result.length // Assign index sequentially
+      });
+      this.logger.log(`Using custom workspace folder for sources: ${sourcesSetting}`);
+    } else if (vscodeWorkspaceFolders && vscodeWorkspaceFolders.length > 0) {
+      // Use VS Code's workspace folders if no custom setting
+      vscodeWorkspaceFolders.forEach((folder, index) => {
+        result.push({
+          uri: folder.uri,
+          name: folder.name,
+          index: index // Preserve original index if possible, though LSP server might re-index
+        });
+      });
+      this.logger.log(`Using VS Code workspace folders: ${result.map(f => f.uri.fsPath).join(', ')}`);
+    }
+
+    // Add test sources folder if configured
+    if (testSourcesSetting && testSourcesSetting.trim().length > 0) {
+       const testSourceUri = vscode.Uri.file(testSourcesSetting);
+       // Ensure we don't add duplicates if test sources are inside main sources/workspace
+       if (!result.some(wf => wf.uri.fsPath === testSourceUri.fsPath)) {
+         result.push({
+           uri: testSourceUri,
+           name: 'NPL Test Sources',
+           index: result.length // Assign index sequentially
+         });
+         this.logger.log(`Added test sources folder: ${testSourcesSetting}`);
+       } else {
+          this.logger.log(`Test sources folder (${testSourcesSetting}) is already included in the workspace folders.`);
+       }
+    }
+
+    // If no folders are determined, we might need a fallback or error handling
+    if (result.length === 0) {
+      this.logger.log('Warning: No workspace folders determined for the NPL Language Server. The server might not function correctly.');
+      // Depending on server requirements, you might want to throw an error here
+      // or provide a default (e.g., based on the first opened file later)
+    }
+
+    return result;
   }
 }

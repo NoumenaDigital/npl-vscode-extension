@@ -60,6 +60,11 @@
           "type": "string",
           "default": "",
           "description": "Path to the NPL test sources. Leave empty to use the current workspace root."
+        },
+        "NPL.server.trace.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable trace logging for the NPL language server communication. Helps diagnose server issues."
         }
       }
     },
