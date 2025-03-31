@@ -32,15 +32,19 @@ export class LanguageClientManager {
     };
 
     // Get workspace folder settings from configuration
-    const config = vscode.workspace.getConfiguration('NPL');
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      throw new Error('No workspace folder found');
+    }
+    const config = vscode.workspace.getConfiguration('NPL', workspaceFolders[0].uri);
     const sourcesSetting = config.get<string>('sources');
     const testSourcesSetting = config.get<string>('testSources');
 
     // Build the list of workspace folders to process
-    const workspaceFolders: vscode.WorkspaceFolder[] = this.buildWorkspaceFoldersList(
+    const workspaceFoldersToProcess: vscode.WorkspaceFolder[] = this.buildWorkspaceFoldersList(
       sourcesSetting,
       testSourcesSetting,
-      vscode.workspace.workspaceFolders
+      workspaceFolders
     );
 
     // Check if trace is enabled (minimal logging)
@@ -55,7 +59,7 @@ export class LanguageClientManager {
       // Let the client handle standard workspace folders based on VS Code's state.
       // Pass the *effective* list, including custom paths, via initializationOptions.
       initializationOptions: {
-        effectiveWorkspaceFolders: workspaceFolders.map(wf => ({ uri: wf.uri.toString(), name: wf.name }))
+        effectiveWorkspaceFolders: workspaceFoldersToProcess.map(wf => ({ uri: wf.uri.toString(), name: wf.name }))
       },
       errorHandler: {
         error: (error, message) => {
@@ -73,7 +77,7 @@ export class LanguageClientManager {
       },
     };
 
-    this.logger.log(`LanguageClient initialized with workspace folders: ${workspaceFolders.map(f => `${f.name} (${f.uri.fsPath})`).join(', ')}`);
+    this.logger.log(`LanguageClient initialized with workspace folders: ${workspaceFoldersToProcess.map(f => `${f.name} (${f.uri.fsPath})`).join(', ')}`);
 
     this.client = new LanguageClient(
       'nplLanguageServer',

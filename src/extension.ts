@@ -48,24 +48,26 @@ export async function activate(context: vscode.ExtensionContext) {
 async function selectNplWorkspace(logger: Logger, type: 'sources' | 'testSources'): Promise<void> {
   try {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    let defaultUri: vscode.Uri | undefined;
-
-    if (workspaceFolders && workspaceFolders.length > 0) {
-      defaultUri = workspaceFolders[0].uri;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showErrorMessage('No workspace folder open to save NPL settings.');
+      return;
     }
+    const currentWorkspace = workspaceFolders[0]; // Assuming single-root workspace for simplicity
 
     const selectedFolder = await vscode.window.showOpenDialog({
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
-      defaultUri,
+      defaultUri: currentWorkspace.uri,
       openLabel: 'Select NPL ' + type,
     });
 
     if (selectedFolder && selectedFolder.length > 0) {
       const selectedPath = selectedFolder[0].fsPath;
-      const config = vscode.workspace.getConfiguration('NPL');
-      await config.update(type, selectedPath, vscode.ConfigurationTarget.Global);
+      // Get configuration specifically for the current workspace folder
+      const config = vscode.workspace.getConfiguration('NPL', currentWorkspace.uri);
+      await config.update(type, selectedPath, vscode.ConfigurationTarget.WorkspaceFolder);
+      vscode.window.showInformationMessage(`NPL ${type} path set to ${selectedPath} for this workspace.`);
     }
   } catch (error) {
     logger.logError(`Failed to select NPL ${type} workspace`, error);

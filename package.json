@@ -54,12 +54,14 @@
         "NPL.sources": {
           "type": "string",
           "default": "",
-          "description": "Path to the NPL sources. Leave empty to use the current workspace root."
+          "description": "Path to the NPL sources. Leave empty to use the current workspace root.",
+          "scope": "resource"
         },
         "NPL.testSources": {
           "type": "string",
           "default": "",
-          "description": "Path to the NPL test sources. Leave empty to use the current workspace root."
+          "description": "Path to the NPL test sources. Leave empty to use the current workspace root.",
+          "scope": "resource"
         },
         "NPL.server.trace.enabled": {
           "type": "boolean",
