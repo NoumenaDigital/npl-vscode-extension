@@ -11,9 +11,7 @@ import * as fs from 'fs';
 export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
   private logger: Logger;
-  private initialized: boolean = false;
   private readonly DEFAULT_PORT = 5007;
-  private readonly SERVER_START_TIMEOUT_MS = 15000;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -249,143 +247,68 @@ export class ServerManager {
     return latestVersion.installedPath;
   }
 
-  private spawnServerProcess(serverPath: string): Promise<StreamInfo> {
+  private spawnServerProcess(serverPath: string): StreamInfo {
     const options: childProcess.SpawnOptions = {
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: false
     };
 
     try {
+      this.logger.log(`Spawning server process: ${serverPath} --stdio`);
       const currentProcess = childProcess.spawn(serverPath, ['--stdio'], options);
       this.serverProcess = currentProcess;
 
-      if (!currentProcess.stdout || !currentProcess.stdin) {
+      if (!currentProcess.stdout || !currentProcess.stdin || !currentProcess.stderr) {
+        this.logger.logError('Failed to get stdio streams from server process.');
         throw new Error('Failed to create stdio streams for server process');
       }
 
-      return this.initializeServerProcess(currentProcess);
+      this.logger.log('Server process spawned successfully.');
+
+      currentProcess.stderr.setEncoding('utf8');
+      currentProcess.stderr.on('data', (data) => {
+        // Log stderr as informational messages, as it contains regular logs
+        this.logger.log(`Server: ${data.toString().trimEnd()}`);
+      });
+
+      currentProcess.on('exit', (code, signal) => {
+        this.logger.log(`Server process exited with code ${code} and signal ${signal}`);
+        // Clear the stored process reference if it's the one that exited
+        if (currentProcess === this.serverProcess) {
+          this.serverProcess = undefined;
+        }
+      });
+
+      currentProcess.on('error', (err) => {
+        this.logger.logError('Server process error', err);
+        // Also clear the reference on error
+        if (currentProcess === this.serverProcess) {
+          this.serverProcess = undefined;
+        }
+      });
+
+      return {
+        reader: currentProcess.stdout,
+        writer: currentProcess.stdin
+      };
+
     } catch (error) {
       this.logger.logError(`Failed to spawn server process: ${error}`);
       throw error;
     }
   }
 
-  private initializeServerProcess(currentProcess: childProcess.ChildProcess): Promise<StreamInfo> {
-    let startupError: Error | undefined;
-
-    currentProcess.stdout!.setEncoding('utf8');
-    currentProcess.stderr?.setEncoding('utf8');
-
-    currentProcess.stdout!.on('data', (data) => {
-      const message = data.toString();
-      this.logger.log(`Server stdout: ${message}`);
-      message.split('\r\n').forEach((line: string) => {
-        if (line.trim()) {
-          try {
-            const parsed = JSON.parse(line);
-            if ((parsed.method === 'initialized') ||
-                (parsed.id === 1 && parsed.result && parsed.result.capabilities)) {
-              this.initialized = true; // Update class property
-              this.logger.log('Server initialized successfully');
-            }
-          } catch (e) {
-            // Not a JSON message, ignore
-          }
-        }
-      });
-    });
-
-    currentProcess.stderr?.on('data', (data) => {
-      this.logger.logError(`Server error: ${data.toString()}`);
-    });
-
-    currentProcess.on('error', (err) => {
-      startupError = err;
-      this.logger.logError('Failed to start server process', err);
-    });
-
-    currentProcess.on('exit', (code, signal) => {
-      this.logger.log(`Server process exited with code ${code} and signal ${signal}`);
-      if (!this.initialized && currentProcess === this.serverProcess) {
-        this.serverProcess = undefined;
-      }
-    });
-
-    this.sendInitializeRequest(currentProcess);
-
-    return this.waitForServerInitialization(currentProcess, startupError);
-  }
-
-  private sendInitializeRequest(currentProcess: childProcess.ChildProcess) {
-    const initializeRequest = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        processId: process.pid,
-        clientInfo: { name: 'vscode' },
-        rootUri: null,
-        capabilities: {}
-      }
-    };
-    const content = JSON.stringify(initializeRequest);
-    const contentLength = Buffer.byteLength(content, 'utf8');
-    const header = `Content-Length: ${contentLength}\r\n\r\n`;
-    currentProcess.stdin!.write(header + content, 'utf8');
-  }
-
-  private waitForServerInitialization(
-      currentProcess: childProcess.ChildProcess,
-      startupError: Error | undefined
-  ): Promise<StreamInfo> {
-    return new Promise((resolve, reject) => {
-      let resolved = false;
-
-      const timeout = setTimeout(() => {
-        if (!resolved && currentProcess && !currentProcess.killed) {
-          this.logger.logError(`Server initialization timed out after ${this.SERVER_START_TIMEOUT_MS}ms`);
-          currentProcess.kill();
-          reject(new Error(`Timeout waiting for server to start after ${this.SERVER_START_TIMEOUT_MS}ms`));
-        }
-      }, this.SERVER_START_TIMEOUT_MS);
-
-      currentProcess.once('exit', (code) => {
-        if (!resolved) {
-          clearTimeout(timeout);
-          this.logger.logError(`Server process exited with code ${code} before initialization`);
-          reject(new Error(`Server process exited with code ${code} before initialization`));
-        }
-      });
-
-      const checkInterval = setInterval(() => {
-        if (startupError) {
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          this.logger.logError(`Server startup error: ${startupError.message}`);
-          reject(startupError);
-        } else if (this.initialized && currentProcess && !currentProcess.killed) { // Use class property
-          resolved = true;
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          this.logger.log('Server initialized successfully, connection established');
-          resolve({
-            reader: currentProcess.stdout!,
-            writer: currentProcess.stdin!
-          });
-        }
-      }, 100);
-    });
-  }
-
   stopServer() {
     if (this.serverProcess) {
-      this.logger.log('Stopping server process');
+      this.logger.log(`Stopping server process (PID: ${this.serverProcess.pid})`);
       try {
         this.serverProcess.kill();
       } catch (error) {
         this.logger.logError(`Error stopping server process: ${error}`);
       }
       this.serverProcess = undefined;
+    } else {
+       this.logger.log('StopServer called but no server process was running.');
     }
   }
 
