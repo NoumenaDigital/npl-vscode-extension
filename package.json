@@ -13,9 +13,6 @@
   "engines": {
     "vscode": "^1.92.0"
   },
-  "activationEvents": [
-    "onLanguage:npl"
-  ],
   "categories": [
     "Programming Languages",
     "Linters"
@@ -94,8 +91,6 @@
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "vscode-languageclient": "^9.0.1"
   }
 }
