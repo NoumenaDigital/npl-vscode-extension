@@ -485,4 +485,17 @@ export class ServerManager {
       vscode.window.showErrorMessage(`Error cleaning server files: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  async restartServer(context: vscode.ExtensionContext): Promise<StreamInfo> {
+    this.logger.log('Restarting NPL language server due to settings change...');
+
+    // Stop any existing server
+    this.stopServer();
+
+    // Short delay to ensure resources are freed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Start a new server instance
+    return this.startNewServerInstance(context);
+  }
 }
