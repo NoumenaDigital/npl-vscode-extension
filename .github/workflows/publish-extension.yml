@@ -48,7 +48,7 @@ jobs:
 
       - name: Publish to open-vsx
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
-        run: npm run publish:ovsx -- -p ${{ secrets.OPEN_VSX_AT }}
+        run: npm run publish:ovsx -- -p ${{ secrets.OPEN_VSX_PAT }}
 
       - name: Create GitHub Release
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
