@@ -38,17 +38,17 @@ jobs:
 
       - name: Package Extension
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
-        run: npx vsce package
+        run: npm run package
 
       - name: Publish to Visual Studio Marketplace
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
-        run: npx vsce publish
+        run: npm run publish:vsce
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Publish to open-vsx
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
-        run: npx ovsx publish *.vsix -p ${{ secrets.OPEN_VSX_AT }}
+        run: npm run publish:ovsx -- -p ${{ secrets.OPEN_VSX_AT }}
 
       - name: Create GitHub Release
         if: steps.check-publish.outputs.PUBLISH_FLAG == 'true'
