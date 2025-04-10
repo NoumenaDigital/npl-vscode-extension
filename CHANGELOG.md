@@ -4,10 +4,14 @@ All notable changes to the NPL-Dev for VS Code extension will be documented in t
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.0]
 
 ### Added
 
+- NPL source/workspace selection. We've added settings and commands that allow you to specify where your production and
+  test sources live, such that sources outside those folders are not analyzed by the language server.
+  - Settings: `NPL.sources` and `NPL.testSources` (both apply to the current workspace only)
+  - Commands: `NPL: Select NPL Sources` and `NPL: Select NPL Test Sources`
 - This changelog
 
 ### Changed

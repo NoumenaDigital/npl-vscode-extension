@@ -1,0 +1,4 @@
+// File in custom test sources with syntax error
+package foo
+
+errors
