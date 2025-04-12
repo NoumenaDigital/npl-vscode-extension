@@ -37,6 +37,35 @@ transitions.
    creating.
 9. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition
    (`otherwise become someState;`) and CANNOT contain any additional behavior or logic.
+10. **End if statements with semicolons**: ALWAYS include semicolons after if statements, even when they have blocks:
+
+```npl
+if (amount > 100) {
+  return "High value";
+}; // Semicolon required here
+```
+
+11. **No Any type**: NPL does NOT have an `Any` type. Use specific types or union types for mixed-type scenarios:
+
+```npl
+union PaymentInfo {
+  Number,
+  Text
+};
+```
+
+12. **Requires outside init blocks**: Place `require` statements at the protocol level after parameter declarations, NOT
+    inside `init` blocks:
+
+```npl
+protocol[issuer, payee] Contract(var amount: Number) {
+  require(amount > 0, "Amount must be positive"); // Correct placement
+
+  init {
+    // Init logic here, no requires
+  };
+};
+```
 
 ## Protocol Syntax
 
@@ -527,6 +556,136 @@ function testPaymentProcessing(t: Test) {
   t.assertFails(function() -> payment.refund[bob](200));
 }
 ```
+
+## Standard Library
+
+NPL has a defined standard library with specific functions, operators, and types. **Never invent or assume the existence
+of methods or functions that are not explicitly documented.**
+
+### Available Types
+
+1. **Basic Types**:
+
+   - `Boolean` - true/false values
+   - `Number` - numeric values (both integers and decimals)
+   - `Text` - text strings (not String!)
+   - `DateTime` - date and time with timezone
+   - `LocalDate` - date without time component
+   - `Duration` - amount of time (seconds, minutes, hours)
+   - `Period` - calendar-based amount of time (days, months, years)
+   - `Blob` - binary data
+   - `Unit` - represents "no value" (similar to void)
+
+2. **Collection Types**:
+
+   - `List<T>` - ordered collection allowing duplicates
+   - `Set<T>` - unordered collection without duplicates
+   - `Map<K, V>` - key-value pairs
+
+3. **Complex Types**:
+
+   - `Optional<T>` - represents a value that may or may not be present
+   - `Pair<A, B>` - a tuple of two values
+   - `Party` - represents a participant in a protocol
+   - `Test` - used in test functions
+
+4. **User-Defined Types**:
+   - `Enum` - fixed set of named values
+   - `Struct` - composite data structure
+   - `Union` - represents a value that could be one of several types
+   - `Identifier` - unique identifier
+   - `Symbol` - named constant value
+   - `Protocol` - defines protocol behavior
+
+### Standard Library Functions
+
+1. **Logging**:
+
+   - `debug(value)` - logs a debug statement
+   - `info(value)` - logs an info statement
+   - `error(value)` - logs an error statement
+
+2. **Constructors**:
+
+   - `listOf<T>(value1, value2, ...)` - creates a List
+   - `setOf<T>(value1, value2, ...)` - creates a Set
+   - `mapOf<K, V>(Pair(key1, value1), ...)` - creates a Map
+   - `optionalOf<T>()` - creates an empty Optional
+   - `optionalOf<T>(value)` - creates an Optional with a value
+   - `dateTimeOf(year, month, day, hour, minute, zoneId)` - creates DateTime
+   - `localDateOf(year, month, day)` - creates LocalDate
+
+3. **Time and Duration**:
+   - `now()` - current DateTime (fixed for transaction)
+   - `millis(value)` - creates Duration of milliseconds
+   - `seconds(value)` - creates Duration of seconds
+   - `minutes(value)` - creates Duration of minutes
+   - `hours(value)` - creates Duration of hours
+   - `days(value)` - creates Period of days
+   - `weeks(value)` - creates Period of weeks
+   - `months(value)` - creates Period of months
+   - `years(value)` - creates Period of years
+   - `valueOfZoneId(ZoneId.ZONE_NAME)` - converts ZoneId to Text
+
+### Common Methods on Types
+
+1. **List Methods**:
+
+   - `list.get(index)` - gets element at index
+   - `list.size()` - returns list size
+   - `list.isEmpty()` - checks if list is empty
+   - `list.with(value)` - returns new list with value added
+   - `list.without(index)` - returns new list with element removed
+   - `list.map(function)` - transforms each element
+   - `list.filter(function)` - filters elements by predicate
+
+2. **Map Methods**:
+
+   - `map.get(key)` - returns Optional of value for key
+   - `map.size()` - returns map size
+   - `map.isEmpty()` - checks if map is empty
+   - `map.with(key, value)` - returns new map with entry added
+   - `map.without(key)` - returns new map with entry removed
+   - `map.containsKey(key)` - checks if key exists
+
+3. **Set Methods**:
+
+   - `set.contains(value)` - checks if value exists
+   - `set.size()` - returns set size
+   - `set.isEmpty()` - checks if set is empty
+   - `set.with(value)` - returns new set with value added
+   - `set.without(value)` - returns new set with value removed
+
+4. **Optional Methods**:
+
+   - `optional.isPresent()` - checks if value exists
+   - `optional.getOrElse(defaultValue)` - returns value or default
+   - `optional.getOrFail()` - returns value or throws exception
+   - `optional.computeIfAbsent(function)` - computes value if absent
+
+5. **DateTime/Duration/Period Methods**:
+   - `dateTime.plus(duration)` - adds duration
+   - `dateTime.minus(duration)` - subtracts duration
+   - `dateTime.isAfter(otherDateTime)` - compares timestamps
+   - `dateTime.isBefore(otherDateTime)` - compares timestamps
+   - `duration.plus(otherDuration)` - adds durations
+   - `duration.minus(otherDuration)` - subtracts durations
+
+### Important Guidelines
+
+1. **Don't hallucinate methods**: Only use methods that are explicitly documented or that you've seen in the codebase
+   examples.
+2. **Check method existence**: If unsure about a method, check if it's used elsewhere in the code or mentioned in
+   documentation.
+3. **Common collections methods**: Collections typically support standard methods like `get()`, `contains()`, `with()`,
+   `without()`, `map()`, `filter()`, but don't assume advanced or language-specific operations.
+4. **Familiar naming patterns**: Method names follow Java-like conventions (e.g., `isPresent()`, `getOrElse()`) rather
+   than Ruby, Python, or other language conventions.
+5. **No implicit conversions**: NPL requires explicit type conversions; types don't automatically coerce to others.
+6. **Immutable collections**: Collection operations like `with()` and `without()` create new collections rather than
+   modifying the original.
+7. **No streams or advanced functional operations**: Don't assume advanced operations like streams, flatMap, reduce,
+   etc. unless explicitly documented.
 
 ## Full Example: IOU Protocol
 
