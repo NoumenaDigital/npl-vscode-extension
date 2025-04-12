@@ -15,11 +15,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const logger = new Logger('NPL Language Server');
   serverManager = new ServerManager(logger);
   clientManager = new LanguageClientManager(logger, serverManager);
-
-  // Initialize InstructionFileManager with real VS Code dialog handler and app name provider
   instructionFileManager = new InstructionFileManager(
-    new VsCodeDialogHandler(),
-    () => vscode.env.appName
+    new VsCodeDialogHandler()
   );
 
   // Initialize managers with the same logger
