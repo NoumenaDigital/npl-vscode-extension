@@ -4,6 +4,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { DialogHandler, EditorType, InstructionFileManager } from '../../instructionFiles/InstructionFileManager';
+import {
+  NPL_INSTRUCTION_VERSION,
+  NPL_SECTION_START_MARKER,
+  NPL_SECTION_END_MARKER,
+  COPILOT_INSTRUCTIONS_PATH,
+  CURSOR_RULES_PATH
+} from '../../constants';
 
 // Test implementation of DialogHandler that records calls and returns predefined responses
 class TestDialogHandler implements DialogHandler {
@@ -25,10 +32,12 @@ suite('InstructionFileManager Test Suite', () => {
   let testDialogHandler: TestDialogHandler;
   let instructionFileManager: InstructionFileManager;
 
-  const NPL_SECTION_START = '# NPL Development v';
-  const NPL_SECTION_END = '<!-- END NPL DEVELOPMENT SECTION -->';
-  const cursorrules = '.cursorrules';
-  const copilotInstructions = '.github/copilot-instructions.md';
+  // Use constants from constants.ts
+  const NPL_SECTION_START = NPL_SECTION_START_MARKER;
+  const NPL_SECTION_END = NPL_SECTION_END_MARKER;
+  const cursorrules = CURSOR_RULES_PATH;
+  const copilotInstructions = COPILOT_INSTRUCTIONS_PATH;
+  const expectedVersionString = `${NPL_SECTION_START}${NPL_INSTRUCTION_VERSION}`;
 
   setup(() => {
     // Create temporary directory for test workspace
@@ -149,7 +158,7 @@ suite('InstructionFileManager Test Suite', () => {
     assert.ok(fs.existsSync(copilotFile), 'Copilot instructions file should exist');
 
     const content = fs.readFileSync(copilotFile, 'utf8');
-    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(expectedVersionString));
     assert.ok(content.includes(NPL_SECTION_END));
   });
 
@@ -170,7 +179,7 @@ suite('InstructionFileManager Test Suite', () => {
 
     const content = fs.readFileSync(copilotFile, 'utf8');
     assert.ok(content.includes('# Existing instructions'));
-    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(expectedVersionString));
     assert.ok(content.includes(NPL_SECTION_END));
   });
 
@@ -178,8 +187,8 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
     const copilotFile = path.join(tempDir, copilotInstructions);
 
-    // Create copilot file with outdated NPL section
-    const initialContent = `# Instructions\n\n${NPL_SECTION_START}1\nOld content\n${NPL_SECTION_END}`;
+    // Create copilot file with outdated NPL section (version 0)
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}0\nOld content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
@@ -190,8 +199,8 @@ suite('InstructionFileManager Test Suite', () => {
     assert.strictEqual(testDialogHandler.messageCount, 1);
 
     const content = fs.readFileSync(copilotFile, 'utf8');
-    assert.ok(!content.includes(`${NPL_SECTION_START}1`));
-    assert.ok(content.includes(`${NPL_SECTION_START}2`));
+    assert.ok(!content.includes(`${NPL_SECTION_START}0`));
+    assert.ok(content.includes(expectedVersionString));
   });
 
   test('checkAndHandleCopilotInstructions does nothing if NPL section is current', async function() {
@@ -199,7 +208,7 @@ suite('InstructionFileManager Test Suite', () => {
     const copilotFile = path.join(tempDir, copilotInstructions);
 
     // Create copilot file with current NPL section
-    const initialContent = `# Instructions\n\n${NPL_SECTION_START}2\nCurrent content\n${NPL_SECTION_END}`;
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}${NPL_INSTRUCTION_VERSION}\nCurrent content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
@@ -217,7 +226,8 @@ suite('InstructionFileManager Test Suite', () => {
     const copilotFile = path.join(tempDir, copilotInstructions);
 
     // Create copilot file with future NPL section version
-    const initialContent = `# Instructions\n\n${NPL_SECTION_START}3\nFuture content\n${NPL_SECTION_END}`;
+    const futureVersion = NPL_INSTRUCTION_VERSION + 1;
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}${futureVersion}\nFuture content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
@@ -244,7 +254,7 @@ suite('InstructionFileManager Test Suite', () => {
     assert.ok(fs.existsSync(cursorFile), 'Cursor rules file should exist');
 
     const content = fs.readFileSync(cursorFile, 'utf8');
-    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(expectedVersionString));
     assert.ok(content.includes(NPL_SECTION_END));
   });
 
