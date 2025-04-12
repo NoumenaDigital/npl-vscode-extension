@@ -18,54 +18,170 @@ transitions.
 6. **Document Everything**: Use Javadoc-style comments (`/** ... */`) preceding all declarations (protocols, functions,
    permissions, obligations, structs, enums, etc.) to explain their purpose. Include `@param` and `@return` tags where
    applicable. Do NOT add Javadoc docstrings to variables or `init` blocks.
+7. **No ternary operators**: Use if-else statements instead of `?:` syntax.
+8. **Initialization**: Use `init` block for initialization behavior.
+9. **No imports**: Define everything needed in the file being created.
+10. **Otherwise clauses**: Only use for state transitions (`otherwise become someState;`).
+11. **End if statements with semicolons**:
+    ```npl
+    if (amount > 0) { return true; }; // Semicolon required
+    ```
+12. **No Any type**: Use specific types or union types instead.
+13. **Requires outside init**: Place `require` statements at protocol level, not in `init`.
+14. **Use toText(), not toString()** for string conversion.
+15. **No Javadoc on init**: Only add Javadoc to declarations, not init blocks.
+16. **Only use for-in loops**:
+    ```npl
+    for (item in items) { process(item); }; // Correct
+    ```
+17. **Multiple parties in single permission**: Use `permission[buyer | seller]` not multiple declarations.
+18. **Direct state names in match**:
+    ```npl
+    match(activeState().getOrFail()) {
+      created -> "Created"
+      processing -> "Processing"
+    };
+    ```
+19. **Use length() for Text, not size()**: The Text type uses `length()` to get character count, not `size()`:
 
-## Common Pitfalls for AI Models
+    ```npl
+    // INCORRECT
+    var nameCount = name.size();
 
-1. **Text, not String**: NPL uses `Text` type, not `String`. Always use `Text` for string values.
-2. **No null values**: NPL does not have `null` or nullable types (no Kotlin-like `?` syntax). Use `Optional<T>`
-   instead.
-3. **Optional handling**: Access optional values with `getOrElse()`, `getOrFail()`, or `computeIfAbsent()`. Check if a
-   value exists with `isPresent()`.
-4. **Party limitations**: The `Party` type cannot be freely used in user-defined code.
-5. **Always use semicolons**: ALWAYS include semicolons at the end of conditionls (if and if-else), statements,
-   permissions, protocols, etc (they are typically required).
-6. **Conditional clauses**: Always use if or if-else clauses for conditionals. There are NO ternary operators in NPL (no
-   `?:` syntax). Always use full if-else statements.
-7. **Initialization**: Initialization behavior should be defined inside the `init` block. Other behavior should be part
-   of functions, permissions, or obligations.
-8. **Imports**: NEVER import things from files you haven't seen. Define everything you need in the file you are
-   creating.
-9. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition
-   (`otherwise become someState;`) and CANNOT contain any additional behavior or logic.
-10. **End if statements with semicolons**: ALWAYS include semicolons after if statements, even when they have blocks:
+    // CORRECT
+    var nameCount = name.length();
+    ```
 
-```npl
-if (amount > 100) {
-  return "High value";
-}; // Semicolon required here
-```
+20. **List.without() removes elements, not indices**: The `without()` method on List takes an element to remove, not an
+    index:
 
-11. **No Any type**: NPL does NOT have an `Any` type. Use specific types or union types for mixed-type scenarios:
+    ```npl
+    // INCORRECT - this tries to remove the element that equals the index number
+    items = items.without(index);
 
-```npl
-union PaymentInfo {
-  Number,
-  Text
-};
-```
+    // CORRECT - first get the element at the index, then remove it
+    var itemToRemove = items.get(index);
+    items = items.without(itemToRemove);
+    ```
 
-12. **Requires outside init blocks**: Place `require` statements at the protocol level after parameter declarations, NOT
-    inside `init` blocks:
+21. **Invoke permissions with this. and party**: When invoking permissions within a protocol, use `this.` prefix and
+    include the party in square brackets:
 
-```npl
-protocol[issuer, payee] Contract(var amount: Number) {
-  require(amount > 0, "Amount must be positive"); // Correct placement
+    ```npl
+    // INCORRECT - calling permission like a function
+    obligation[provider] processOrder() before deadline | placed {
+        startProcessing();
+    } otherwise become cancelled;
 
-  init {
-    // Init logic here, no requires
-  };
-};
-```
+    // CORRECT - using this. and specifying the party
+    obligation[provider] processOrder() before deadline | placed {
+        this.startProcessing[provider]();
+    } otherwise become cancelled;
+    ```
+
+22. **Always include package declaration**: Every NPL file must start with a package declaration:
+
+    ```npl
+    // REQUIRED at the beginning of every file
+    package payments;
+
+    protocol[buyer, seller] Payment() {
+        // Protocol content
+    };
+    ```
+
+23. **NEVER add docstrings to init blocks**: Init blocks should never have Javadoc docstrings:
+
+    ```npl
+    // INCORRECT
+    protocol[owner] MyProtocol() {
+        /**
+         * Initialize protocol state.
+         */
+        init {
+            // Initialization code
+        };
+    };
+
+    // CORRECT
+    protocol[owner] MyProtocol() {
+        init {
+            // Initialization code (no docstring)
+        };
+    };
+    ```
+
+24. **NO ternary operators**: NPL does not support ternary operations (`condition ? trueValue : falseValue`). Always use
+    full if-else statements:
+
+    ```npl
+    // INCORRECT - ternary operator does not exist in NPL
+    var status = isActive ? "active" : "inactive";
+
+    // CORRECT - use if-else statements
+    var status = "";
+    if (isActive) {
+        status = "active";
+    } else {
+        status = "inactive";
+    };
+    ```
+
+25. **DateTime.isBefore/isAfter require inclusive parameter**: Always include the second Boolean parameter that
+    indicates whether equality is considered:
+
+    ```npl
+    // INCORRECT - missing required inclusive parameter
+    if (deadline.isBefore(now())) {
+        // Handle late case
+    };
+
+    // CORRECT - with required inclusive parameter
+    if (deadline.isBefore(now(), false)) {
+        // Handle late case (strictly before)
+    };
+
+    // CORRECT - inclusive comparison
+    if (deadline.isBefore(now(), true)) {
+        // Handle late case (before or equal)
+    };
+    ```
+
+26. **Always initialize variables**: All variables must be initialized when declared. NPL does not support declaring a
+    variable without initializing it:
+
+    ```npl
+    // INCORRECT - uninitialized variable
+    var total;
+
+    // CORRECT - initialize at declaration
+    var total = 0;
+    ```
+
+27. **Never use undeclared variables**: All variables must be declared with `var` before use. You cannot assign to a
+    variable that hasn't been declared:
+
+    ```npl
+    // INCORRECT - using variable before declaration
+    total = 0;  // Error: total is not declared
+
+    // CORRECT - declare then use
+    var total = 0;
+    total = total + 100;  // OK: total is already declared
+    ```
+
+28. **Don't use reserved keywords as variable names**: Never use NPL reserved keywords like `state`, `protocol`,
+    `permission`, `final`, `var`, `init`, etc. as variable names:
+
+    ```npl
+    // INCORRECT - using reserved keywords as variable names
+    var state = "active";  // Error: 'state' is a reserved keyword
+    var final = true;      // Error: 'final' is a reserved keyword
+
+    // CORRECT - use different variable names
+    var myState = "active";
+    var isFinal = true;
+    ```
 
 ## Protocol Syntax
 
@@ -73,18 +189,16 @@ protocol[issuer, payee] Contract(var amount: Number) {
 
 ```npl
 /**
- * Represents a basic protocol structure between two parties.
- * The party1 is the first party involved in the protocol.
- * The party2 is the second party involved in the protocol.
- * @param initialValue An initial numeric value for the protocol.
- * @param textParameter A text parameter for the protocol.
+ * Basic protocol structure.
+ * @param initialValue Initial numeric value.
+ * @param textParameter Text parameter.
  */
 protocol[party1, party2] ProtocolName(
   var initialValue: Number,
   var textParameter: Text
 ) {
     init {
-        // Behavior that runs on instantiation goes here
+        // Initialization
     };
     // Protocol body
 };
@@ -94,377 +208,145 @@ protocol[party1, party2] ProtocolName(
 
 ```npl
 // Basic instantiation
-var protocolInstance = ProtocolName[alice, bob](42, "example text");
+var instance = ProtocolName[alice, bob](42, "example");
 
 // With named arguments
-var namedInstance = ProtocolName[
-  party1 = alice,
-  party2 = bob
-](
-  initialValue = 42,
-  textParameter = "example text"
+var namedInstance = ProtocolName[party1 = alice, party2 = bob](
+  initialValue = 42, textParameter = "example"
 );
 ```
 
-Protocols annotated with `@api` can be instantiated from the API.
-
 ## Permissions
 
-### Declaring Permissions
-
 ```npl
-/**
- * Protocol demonstrating different permission structures between an issuer and recipient.
- */
 protocol[issuer, recipient] Transfer() {
   /**
    * Allows the issuer to send money.
-   * @param amount The amount of money to send.
-   * @return true if the transfer was successful, false otherwise.
+   * @param amount Amount to send.
+   * @return Success status.
    */
   permission[issuer] sendMoney(amount: Number) returns Boolean {
-    // Permission body
     return true;
   };
 
   /**
-   * Allows either the issuer or recipient to check the balance.
-   * @return The current balance.
+   * Allows either party to check balance.
+   * @return Current balance.
    */
   permission[issuer | recipient] checkBalance() returns Number {
-    // Permission body
     return 100;
   };
 };
 ```
 
-### Invoking Permissions
-
-```npl
-var transfer = Transfer[alice, bob]();
-
-// Invoke permission as alice
-var result = transfer.sendMoney[alice](50);
-
-// Invoke permission as bob
-var balance = transfer.checkBalance[bob]();
-```
-
 ### Require Conditions
 
 ```npl
-/**
- * Transfers a specified amount, requiring it to be positive and within balance.
- * @param amount The amount to transfer.
- */
 permission[sender] transfer(amount: Number) {
   require(amount > 0, "Amount must be positive");
-
   require(balance >= amount, "Insufficient balance");
-
-  // Rest of permission body
+  // Permission body
 };
 ```
 
 ## States
 
-### Declaring States
-
 ```npl
-/**
- * Protocol demonstrating state management for a purchase process between a buyer and seller.
- */
 protocol[buyer, seller] Purchase() {
   initial state created;
   state pending;
   state shipped;
   final state delivered;
   final state cancelled;
-
-  // Protocol body
 };
 ```
 
-### States as Guards
+### States as Guards and Transitions
 
 ```npl
-/**
- * Allows the buyer to cancel the order only when it's in 'created' or 'pending' state.
- */
-// This permission can only be invoked when in created or pending states
+// Permission only valid in created or pending states
 permission[buyer] cancelOrder() | created, pending {
-  // Permission body
+  become cancelled;
 };
-```
 
-### State Transitions
-
-```npl
-/**
- * Allows the seller to ship the order when it's in the 'pending' state,
- * transitioning the protocol to the 'shipped' state.
- */
+// Transition to shipped state
 permission[seller] shipOrder() | pending {
-  // Permission logic
-
-  // Transition to shipped state
   become shipped;
-}
-```
-
-### Interacting with States
-
-```npl
-/**
- * A simple protocol with states to demonstrate state interaction.
- * The protocol has a single owner party.
- */
-protocol[owner] StatefulProtocol() {
-  initial state active;
-  final state inactive;
-}
-
-// Using the protocol's States
-var myProtocol = StatefulProtocol[alice]();
-
-// Get all possible states
-var allStates = StatefulProtocol.States.variants();
-
-// Get the initial state
-var initialState = myProtocol.initialState();
-
-// Get all final states
-var finalStates = myProtocol.finalStates();
-
-// Get current active state
-var currentState = myProtocol.activeState();
-```
-
-## Party System
-
-Parties are entities that interact with protocols. They define permissions and control who can perform which actions.
-
-### Entity and Access
-
-Entity represents the identity of a party (immutable), while access represents the party's current access rights (can be
-changed via API).
-
-### Observers
-
-Observers can view protocol instances but need explicit permissions.
-
-```npl
-/**
- * Protocol demonstrating how to manage observers.
- * The protocol has a single owner party who can manage observers.
- */
-protocol[owner] Observable() {
-  // All protocols have an implicit observers field
-  // of type Map<Text, Party>
-
-  /**
-   * Allows the owner to add a new observer party.
-   * The newObserver represents the party to be added as an observer.
-   * @param name The name to associate with the new observer.
-   */
-  permission[*newObserver & owner] addObserver(name: Text) {
-    observers = observers.with(name, newObserver);
-  };
-
-  /**
-   * Allows the owner to remove an observer by name.
-   * @param name The name of the observer to remove.
-   */
-  permission[owner] removeObserver(name: Text) {
-    observers = observers.without(name);
-  };
 };
 ```
+
+## Protocol State Methods
+
+1. **activeState() returns Optional**: Always unwrap with `getOrFail()` or `getOrElse()`:
+
+   ```npl
+   // CORRECT
+   if (protocol.activeState().getOrFail() == MyProtocol.States.pending) {
+     // Do something
+   };
+   ```
+
+2. **Handling state checks safely**:
+   ```npl
+   // Using getOrElse or checking presence
+   var state = protocol.activeState().getOrElse(MyProtocol.States.created);
+   ```
+
+## Standard Library
+
+NPL has a defined standard library. **Never invent or assume the existence of methods that aren't documented.**
+
+### Available Types
+
+1. **Basic Types**: `Boolean`, `Number`, `Text`, `DateTime`, `LocalDate`, `Duration`, `Period`, `Blob`, `Unit`
+2. **Collection Types**: `List<T>`, `Set<T>`, `Map<K, V>`
+3. **Complex Types**: `Optional<T>`, `Pair<A, B>`, `Party`, `Test`
+4. **User-Defined Types**: `Enum`, `Struct`, `Union`, `Identifier`, `Symbol`, `Protocol`
+
+### Standard Library Functions
+
+1. **Logging**: `debug()`, `info()`, `error()`
+2. **Constructors**: `listOf()`, `setOf()`, `mapOf()`, `optionalOf()`, `dateTimeOf()`, `localDateOf()`
+3. **Time and Duration**: `now()`, `millis()`, `seconds()`, `minutes()`, `hours()`, `days()`, `weeks()`, `months()`,
+   `years()`
+
+### Common Methods on Types
+
+1. **List**: `get()`, `size()`, `isEmpty()`, `with()`, `without()`, `map()`, `filter()`
+2. **Map**: `get()`, `size()`, `isEmpty()`, `with()`, `without()`, `containsKey()`
+3. **Set**: `contains()`, `size()`, `isEmpty()`, `with()`, `without()`
+4. **Optional**: `isPresent()`, `getOrElse()`, `getOrFail()`, `computeIfAbsent()`
+5. **DateTime/Duration**: `plus()`, `minus()`, `isAfter()`, `isBefore()`
+
+### Important Guidelines
+
+1. **Don't hallucinate methods**: Only use documented methods.
+2. **Immutable collections**: `with()` and `without()` create new collections.
+3. **No advanced functional operations**: No streams, flatMap, reduce, unless documented.
 
 ## Type System
 
-### Basic Types
-
 ```npl
-// Number
+// Basic types
 var amount = 100;
-var price = 19.99;
-var calculatedValue = amount * 0.2 + price;
-
-// Text (not String!)
-var firstName = "John";
-var lastName = "Doe";
-var fullName = firstName + " " + lastName;
-
-// Boolean
+var name = "John";
 var isValid = true;
-var isComplete = false;
-var combinedCheck = isValid && !isComplete;
-
-// Date and Time
 var today = localDateOf(2023, 5, 15);
-var timestamp = dateTimeOf(
-  2023, 5, 15, 14, 30,
-  valueOfZoneId(ZoneId.EUROPE_ZURICH)
-);
 
-// Duration
-var waitPeriod = days(3).plus(hours(12)).minus(minutes(30));
+// Collections
+var numbers = listOf(1, 2, 3);
+var uniqueNumbers = setOf(1, 2, 3);
+var userScores = mapOf(Pair("alice", 95), Pair("bob", 87));
 
-// Period
-var loanTerm = months(6).plus(days(15));
-```
-
-### Optionals
-
-NPL does not have `null`, but uses `Optional<T>` for values that might not be present. `Optional<T>` is a union type
-between `Some<T>` and `None`.
-
-```npl
-/**
- * Examples of working with Optional values in NPL.
- */
-
-// Present optional
+// Optionals
 var presentValue = optionalOf(42);
-
-// Empty optional
 var emptyValue = optionalOf<Number>();
-
-// Accessing values
-var valueOrDefault = presentValue.getOrElse(0);
-var extractedValue = presentValue.getOrFail(); // Throws exception if empty
-
-// Checking if present
-var hasValue = presentValue.isPresent();
-
-// Lazy computation for default value
-var lazyValue = emptyValue.computeIfAbsent(function() -> {
-  // Complex computation only executed if optional is empty
-  return calculateDefaultValue();
-});
-```
-
-### Collections
-
-```npl
-/**
- * Examples of working with collection types in NPL.
- */
-
-// List (ordered, allows duplicates)
-var numbers = listOf(1, 2, 3, 2, 4);
-var firstItem = numbers.get(0);
-var withNewItem = numbers.with(5);
-
-// Set (unordered, no duplicates)
-var uniqueNumbers = setOf(1, 2, 3, 4);
-var hasThree = uniqueNumbers.contains(3);
-
-// Map (key-value pairs)
-var userScores = mapOf(
-  Pair("alice", 95),
-  Pair("bob", 87)
-);
-var aliceScore = userScores.get("alice").getOrElse(0);
-```
-
-### User-Defined Types
-
-#### Structs
-
-```npl
-/**
- * Represents a person with name, age, and optional address.
- */
-struct Person {
-  name: Text,
-  age: Number,
-  address: Optional<Text>
-};
-
-// Creation
-var person = Person(
-  name = "Alice",
-  age = 30,
-  address = optionalOf("123 Main St")
-);
-
-// Copying with changes
-var updatedPerson = person.copy(age = 31);
-```
-
-#### Enums
-
-```npl
-/**
- * Represents the possible statuses of a payment.
- */
-enum PaymentStatus {
-  Pending,
-  Completed,
-  Failed
-};
-
-// Usage
-var status = PaymentStatus.Pending;
-
-// Matching on enum values
-var statusText = match(status) {
-  PaymentStatus.Pending -> "Payment is pending"
-  PaymentStatus.Completed -> "Payment completed"
-  PaymentStatus.Failed -> "Payment failed"
-};
-```
-
-#### Unions
-
-```npl
-/**
- * Represents a payment method which can be either a bank transfer ID (Text)
- * or a card number (Number).
- */
-union PaymentMethod {
-  Text,  // For bank transfer IDs
-  Number // For card numbers
-};
-
-// Usage
-var bankPayment = PaymentMethod("TX123456");
-var cardPayment = PaymentMethod(4111111111111111);
-```
-
-#### Identifiers
-
-```npl
-/**
- * A unique identifier for transactions.
- */
-identifier TransactionId;
-
-// Creation
-var txId = TransactionId();
-
-// Usage
-var transactionMap = mapOf(Pair(txId, "Completed"));
-```
-
-#### Symbols
-
-```npl
-/**
- * Represents the US Dollar currency symbol.
- */
-symbol USD;
-
-// Usage
-var amount = USD(199.99);
+var value = presentValue.getOrElse(0);
 ```
 
 ## Control Flow
 
 ```npl
-
 // If-else
 if (amount > 100) {
   return "High value";
@@ -477,215 +359,31 @@ if (amount > 100) {
 // For loops
 for (item in itemsList) {
   totalPrice = totalPrice + item.price;
-}
+};
 
 // Match expressions
 var result = match(paymentStatus) {
-  PaymentStatus.Pending -> "Please wait"
-  PaymentStatus.Completed -> "Thank you"
-  PaymentStatus.Failed -> "Please try again"
-};
-
-// Match with default case
-var simpleResult = match(paymentStatus) {
-  PaymentStatus.Completed -> "Success"
-  else -> "Not completed"
+  Pending -> "Please wait"
+  Completed -> "Thank you"
+  Failed -> "Please try again"
 };
 ```
 
-## Functions and Lambdas
+## Functions
 
 ```npl
 /**
- * Calculates tax based on a given amount.
- * @param amount The amount to calculate tax for.
- * @return The calculated tax amount.
+ * Calculates tax for an amount.
+ * @param amount The amount.
+ * @return The tax amount.
  */
 function calculateTax(amount: Number) returns Number -> {
   return amount * 0.2;
 };
 
-/**
- * Adds a fixed fee to a given amount.
- * @param amount The amount to add the fee to.
- * @return The amount plus the fee.
- */
-function addFee(amount: Number) returns Number -> amount + 10;
-
 // Anonymous function (lambda)
 var doubleValue = function(x: Number) -> x * 2;
-
-// Using lambdas with collections
-var doubledPrices = prices.map(doubleValue);
-var expensiveItems = items.filter(function(item) -> item.price > 100);
 ```
-
-## Logging
-
-```npl
-// Debug level logging
-debug("Processing transaction");
-debug(transactionData);
-
-// Info level logging
-info("Transaction completed");
-
-// Error level logging
-error("Failed to process payment");
-error(paymentDetails);
-```
-
-## Testing
-
-```npl
-/**
- * Tests the payment processing logic of a hypothetical Payment protocol.
- * @param t The test context provided by the NPL testing framework.
- */
-@test
-function testPaymentProcessing(t: Test) {
-  // Setup
-  var payment = Payment[alice, bob](100);
-
-  // Execute
-  var result = payment.process[alice]();
-
-  // Assert
-  t.assertTrue(result);
-  t.assertEquals(PaymentStatus.Completed, payment.status());
-  t.assertFails(function() -> payment.refund[bob](200));
-}
-```
-
-## Standard Library
-
-NPL has a defined standard library with specific functions, operators, and types. **Never invent or assume the existence
-of methods or functions that are not explicitly documented.**
-
-### Available Types
-
-1. **Basic Types**:
-
-   - `Boolean` - true/false values
-   - `Number` - numeric values (both integers and decimals)
-   - `Text` - text strings (not String!)
-   - `DateTime` - date and time with timezone
-   - `LocalDate` - date without time component
-   - `Duration` - amount of time (seconds, minutes, hours)
-   - `Period` - calendar-based amount of time (days, months, years)
-   - `Blob` - binary data
-   - `Unit` - represents "no value" (similar to void)
-
-2. **Collection Types**:
-
-   - `List<T>` - ordered collection allowing duplicates
-   - `Set<T>` - unordered collection without duplicates
-   - `Map<K, V>` - key-value pairs
-
-3. **Complex Types**:
-
-   - `Optional<T>` - represents a value that may or may not be present
-   - `Pair<A, B>` - a tuple of two values
-   - `Party` - represents a participant in a protocol
-   - `Test` - used in test functions
-
-4. **User-Defined Types**:
-   - `Enum` - fixed set of named values
-   - `Struct` - composite data structure
-   - `Union` - represents a value that could be one of several types
-   - `Identifier` - unique identifier
-   - `Symbol` - named constant value
-   - `Protocol` - defines protocol behavior
-
-### Standard Library Functions
-
-1. **Logging**:
-
-   - `debug(value)` - logs a debug statement
-   - `info(value)` - logs an info statement
-   - `error(value)` - logs an error statement
-
-2. **Constructors**:
-
-   - `listOf<T>(value1, value2, ...)` - creates a List
-   - `setOf<T>(value1, value2, ...)` - creates a Set
-   - `mapOf<K, V>(Pair(key1, value1), ...)` - creates a Map
-   - `optionalOf<T>()` - creates an empty Optional
-   - `optionalOf<T>(value)` - creates an Optional with a value
-   - `dateTimeOf(year, month, day, hour, minute, zoneId)` - creates DateTime
-   - `localDateOf(year, month, day)` - creates LocalDate
-
-3. **Time and Duration**:
-   - `now()` - current DateTime (fixed for transaction)
-   - `millis(value)` - creates Duration of milliseconds
-   - `seconds(value)` - creates Duration of seconds
-   - `minutes(value)` - creates Duration of minutes
-   - `hours(value)` - creates Duration of hours
-   - `days(value)` - creates Period of days
-   - `weeks(value)` - creates Period of weeks
-   - `months(value)` - creates Period of months
-   - `years(value)` - creates Period of years
-   - `valueOfZoneId(ZoneId.ZONE_NAME)` - converts ZoneId to Text
-
-### Common Methods on Types
-
-1. **List Methods**:
-
-   - `list.get(index)` - gets element at index
-   - `list.size()` - returns list size
-   - `list.isEmpty()` - checks if list is empty
-   - `list.with(value)` - returns new list with value added
-   - `list.without(index)` - returns new list with element removed
-   - `list.map(function)` - transforms each element
-   - `list.filter(function)` - filters elements by predicate
-
-2. **Map Methods**:
-
-   - `map.get(key)` - returns Optional of value for key
-   - `map.size()` - returns map size
-   - `map.isEmpty()` - checks if map is empty
-   - `map.with(key, value)` - returns new map with entry added
-   - `map.without(key)` - returns new map with entry removed
-   - `map.containsKey(key)` - checks if key exists
-
-3. **Set Methods**:
-
-   - `set.contains(value)` - checks if value exists
-   - `set.size()` - returns set size
-   - `set.isEmpty()` - checks if set is empty
-   - `set.with(value)` - returns new set with value added
-   - `set.without(value)` - returns new set with value removed
-
-4. **Optional Methods**:
-
-   - `optional.isPresent()` - checks if value exists
-   - `optional.getOrElse(defaultValue)` - returns value or default
-   - `optional.getOrFail()` - returns value or throws exception
-   - `optional.computeIfAbsent(function)` - computes value if absent
-
-5. **DateTime/Duration/Period Methods**:
-   - `dateTime.plus(duration)` - adds duration
-   - `dateTime.minus(duration)` - subtracts duration
-   - `dateTime.isAfter(otherDateTime)` - compares timestamps
-   - `dateTime.isBefore(otherDateTime)` - compares timestamps
-   - `duration.plus(otherDuration)` - adds durations
-   - `duration.minus(otherDuration)` - subtracts durations
-
-### Important Guidelines
-
-1. **Don't hallucinate methods**: Only use methods that are explicitly documented or that you've seen in the codebase
-   examples.
-2. **Check method existence**: If unsure about a method, check if it's used elsewhere in the code or mentioned in
-   documentation.
-3. **Common collections methods**: Collections typically support standard methods like `get()`, `contains()`, `with()`,
-   `without()`, `map()`, `filter()`, but don't assume advanced or language-specific operations.
-4. **Familiar naming patterns**: Method names follow Java-like conventions (e.g., `isPresent()`, `getOrElse()`) rather
-   than Ruby, Python, or other language conventions.
-5. **No implicit conversions**: NPL requires explicit type conversions; types don't automatically coerce to others.
-6. **Immutable collections**: Collection operations like `with()` and `without()` create new collections rather than
-   modifying the original.
-7. **No streams or advanced functional operations**: Don't assume advanced operations like streams, flatMap, reduce,
-   etc. unless explicitly documented.
 
 ## Full Example: IOU Protocol
 
@@ -808,7 +506,6 @@ protocol[issuer, payee] Iou(
         return amountOwed();
     };
 };
-```
 
 ## Common NPL Patterns
 
@@ -820,3 +517,4 @@ protocol[issuer, payee] Iou(
 5. **Helper functions**: Creating private functions for reusable logic
 
 <!-- END NPL DEVELOPMENT SECTION -->
+```
