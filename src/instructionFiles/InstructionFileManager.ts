@@ -1,6 +1,16 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  NPL_INSTRUCTION_VERSION,
+  NPL_SECTION_START_MARKER,
+  NPL_SECTION_END_MARKER,
+  COPILOT_INSTRUCTIONS_PATH,
+  CURSOR_RULES_PATH,
+  TEMPLATE_DIR,
+  COPILOT_TEMPLATE_FILENAME,
+  CURSOR_TEMPLATE_FILENAME
+} from '../constants';
 
 // Interface for dialog interactions to make testing easier
 export interface DialogHandler {
@@ -14,22 +24,69 @@ export class VsCodeDialogHandler implements DialogHandler {
   }
 }
 
+export enum EditorType {
+  VSCode,
+  Cursor
+}
+
+interface InstructionFileType {
+  path: string;
+  createMessage: string;
+  appendMessage: string;
+  updateMessage: string;
+  templatePath: string;
+}
+
 export class InstructionFileManager {
-  // Current version of NPL instruction sections
-  private readonly CURRENT_VERSION = 2;
-  private readonly CURSOR_RULES_PATH = '.cursorrules';
-  private readonly COPILOT_INSTRUCTIONS_PATH = '.github/copilot-instructions.md';
+  private readonly CURRENT_VERSION = NPL_INSTRUCTION_VERSION;
+  private readonly NPL_SECTION_START = NPL_SECTION_START_MARKER;
+  private readonly NPL_SECTION_END = NPL_SECTION_END_MARKER;
+
+  // Define instruction file types
+  private readonly instructionTypes = {
+    copilot: {
+      path: COPILOT_INSTRUCTIONS_PATH,
+      createMessage: 'NPL-Dev can create a GitHub Copilot instructions file for better AI assistance in VS Code. Create it?',
+      appendMessage: 'NPL-Dev can add NPL-specific instructions to your GitHub Copilot AI assistant in VS Code. Add them?',
+      updateMessage: 'Your NPL instructions for GitHub Copilot AI in VS Code are outdated (version {0}). Update to the latest version?',
+      templatePath: path.join(__dirname, TEMPLATE_DIR, COPILOT_TEMPLATE_FILENAME)
+    },
+    cursor: {
+      path: CURSOR_RULES_PATH,
+      createMessage: 'NPL-Dev can create a Cursor rules file for better AI assistance in Cursor editor. Create it?',
+      appendMessage: 'NPL-Dev can add NPL-specific rules to your Cursor AI assistant. Add them?',
+      updateMessage: 'Your NPL rules for Cursor AI are outdated (version {0}). Update to the latest version?',
+      templatePath: path.join(__dirname, TEMPLATE_DIR, CURSOR_TEMPLATE_FILENAME)
+    }
+  };
 
   // Dependencies injected via constructor
   private readonly dialogHandler: DialogHandler;
-  private readonly appNameProvider: () => string;
+  private readonly editorTypeProvider: () => EditorType;
 
   constructor(
     dialogHandler: DialogHandler = new VsCodeDialogHandler(),
-    appNameProvider: () => string = () => vscode.env.appName
+    editorTypeProvider?: () => EditorType
   ) {
     this.dialogHandler = dialogHandler;
-    this.appNameProvider = appNameProvider;
+    this.editorTypeProvider = editorTypeProvider || (() => this.detectEditorType());
+  }
+
+  /**
+   * Detects whether we're running in VS Code or Cursor
+   */
+  private detectEditorType(): EditorType {
+    // Simple detection based on app name
+    const appName = vscode.env.appName || '';
+
+    if (appName === 'Visual Studio Code') {
+      return EditorType.VSCode;
+    } else if (appName === 'Cursor') {
+      return EditorType.Cursor;
+    } else {
+      // For testing or unknown environments, default to VS Code
+      return EditorType.VSCode;
+    }
   }
 
   /**
@@ -40,31 +97,43 @@ export class InstructionFileManager {
       return;
     }
 
-    // Always check Copilot instructions
-    await this.checkAndHandleCopilotInstructions(workspaceFolder);
+    const editorType = this.editorTypeProvider();
 
-    // Only check Cursor rules if in Cursor
-    if (this.appNameProvider() === 'Cursor') {
-      await this.checkAndHandleCursorRules(workspaceFolder);
+    switch (editorType) {
+      case EditorType.VSCode:
+        // VS Code only handles Copilot instructions
+        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot);
+        break;
+      case EditorType.Cursor:
+        // Cursor only handles Cursor rules
+        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor);
+        break;
+      default:
+        // This should not happen with our current implementation,
+        // but the default case is here for future-proofing
+        break;
     }
   }
 
   /**
-   * Handle Copilot instructions file
+   * General method to handle any instruction file
    */
-  public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.COPILOT_INSTRUCTIONS_PATH);
+  private async checkAndHandleInstructionFile(
+    workspaceFolder: vscode.WorkspaceFolder,
+    fileType: InstructionFileType
+  ): Promise<void> {
+    const filePath = path.join(workspaceFolder.uri.fsPath, fileType.path);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       // File doesn't exist, ask if user wants to create it
       const answer = await this.dialogHandler.showInformationMessage(
-        'NPL-Dev can create a GitHub Copilot instructions file for better NPL code assistance. Create it?',
+        fileType.createMessage,
         'Yes', 'No'
       );
 
       if (answer === 'Yes') {
-        await this.createCopilotInstructionsFile(workspaceFolder);
+        await this.createInstructionFile(filePath, fileType.templatePath);
       }
       return;
     }
@@ -75,12 +144,12 @@ export class InstructionFileManager {
     if (!this.hasNplSection(content)) {
       // No NPL section, ask if user wants to add it
       const answer = await this.dialogHandler.showInformationMessage(
-        'NPL-Dev can add NPL-specific instructions to your GitHub Copilot instructions file. Add them?',
+        fileType.appendMessage,
         'Yes', 'No'
       );
 
       if (answer === 'Yes') {
-        await this.appendNplSectionToCopilot(workspaceFolder, content);
+        await this.appendNplSection(filePath, content, fileType.templatePath);
       }
       return;
     }
@@ -91,138 +160,87 @@ export class InstructionFileManager {
     if (version < this.CURRENT_VERSION) {
       // Outdated version, ask if user wants to update
       const answer = await this.dialogHandler.showInformationMessage(
-        `Your NPL instructions are outdated (version ${version}). Update to the latest version?`,
+        fileType.updateMessage.replace('{0}', version.toString()),
         'Yes', 'No'
       );
 
       if (answer === 'Yes') {
-        await this.updateNplSectionInCopilot(workspaceFolder, content);
+        await this.updateNplSection(filePath, content, fileType.templatePath);
       }
     }
+    // If version is current or higher, do nothing
+  }
+
+  // Convenience methods for backward compatibility and direct access
+
+  /**
+   * Handle Copilot instructions file
+   */
+  public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot);
   }
 
   /**
    * Handle Cursor rules file
    */
   public async checkAndHandleCursorRules(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.CURSOR_RULES_PATH);
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      // File doesn't exist, ask if user wants to create it
-      const answer = await this.dialogHandler.showInformationMessage(
-        'NPL-Dev can create a Cursor rules file for better NPL code assistance. Create it?',
-        'Yes', 'No'
-      );
-
-      if (answer === 'Yes') {
-        await this.createCursorRulesFile(workspaceFolder);
-      }
-      return;
-    }
-
-    // File exists, check if it has NPL section
-    const content = fs.readFileSync(filePath, 'utf8');
-
-    if (!this.hasNplSection(content)) {
-      // No NPL section, ask if user wants to add it
-      const answer = await this.dialogHandler.showInformationMessage(
-        'NPL-Dev can add NPL-specific rules to your Cursor rules file. Add them?',
-        'Yes', 'No'
-      );
-
-      if (answer === 'Yes') {
-        await this.appendNplSectionToCursor(workspaceFolder, content);
-      }
-      return;
-    }
-
-    // Has NPL section, check version
-    const version = this.getNplSectionVersion(content);
-
-    if (version < this.CURRENT_VERSION) {
-      // Outdated version, ask if user wants to update
-      const answer = await this.dialogHandler.showInformationMessage(
-        `Your NPL rules are outdated (version ${version}). Update to the latest version?`,
-        'Yes', 'No'
-      );
-
-      if (answer === 'Yes') {
-        await this.updateNplSectionInCursor(workspaceFolder, content);
-      }
-    }
+    await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor);
   }
 
   // Helper methods
 
   private hasNplSection(content: string): boolean {
-    return content.includes('## NPL Development') || content.includes('NPL Development');
+    return content.includes(this.NPL_SECTION_START);
   }
 
   private getNplSectionVersion(content: string): number {
-    const versionMatch = content.match(/<!-- NPL-version: (\d+) -->/);
+    const versionRegex = new RegExp(`${this.NPL_SECTION_START}(\\d+)`);
+    const versionMatch = content.match(versionRegex);
     if (versionMatch && versionMatch[1]) {
       return parseInt(versionMatch[1], 10);
     }
     return 0; // Default to 0 if no version found
   }
 
-  private async createCopilotInstructionsFile(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.COPILOT_INSTRUCTIONS_PATH);
+  private getTemplateContent(templatePath: string): string {
+    if (fs.existsSync(templatePath)) {
+      let content = fs.readFileSync(templatePath, 'utf8');
+      // Replace version placeholder with current version
+      content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
+      return content;
+    }
+
+    return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
+  }
+
+  private async createInstructionFile(filePath: string, templatePath: string): Promise<void> {
     const dirPath = path.dirname(filePath);
 
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
 
-    fs.writeFileSync(filePath, this.getCopilotTemplate(), 'utf8');
+    fs.writeFileSync(filePath, this.getTemplateContent(templatePath), 'utf8');
   }
 
-  private async appendNplSectionToCopilot(workspaceFolder: vscode.WorkspaceFolder, existingContent: string): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.COPILOT_INSTRUCTIONS_PATH);
-
+  private async appendNplSection(filePath: string, existingContent: string, templatePath: string): Promise<void> {
     // Add NPL section to existing content
-    const newContent = `${existingContent.trim()}\n\n${this.getNplSection()}`;
+    const newContent = `${existingContent.trim()}\n\n${this.getTemplateContent(templatePath)}`;
 
     fs.writeFileSync(filePath, newContent, 'utf8');
   }
 
-  private async updateNplSectionInCopilot(workspaceFolder: vscode.WorkspaceFolder, existingContent: string): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.COPILOT_INSTRUCTIONS_PATH);
-
+  private async updateNplSection(filePath: string, existingContent: string, templatePath: string): Promise<void> {
     // Replace the old NPL section with the new one
-    const newContent = this.replaceNplSection(existingContent);
+    const newContent = this.replaceNplSection(existingContent, templatePath);
 
     fs.writeFileSync(filePath, newContent, 'utf8');
   }
 
-  private async createCursorRulesFile(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.CURSOR_RULES_PATH);
-
-    fs.writeFileSync(filePath, this.getCursorRulesTemplate(), 'utf8');
-  }
-
-  private async appendNplSectionToCursor(workspaceFolder: vscode.WorkspaceFolder, existingContent: string): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.CURSOR_RULES_PATH);
-
-    // Add NPL section to existing content
-    const newContent = `${existingContent.trim()}\n\n${this.getNplSection()}`;
-
-    fs.writeFileSync(filePath, newContent, 'utf8');
-  }
-
-  private async updateNplSectionInCursor(workspaceFolder: vscode.WorkspaceFolder, existingContent: string): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, this.CURSOR_RULES_PATH);
-
-    // Replace the old NPL section with the new one
-    const newContent = this.replaceNplSection(existingContent);
-
-    fs.writeFileSync(filePath, newContent, 'utf8');
-  }
-
-  private replaceNplSection(content: string): string {
-    // Find the NPL section start and end
-    const startMatch = content.match(/## NPL Development/);
+  private replaceNplSection(content: string, templatePath: string): string {
+    // Find the NPL section start
+    const startRegex = new RegExp(`${this.NPL_SECTION_START}\\d+`);
+    const startMatch = content.match(startRegex);
     if (!startMatch) {
       return content;
     }
@@ -232,45 +250,15 @@ export class InstructionFileManager {
       return content;
     }
 
-    // Find the next heading or end of file
-    const nextHeadingMatch = content.slice(startIndex).match(/\n## [^\n]+/);
-    const endIndex = nextHeadingMatch && nextHeadingMatch.index !== undefined
-      ? startIndex + nextHeadingMatch.index
-      : content.length;
+    // Find the NPL section end
+    const endIndex = content.indexOf(this.NPL_SECTION_END, startIndex);
+    if (endIndex === -1) {
+      // If no end marker, append the entire template
+      return `${content}\n\n${this.getTemplateContent(templatePath)}`;
+    }
 
-    // Replace the section
-    return content.slice(0, startIndex) + this.getNplSection() + content.slice(endIndex);
-  }
-
-  // Templates
-
-  private getCopilotTemplate(): string {
-    return `# GitHub Copilot Instructions for this repository
-
-This file provides instructions to GitHub Copilot to improve assistance when working with this codebase.
-
-${this.getNplSection()}`;
-  }
-
-  private getCursorRulesTemplate(): string {
-    return `# Cursor Rules for this repository
-
-These rules provide guidance to Cursor to improve assistance when working with this codebase.
-
-${this.getNplSection()}`;
-  }
-
-  private getNplSection(): string {
-    return `## NPL Development
-<!-- NPL-version: ${this.CURRENT_VERSION} -->
-
-When working with NPL (Noumena Protocol Language) files:
-
-1. NPL is a domain-specific language for the Noumena Protocol, a blockchain protocol focused on programmable assets
-2. NPL uses a unique syntax for defining protocol types and operations
-3. All NPL files have the .npl extension
-4. Follow the existing code style when suggesting NPL code
-5. Respect the type system - NPL is strongly typed
-`;
+    // Replace section including the end marker
+    const endOfSection = endIndex + this.NPL_SECTION_END.length;
+    return content.slice(0, startIndex) + this.getTemplateContent(templatePath) + content.slice(endOfSection);
   }
 }

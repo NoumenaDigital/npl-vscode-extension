@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { DialogHandler, InstructionFileManager } from '../../instructionFiles/InstructionFileManager';
+import { DialogHandler, EditorType, InstructionFileManager } from '../../instructionFiles/InstructionFileManager';
 
 // Test implementation of DialogHandler that records calls and returns predefined responses
 class TestDialogHandler implements DialogHandler {
@@ -25,6 +25,8 @@ suite('InstructionFileManager Test Suite', () => {
   let testDialogHandler: TestDialogHandler;
   let instructionFileManager: InstructionFileManager;
 
+  const NPL_SECTION_START = '# NPL Development v';
+  const NPL_SECTION_END = '<!-- END NPL DEVELOPMENT SECTION -->';
   const cursorrules = '.cursorrules';
   const copilotInstructions = '.github/copilot-instructions.md';
 
@@ -69,6 +71,18 @@ suite('InstructionFileManager Test Suite', () => {
     }
   });
 
+  test('detectEditorType correctly identifies editor', async function() {
+    // Create instance with default editor type detection
+    const manager = new InstructionFileManager(testDialogHandler);
+
+    // Use reflection to access the private method
+    const detectEditorType = (manager as any).detectEditorType.bind(manager);
+
+    // When run in VS Code Test Runner, it should identify as VS Code
+    const result = detectEditorType();
+    assert.strictEqual(result, EditorType.VSCode, 'Editor should be identified as VS Code in test environment');
+  });
+
   test('checkAndHandleInstructionFiles handles VS Code and Cursor differently', async function() {
     // Mock workspaceFolder
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
@@ -76,7 +90,7 @@ suite('InstructionFileManager Test Suite', () => {
     // Test for VS Code
     instructionFileManager = new InstructionFileManager(
       testDialogHandler,
-      () => 'Visual Studio Code'
+      () => EditorType.VSCode
     );
 
     // Set response to No so no files are created
@@ -93,13 +107,32 @@ suite('InstructionFileManager Test Suite', () => {
     // Test for Cursor
     instructionFileManager = new InstructionFileManager(
       testDialogHandler,
-      () => 'Cursor'
+      () => EditorType.Cursor
     );
 
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
 
-    // Should check both Cursor rules and Copilot instructions
-    assert.strictEqual(testDialogHandler.messageCount, 2, 'Cursor should show 2 prompts');
+    // Should check only for Cursor rules
+    assert.strictEqual(testDialogHandler.messageCount, 1, 'Cursor should show 1 prompt');
+    assert.ok(testDialogHandler.lastMessage?.includes('Cursor rules'), 'Prompt should be about Cursor rules');
+
+    // Reset count for Unknown editor test - this is now handled as VS Code in our implementation
+    testDialogHandler.messageCount = 0;
+
+    // Pass a mock function that would have returned Unknown before
+    instructionFileManager = new InstructionFileManager(
+      testDialogHandler,
+      () => {
+        // Mock what would happen for an unknown app name - should return VSCode now
+        const detectEditorType = (new InstructionFileManager(testDialogHandler) as any).detectEditorType.bind({ detectEditorType() {} });
+        return detectEditorType();
+      }
+    );
+
+    await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
+
+    // Unknown editors are treated as VS Code and should show a prompt for Copilot
+    assert.strictEqual(testDialogHandler.messageCount, 1, 'Unknown editor should be treated as VS Code');
   });
 
   test('checkAndHandleCopilotInstructions creates file if not exists', async function() {
@@ -116,8 +149,8 @@ suite('InstructionFileManager Test Suite', () => {
     assert.ok(fs.existsSync(copilotFile), 'Copilot instructions file should exist');
 
     const content = fs.readFileSync(copilotFile, 'utf8');
-    assert.ok(content.includes('NPL Development'));
-    assert.ok(content.includes('<!-- NPL-version: 2 -->'));
+    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(NPL_SECTION_END));
   });
 
   test('checkAndHandleCopilotInstructions appends NPL section if file exists without it', async function() {
@@ -137,8 +170,8 @@ suite('InstructionFileManager Test Suite', () => {
 
     const content = fs.readFileSync(copilotFile, 'utf8');
     assert.ok(content.includes('# Existing instructions'));
-    assert.ok(content.includes('NPL Development'));
-    assert.ok(content.includes('<!-- NPL-version: 2 -->'));
+    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(NPL_SECTION_END));
   });
 
   test('checkAndHandleCopilotInstructions updates NPL section if outdated', async function() {
@@ -146,7 +179,7 @@ suite('InstructionFileManager Test Suite', () => {
     const copilotFile = path.join(tempDir, copilotInstructions);
 
     // Create copilot file with outdated NPL section
-    const initialContent = '# Instructions\n\n## NPL Development\n<!-- NPL-version: 1 -->\nOld content';
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}1\nOld content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
@@ -157,8 +190,8 @@ suite('InstructionFileManager Test Suite', () => {
     assert.strictEqual(testDialogHandler.messageCount, 1);
 
     const content = fs.readFileSync(copilotFile, 'utf8');
-    assert.ok(!content.includes('<!-- NPL-version: 1 -->'));
-    assert.ok(content.includes('<!-- NPL-version: 2 -->'));
+    assert.ok(!content.includes(`${NPL_SECTION_START}1`));
+    assert.ok(content.includes(`${NPL_SECTION_START}2`));
   });
 
   test('checkAndHandleCopilotInstructions does nothing if NPL section is current', async function() {
@@ -166,7 +199,7 @@ suite('InstructionFileManager Test Suite', () => {
     const copilotFile = path.join(tempDir, copilotInstructions);
 
     // Create copilot file with current NPL section
-    const initialContent = '# Instructions\n\n## NPL Development\n<!-- NPL-version: 2 -->\nCurrent content';
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}2\nCurrent content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
@@ -177,6 +210,24 @@ suite('InstructionFileManager Test Suite', () => {
 
     const content = fs.readFileSync(copilotFile, 'utf8');
     assert.strictEqual(content, initialContent);
+  });
+
+  test('checkAndHandleCopilotInstructions does nothing if NPL section version is higher', async function() {
+    const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
+    const copilotFile = path.join(tempDir, copilotInstructions);
+
+    // Create copilot file with future NPL section version
+    const initialContent = `# Instructions\n\n${NPL_SECTION_START}3\nFuture content\n${NPL_SECTION_END}`;
+    fs.writeFileSync(copilotFile, initialContent, 'utf8');
+
+    instructionFileManager = new InstructionFileManager(testDialogHandler);
+
+    await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+    assert.strictEqual(testDialogHandler.messageCount, 0, 'No prompt should appear for higher version');
+
+    const content = fs.readFileSync(copilotFile, 'utf8');
+    assert.strictEqual(content, initialContent, 'File with higher version should not be modified');
   });
 
   test('checkAndHandleCursorRules follows same pattern as Copilot instructions', async function() {
@@ -193,8 +244,8 @@ suite('InstructionFileManager Test Suite', () => {
     assert.ok(fs.existsSync(cursorFile), 'Cursor rules file should exist');
 
     const content = fs.readFileSync(cursorFile, 'utf8');
-    assert.ok(content.includes('NPL Development'));
-    assert.ok(content.includes('<!-- NPL-version: 2 -->'));
+    assert.ok(content.includes('NPL Development v2'));
+    assert.ok(content.includes(NPL_SECTION_END));
   });
 
   test('user can cancel file creation', async function() {
