@@ -1,6 +1,6 @@
 # NPL Development v{{VERSION}}
 
-When working with NPL (Noumena Protocol Language) files in VS Code with GitHub Copilot:
+When working with NPL (Noumena Protocol Language) files:
 
 1. NPL is a domain-specific language for the Noumena Protocol, a blockchain protocol focused on programmable assets
 2. NPL uses a unique syntax for defining protocol types and operations

@@ -9,7 +9,7 @@ export const NPL_SECTION_END_MARKER = '<!-- END NPL DEVELOPMENT SECTION -->';
 export const COPILOT_INSTRUCTIONS_PATH = '.github/copilot-instructions.md';
 export const CURSOR_RULES_PATH = '.cursorrules';
 
-// Template paths - relative paths from the build output directory to the templates
-export const TEMPLATE_DIR = 'templates';
-export const COPILOT_TEMPLATE_FILENAME = 'copilot-instructions.md';
-export const CURSOR_TEMPLATE_FILENAME = 'cursor-rules.md';
+// Template paths
+export const RESOURCES_DIR = 'resources';
+export const TEMPLATES_DIR = 'templates';
+export const NPL_INSTRUCTIONS_TEMPLATE_FILENAME = 'npl-instructions.md';
