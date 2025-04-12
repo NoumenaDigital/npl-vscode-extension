@@ -12,6 +12,14 @@ import {
   NPL_INSTRUCTIONS_TEMPLATE_FILENAME
 } from '../constants';
 
+// Keep track of the extension context for path resolution
+let extensionContext: vscode.ExtensionContext;
+
+// Function to set the extension context
+export function setExtensionContext(context: vscode.ExtensionContext): void {
+  extensionContext = context;
+}
+
 // Interface for dialog interactions to make testing easier
 export interface DialogHandler {
   showInformationMessage(message: string, ...items: string[]): Thenable<string | undefined>;
@@ -49,14 +57,14 @@ export class InstructionFileManager {
       createMessage: 'NPL-Dev can create a GitHub Copilot instructions file for better AI assistance in VS Code. Create it?',
       appendMessage: 'NPL-Dev can add NPL-specific instructions to your GitHub Copilot AI assistant in VS Code. Add them?',
       updateMessage: 'Your NPL instructions for GitHub Copilot AI in VS Code are outdated (version {0}). Update to the latest version?',
-      templatePath: path.join(__dirname, '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME)
+      templatePath: this.getTemplatePath()
     },
     cursor: {
       path: CURSOR_RULES_PATH,
       createMessage: 'NPL-Dev can create a Cursor rules file for better AI assistance in Cursor editor. Create it?',
       appendMessage: 'NPL-Dev can add NPL-specific rules to your Cursor AI assistant. Add them?',
       updateMessage: 'Your NPL rules for Cursor AI are outdated (version {0}). Update to the latest version?',
-      templatePath: path.join(__dirname, '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME)
+      templatePath: this.getTemplatePath()
     }
   };
 
@@ -203,13 +211,19 @@ export class InstructionFileManager {
   }
 
   private getTemplateContent(templatePath: string): string {
+    console.log(`Attempting to load template from: ${templatePath}`);
+    console.log(`Current directory: ${process.cwd()}`);
+    console.log(`Template exists: ${fs.existsSync(templatePath)}`);
+
     if (fs.existsSync(templatePath)) {
       let content = fs.readFileSync(templatePath, 'utf8');
       // Replace version placeholder with current version
       content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
+      console.log(`Template loaded successfully with version: ${this.CURRENT_VERSION}`);
       return content;
     }
 
+    console.log(`Template not found, using fallback content with version: ${this.CURRENT_VERSION}`);
     return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
   }
 
@@ -260,5 +274,16 @@ export class InstructionFileManager {
     // Replace section including the end marker
     const endOfSection = endIndex + this.NPL_SECTION_END.length;
     return content.slice(0, startIndex) + this.getTemplateContent(templatePath) + content.slice(endOfSection);
+  }
+
+  // Get template path, using extension context if available
+  private getTemplatePath(): string {
+    if (extensionContext) {
+      // Use extension context path for more reliable resolution in debug/production
+      return path.join(extensionContext.extensionPath, 'out', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+    } else {
+      // Fallback to relative path (less reliable)
+      return path.join(__dirname, '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+    }
   }
 }
