@@ -47,15 +47,15 @@ export class InstructionFileManager {
     copilot: {
       path: COPILOT_INSTRUCTIONS_PATH,
       createMessage: 'NPL-Dev can create a GitHub Copilot instructions file for better AI assistance in VS Code. Create it?',
-      appendMessage: 'NPL-Dev can add NPL-specific instructions to your GitHub Copilot AI assistant in VS Code. Add them?',
-      updateMessage: 'Your NPL instructions for GitHub Copilot AI in VS Code are outdated (version {0}). Update to the latest version?',
+      appendMessage: 'NPL-Dev can add NPL-specific instructions to your GitHub Copilot instructions. Add them?',
+      updateMessage: 'Your NPL instructions for GitHub Copilot in VS Code are outdated (version {0}). Update to the latest version?',
       templatePath: path.join(__dirname, TEMPLATE_DIR, COPILOT_TEMPLATE_FILENAME)
     },
     cursor: {
       path: CURSOR_RULES_PATH,
-      createMessage: 'NPL-Dev can create a Cursor rules file for better AI assistance in Cursor editor. Create it?',
-      appendMessage: 'NPL-Dev can add NPL-specific rules to your Cursor AI assistant. Add them?',
-      updateMessage: 'Your NPL rules for Cursor AI are outdated (version {0}). Update to the latest version?',
+      createMessage: 'NPL-Dev can create a Cursor rules file for better AI assistance in Cursor. Create it?',
+      appendMessage: 'NPL-Dev can add NPL-specific rules to your Cursor rules. Add them?',
+      updateMessage: 'Your NPL rules for Cursor are outdated (version {0}). Update to the latest version?',
       templatePath: path.join(__dirname, TEMPLATE_DIR, CURSOR_TEMPLATE_FILENAME)
     }
   };
