@@ -5,7 +5,7 @@ import { LanguageClientManager } from './client/LanguageClientManager';
 import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
-import { InstructionFileManager, VsCodeDialogHandler } from './instructionFiles/InstructionFileManager';
+import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from './instructionFiles/InstructionFileManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -15,6 +15,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const logger = new Logger('NPL Language Server');
   serverManager = new ServerManager(logger);
   clientManager = new LanguageClientManager(logger, serverManager);
+
+  // Set extension context for correct path resolution
+  setExtensionContext(context);
+
   instructionFileManager = new InstructionFileManager(
     new VsCodeDialogHandler()
   );

@@ -66,14 +66,15 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run copy-resources",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "node ./out/test/runTest.js",
     "package": "vsce package",
     "publish:vsce": "vsce publish",
-    "publish:ovsx": "ovsx publish *.vsix"
+    "publish:ovsx": "ovsx publish *.vsix",
+    "copy-resources": "mkdir -p out/resources/templates && cp -r src/resources/templates/npl-instructions.md out/resources/templates/"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
