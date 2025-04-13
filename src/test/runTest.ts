@@ -1,9 +1,5 @@
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
-import * as dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
 
 async function main() {
   try {
@@ -16,10 +12,7 @@ async function main() {
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
     // Download VS Code, unzip it and run the integration test
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath
-    });
+    await runTests({ extensionDevelopmentPath, extensionTestsPath });
   } catch (err) {
     console.error('Failed to run tests', err);
     process.exit(1);

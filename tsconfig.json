@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"module": "commonjs",
+		"module": "Node16",
 		"target": "ES2022",
 		"outDir": "out",
 		"lib": [
@@ -9,9 +9,9 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
-		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
-		"resolveJsonModule": true
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedParameters": false
 	},
-	"exclude": ["node_modules", ".vscode-test"]
+	"include": ["src/**/*.ts"]
 }

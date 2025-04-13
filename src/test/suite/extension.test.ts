@@ -21,32 +21,8 @@ suite('Extension E2E Test Suite', () => {
 
 		const rootPath = path.resolve(__dirname, '../../../');
 
-		// Note: The fixtures path needs to be correctly mapped to the compiled location
-		syntaxErrorFilePath = path.join(rootPath, 'test', 'fixtures', 'syntax-error.npl');
-		validFilePath = path.join(rootPath, 'test', 'fixtures', 'no-syntax-error.npl');
-
-		// Define the fixtures path in the output directory - properly referencing using __dirname
-		const outDirFixturesPath = path.join(rootPath, 'src', 'test', 'fixtures');
-		const outSyntaxErrorFilePath = path.join(outDirFixturesPath, 'syntax-error.npl');
-		const outValidFilePath = path.join(outDirFixturesPath, 'no-syntax-error.npl');
-
-		// Ensure the directory exists
-		if (!fs.existsSync(outDirFixturesPath)) {
-			fs.mkdirSync(outDirFixturesPath, { recursive: true });
-		}
-
-		// Copy the fixture files to the output directory
-		if (fs.existsSync(syntaxErrorFilePath)) {
-			fs.copyFileSync(syntaxErrorFilePath, outSyntaxErrorFilePath);
-		}
-
-		if (fs.existsSync(validFilePath)) {
-			fs.copyFileSync(validFilePath, outValidFilePath);
-		}
-
-		// Use the output fixtures
-		syntaxErrorFilePath = outSyntaxErrorFilePath;
-		validFilePath = outValidFilePath;
+		syntaxErrorFilePath = path.join(rootPath, 'src', 'test', 'fixtures', 'syntax-error.npl');
+		validFilePath = path.join(rootPath, 'src', 'test', 'fixtures', 'no-syntax-error.npl');
 
 		if (!fs.existsSync(syntaxErrorFilePath)) {
 			throw new Error(`Test fixture not found: ${syntaxErrorFilePath}`);
