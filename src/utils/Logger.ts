@@ -11,6 +11,14 @@ export class Logger {
     this.outputChannel.appendLine(message);
   }
 
+  logInfo(message: string) {
+    this.outputChannel.appendLine(`INFO: ${message}`);
+  }
+
+  logWarning(message: string) {
+    this.outputChannel.appendLine(`WARNING: ${message}`);
+  }
+
   logError(message: string, error?: any, metadata?: Record<string, any>) {
     const errorMessage = error ? `${message}: ${error.toString()}` : message;
     this.outputChannel.appendLine(`ERROR: ${errorMessage}`);
@@ -22,6 +30,10 @@ export class Logger {
     if (error?.stack) {
       this.outputChannel.appendLine(error.stack);
     }
+  }
+
+  show() {
+    this.outputChannel.show();
   }
 
   getOutputChannel(): vscode.OutputChannel {
