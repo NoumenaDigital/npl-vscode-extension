@@ -1,9 +1,8 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { DeploymentConfigManager, DeploymentConfig } from './DeploymentConfig';
-import { DeploymentService } from './DeploymentService';
-import { Logger } from '../utils/Logger';
-import { CredentialManager } from './CredentialManager';
+import * as vscode from "vscode";
+import { DeploymentConfig, DeploymentConfigManager } from "./DeploymentConfig";
+import { DeploymentService } from "./DeploymentService";
+import { Logger } from "../utils/Logger";
+import { CredentialManager } from "./CredentialManager";
 
 export class DeployCommandHandler {
   private logger: Logger;
@@ -25,10 +24,8 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Load existing config if available
       let config = await this.configManager.loadConfig(workspaceFolder);
 
-      // Create default config if none exists
       if (!config) {
         config = {
           baseUrl: 'https://portal.noumena.cloud',
@@ -39,7 +36,6 @@ export class DeployCommandHandler {
         };
       }
 
-      // Get input from user
       const baseUrl = await vscode.window.showInputBox({
         prompt: 'Enter the Noumena Cloud base URL',
         value: config.baseUrl,
@@ -70,7 +66,6 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Prompt for password right after username
       const password = await vscode.window.showInputBox({
         prompt: 'Enter your password (will be stored securely)',
         password: true
@@ -80,7 +75,6 @@ export class DeployCommandHandler {
         await this.credentialManager.storePassword(baseUrl, username, password);
       }
 
-      // Select source path with folder picker
       const defaultSourcePath = config.sourcePath || workspaceFolder.uri.fsPath;
       const sourcePath = await vscode.window.showOpenDialog({
         canSelectFiles: false,
@@ -107,7 +101,6 @@ export class DeployCommandHandler {
 
       const rapidDeploy = rapidDeploySelection.startsWith('Yes');
 
-      // Save the configuration
       const newConfig: DeploymentConfig = {
         baseUrl,
         appName,
@@ -131,7 +124,6 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Load config
       const config = await this.configManager.loadConfig(workspaceFolder);
       if (!config) {
         const configOption = 'Configure Deployment';
@@ -146,7 +138,6 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Confirm before doing a rapid deployment
       if (config.rapidDeploy && !config.skipRapidDeployWarning) {
         const confirmOption = 'Yes, clear data and deploy';
         const dontWarnOption = 'Yes, and don\'t warn me again';
@@ -159,7 +150,6 @@ export class DeployCommandHandler {
         );
 
         if (selection === dontWarnOption) {
-          // Save preference to skip warning in the future
           config.skipRapidDeployWarning = true;
           await this.configManager.saveConfig(workspaceFolder, config);
         } else if (selection !== confirmOption) {
@@ -167,7 +157,6 @@ export class DeployCommandHandler {
         }
       }
 
-      // Deploy
       await this.deploymentService.deploy(workspaceFolder, config);
     } catch (error) {
       this.logger.logError('Error during deployment command', error);
@@ -182,14 +171,12 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Load config
       const config = await this.configManager.loadConfig(workspaceFolder);
       if (!config || !config.baseUrl || !config.username) {
         vscode.window.showInformationMessage('No credentials found to clean');
         return;
       }
 
-      // Delete password
       await this.credentialManager.deletePassword(config.baseUrl, config.username);
       vscode.window.showInformationMessage('Credentials cleaned successfully');
     } catch (error) {
@@ -210,11 +197,8 @@ export class DeployCommandHandler {
       return workspaceFolders[0];
     }
 
-    // If multiple workspace folders, let the user pick one
-    const selected = await vscode.window.showWorkspaceFolderPick({
+    return vscode.window.showWorkspaceFolderPick({
       placeHolder: 'Select workspace folder for deployment configuration'
     });
-
-    return selected;
   }
 }

@@ -11,9 +11,9 @@ export interface JwtProviderOptions {
 }
 
 export class JwtProvider {
-  private username: string;
-  private password: string;
-  private authUrl: string;
+  private readonly username: string;
+  private readonly password: string;
+  private readonly authUrl: string;
   private logger: Logger;
 
   constructor(options: JwtProviderOptions) {
@@ -90,7 +90,6 @@ export class JwtProvider {
         }
       });
     } catch (error) {
-      // Catch any unexpected errors at the outer level
       this.logger.logError('Unexpected error during JWT retrieval', error);
       return null;
     }

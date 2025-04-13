@@ -1,15 +1,7 @@
-import * as vscode from 'vscode';
-import { Logger } from '../utils/Logger';
-
-// VS Code API typings don't fully cover secrets API
-interface SecretStorage {
-  store(key: string, value: string): Thenable<void>;
-  get(key: string): Thenable<string | undefined>;
-  delete(key: string): Thenable<void>;
-}
+import * as vscode from "vscode";
+import { Logger } from "../utils/Logger";
 
 export class CredentialManager {
-  private static readonly CREDENTIAL_SERVICE = 'npl-deployment';
   private logger: Logger;
   private secretStorage: vscode.SecretStorage;
 
@@ -27,7 +19,7 @@ export class CredentialManager {
       const key = this.getCredentialKey(baseUrl, username);
       await this.secretStorage.store(key, password);
     } catch (error) {
-      this.logger.logError('Failed to store password', error);
+      this.logger.logError("Failed to store password", error);
       throw error;
     }
   }
@@ -37,7 +29,7 @@ export class CredentialManager {
       const key = this.getCredentialKey(baseUrl, username);
       return await this.secretStorage.get(key);
     } catch (error) {
-      this.logger.logError('Failed to retrieve password', error);
+      this.logger.logError("Failed to retrieve password", error);
       return undefined;
     }
   }
@@ -47,7 +39,7 @@ export class CredentialManager {
       const key = this.getCredentialKey(baseUrl, username);
       await this.secretStorage.delete(key);
     } catch (error) {
-      this.logger.logError('Failed to delete password', error);
+      this.logger.logError("Failed to delete password", error);
       throw error;
     }
   }

@@ -25,14 +25,12 @@ export interface DeploymentStatus {
 }
 
 export class DeploymentService {
-  private logger: Logger;
+  private readonly logger: Logger;
   private credentialManager: CredentialManager;
   private zipProducer: ZipProducer;
-  private context: vscode.ExtensionContext;
 
   constructor(logger: Logger, context: vscode.ExtensionContext) {
     this.logger = logger;
-    this.context = context;
     this.credentialManager = new CredentialManager(logger, context);
     this.zipProducer = new ZipProducer(logger);
   }
@@ -42,7 +40,6 @@ export class DeploymentService {
     this.logger.log(`Starting deployment to ${config.baseUrl} for app ${config.appName}...`);
 
     try {
-      // Get password
       const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
       if (!password) {
         const passwordInput = await vscode.window.showInputBox({
@@ -57,11 +54,9 @@ export class DeploymentService {
           };
         }
 
-        // Store the password for future use
         await this.credentialManager.storePassword(config.baseUrl, config.username, passwordInput);
       }
 
-      // Create JWT provider
       const jwtProvider = new JwtProvider({
         username: config.username,
         password: password || '',
@@ -69,7 +64,6 @@ export class DeploymentService {
         logger: this.logger
       });
 
-      // Generate ZIP file
       this.logger.log('Creating deployment package...');
       const zipBuffer = await this.zipProducer.produceZip(
         config.sourcePath,
@@ -77,20 +71,15 @@ export class DeploymentService {
       );
       this.logger.log(`Deployment package created (${Math.round(zipBuffer.length / 1024)} KB)`);
 
-      // Get JWT
       this.logger.log('Authenticating...');
-      // Add a timeout promise to prevent hanging on auth
       const tokenPromise = jwtProvider.provideJwt();
       const timeoutPromise = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), 3000); // 3 second timeout
+        setTimeout(() => resolve(null), 3000);
       });
 
-      // Use Promise.race to resolve with either the token or timeout
       const token = await Promise.race([tokenPromise, timeoutPromise]);
 
       if (!token) {
-        // Could be either authentication failure or connection error
-        // Try to determine if it's a connection error by checking if we can reach the base URL
         try {
           const url = new URL(config.baseUrl);
           await new Promise<void>((resolve, reject) => {
@@ -101,7 +90,7 @@ export class DeploymentService {
                 port: url.port || (url.protocol === 'https:' ? 443 : 80),
                 path: '/',
                 method: 'HEAD',
-                timeout: 2000 // 2 second timeout
+                timeout: 2000
               },
               () => resolve()
             );
@@ -109,13 +98,11 @@ export class DeploymentService {
             req.end();
           });
 
-          // If we got here, connection is OK, so it's an auth error
           return {
             result: DeploymentResult.AuthorizationError,
             message: 'Failed to retrieve authentication token. Check your credentials.'
           };
         } catch (error) {
-          // Connection error
           return {
             result: DeploymentResult.ConnectionError,
             message: 'Could not connect to the server. Check your network connection and server URL.'
@@ -125,7 +112,6 @@ export class DeploymentService {
 
       this.logger.log('Authentication successful');
 
-      // Clear app if requested
       if (config.rapidDeploy) {
         this.logger.log('Clearing existing application...');
         const clearResult = await this.clearApplication(config.baseUrl, config.appName, token);
@@ -139,7 +125,6 @@ export class DeploymentService {
         this.logger.log('Application cleared successfully');
       }
 
-      // Deploy the zip
       this.logger.log('Uploading deployment package...');
       const deployResult = await this.uploadDeployment(config.baseUrl, config.appName, token, zipBuffer);
 
@@ -278,7 +263,6 @@ export class DeploymentService {
         const url = new URL(`${baseUrl}/api/v1/applications/${appName}/deploy`);
         const protocol = url.protocol === 'https:' ? https : http;
 
-        // Generate a random boundary for multipart/form-data
         const boundary = `----WebKitFormBoundary${Math.random().toString(16).substr(2)}`;
 
         const postData = [
