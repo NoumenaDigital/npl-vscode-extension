@@ -183,6 +183,25 @@ transitions.
     var isFinal = true;
     ```
 
+29. **No while loops**: NPL does not support while loops. Use for-in loops or list methods like map/filter instead:
+
+    ```npl
+    // INCORRECT - while loops don't exist in NPL
+    var i = 0;
+    while (i < 10) {
+        // Do something
+        i = i + 1;
+    };
+
+    // CORRECT - use for-in loop with a list
+    for (i in listOfSize(10, function(idx) -> idx)) {
+        // Do something with i
+    };
+
+    // CORRECT - use map for transformations
+    var results = items.map(function(item) -> processItem(item));
+    ```
+
 ## Protocol Syntax
 
 ### Protocol Declaration
@@ -193,6 +212,7 @@ transitions.
  * @param initialValue Initial numeric value.
  * @param textParameter Text parameter.
  */
+@api  // Required for API instantiation
 protocol[party1, party2] ProtocolName(
   var initialValue: Number,
   var textParameter: Text
@@ -207,7 +227,7 @@ protocol[party1, party2] ProtocolName(
 ### Protocol Instantiation
 
 ```npl
-// Basic instantiation
+// Basic instantiation (only possible if protocol is annotated with @api)
 var instance = ProtocolName[alice, bob](42, "example");
 
 // With named arguments
@@ -219,6 +239,7 @@ var namedInstance = ProtocolName[party1 = alice, party2 = bob](
 ## Permissions
 
 ```npl
+@api  // Required for API instantiation
 protocol[issuer, recipient] Transfer() {
   /**
    * Allows the issuer to send money.
@@ -252,6 +273,7 @@ permission[sender] transfer(amount: Number) {
 ## States
 
 ```npl
+@api  // Required for API instantiation
 protocol[buyer, seller] Purchase() {
   initial state created;
   state pending;
@@ -310,19 +332,93 @@ NPL has a defined standard library. **Never invent or assume the existence of me
 3. **Time and Duration**: `now()`, `millis()`, `seconds()`, `minutes()`, `hours()`, `days()`, `weeks()`, `months()`,
    `years()`
 
-### Common Methods on Types
+### Allowed Methods by Type
 
-1. **List**: `get()`, `size()`, `isEmpty()`, `with()`, `without()`, `map()`, `filter()`
-2. **Map**: `get()`, `size()`, `isEmpty()`, `with()`, `without()`, `containsKey()`
-3. **Set**: `contains()`, `size()`, `isEmpty()`, `with()`, `without()`
-4. **Optional**: `isPresent()`, `getOrElse()`, `getOrFail()`, `computeIfAbsent()`
-5. **DateTime/Duration**: `plus()`, `minus()`, `isAfter()`, `isBefore()`
+Use ONLY these methods - do not hallucinate or invent others:
+
+1. **Collection Methods (all collections)**:
+
+   - `allMatch()`, `anyMatch()`, `contains()`, `flatMap()`, `fold()`, `forEach()`, `isEmpty()`, `isNotEmpty()`
+   - `map()`, `noneMatch()`, `size()`, `asList()`
+   - Collections of `Number`: `sum()`
+
+2. **List Methods**:
+
+   - `filter()`, `findFirstOrNone()`, `firstOrNone()`, `get()`, `head()`, `indexOfOrNone()`, `lastOrNone()`, `plus()`
+   - `reverse()`, `sort()`, `sortBy()`, `tail()`, `toSet()`, `with()`, `withAt()`, `without()`, `withoutAt()`
+   - `withIndex()`, `zipOrFail()`, `takeFirst()`, `takeLast()`, `toMap()`
+
+3. **Map Methods**:
+
+   - `filter()`, `forEach()`, `getOrNone()`, `isEmpty()`, `isNotEmpty()`, `keys()`, `plus()`, `size()`
+   - `mapValues()`, `values()`, `with()`, `without()`, `toList()`
+
+4. **Set Methods**:
+
+   - `filter()`, `plus()`, `toList()`, `with()`, `without()`, `takeFirst()`, `takeLast()`
+
+5. **Text Methods**:
+
+   - `plus()`, `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`, `length()`
+
+6. **Number Methods**:
+
+   - `isInteger()`, `roundTo()`, `negative()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`
+   - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
+
+7. **Boolean Methods**:
+
+   - `not()`
+
+8. **DateTime Methods**:
+
+   - `day()`, `month()`, `year()`, `nano()`, `second()`, `minute()`, `hour()`, `zoneId()`
+   - `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`, `startOfDay()`
+   - `durationUntil()`, `isAfter()`, `isBefore()`, `isBetween()`, `withZoneSameLocal()`, `withZoneSameInstant()`
+   - `plus()`, `minus()`, `toLocalDate()`, `dayOfWeek()`
+
+9. **Duration Methods**:
+
+   - `toSeconds()`, `plus()`, `minus()`, `multiplyBy()`
+
+10. **LocalDate Methods**:
+
+    - `day()`, `month()`, `year()`, `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`
+    - `isAfter()`, `isBefore()`, `isBetween()`, `plus()`, `minus()`, `periodUntil()`, `atStartOfDay()`, `dayOfWeek()`
+
+11. **Period Methods**:
+
+    - `plus()`, `minus()`, `multiplyBy()`
+
+12. **Optional Methods**:
+
+    - `isPresent()`, `getOrElse()`, `getOrFail()`, `computeIfAbsent()`
+
+13. **Party Methods**:
+
+    - `sameEntityAs()`, `containsEntityValuesOf()`, `isRepresentableBy()`, `mayRepresent()`, `entity()`, `access()`
+
+14. **Protocol Methods**:
+
+    - `parties()`, `activeState()`, `initialState()`, `finalStates()`
+
+15. **Blob Methods**:
+
+    - `filename()`, `mimeType()`
+
+16. **Symbol Methods**:
+
+    - `toNumber()`, `unit()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`, `negative()`
+    - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
+
+17. **General Methods**:
+    - All types: `toText()` - converts value to Text representation
 
 ### Important Guidelines
 
-1. **Don't hallucinate methods**: Only use documented methods.
+1. **Don't hallucinate methods**: Only use methods listed above.
 2. **Immutable collections**: `with()` and `without()` create new collections.
-3. **No advanced functional operations**: No streams, flatMap, reduce, unless documented.
+3. **No advanced functional operations**: No streams, reduce, unless documented above.
 
 ## Type System
 
@@ -421,6 +517,7 @@ function total(payments: List<TimestampedAmount>) returns Number -> {
  * @param paymentDeadline The date by which the full amount must be paid.
  * @param lateFee The fee applied if the payment is late.
  */
+@api
 protocol[issuer, payee] Iou(
     // Initial parameters with validation
     var forAmount: Number,
