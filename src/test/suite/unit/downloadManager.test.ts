@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import { DownloadManager, IFileSystem, IHttpClient } from '../../server/binary/DownloadManager';
+import { DownloadManager, IFileSystem, IHttpClient } from '../../../server/binary/DownloadManager';
 import * as http from 'http';
 import * as fs from 'fs';
 

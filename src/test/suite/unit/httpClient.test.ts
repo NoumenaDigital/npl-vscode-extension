@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { ClientRequest, IncomingMessage } from 'http';
-import { HttpClient, IHttpRequester } from '../../utils/HttpClient';
+import { HttpClient, IHttpRequester } from '../../../utils/HttpClient';
 import { EventEmitter } from 'events';
 
 function createMockRequest(): ClientRequest & EventEmitter {

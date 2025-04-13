@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as path from 'path';
-import { VersionManager } from '../../server/binary/VersionManager';
+import { VersionManager } from '../../../server/binary/VersionManager';
 import * as vscode from 'vscode';
-import { BinaryManager } from '../../server/binary/BinaryManager';
+import { BinaryManager } from '../../../server/binary/BinaryManager';
 import * as fs from 'fs';
 
 suite('VersionManager Test Suite', () => {

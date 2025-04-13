@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as https from 'https';
-import * as fs from 'fs';
 import { CredentialManager } from './CredentialManager';
 import { ZipProducer } from './ZipProducer';
 import { JwtProvider } from './JwtProvider';
@@ -80,13 +79,50 @@ export class DeploymentService {
 
       // Get JWT
       this.logger.log('Authenticating...');
-      const token = await jwtProvider.provideJwt();
+      // Add a timeout promise to prevent hanging on auth
+      const tokenPromise = jwtProvider.provideJwt();
+      const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 3000); // 3 second timeout
+      });
+
+      // Use Promise.race to resolve with either the token or timeout
+      const token = await Promise.race([tokenPromise, timeoutPromise]);
+
       if (!token) {
-        return {
-          result: DeploymentResult.AuthorizationError,
-          message: 'Failed to retrieve authentication token. Check your credentials.'
-        };
+        // Could be either authentication failure or connection error
+        // Try to determine if it's a connection error by checking if we can reach the base URL
+        try {
+          const url = new URL(config.baseUrl);
+          await new Promise<void>((resolve, reject) => {
+            const protocol = url.protocol === 'https:' ? https : http;
+            const req = protocol.request(
+              {
+                hostname: url.hostname,
+                port: url.port || (url.protocol === 'https:' ? 443 : 80),
+                path: '/',
+                method: 'HEAD',
+                timeout: 2000 // 2 second timeout
+              },
+              () => resolve()
+            );
+            req.on('error', () => reject(new Error('ECONNREFUSED')));
+            req.end();
+          });
+
+          // If we got here, connection is OK, so it's an auth error
+          return {
+            result: DeploymentResult.AuthorizationError,
+            message: 'Failed to retrieve authentication token. Check your credentials.'
+          };
+        } catch (error) {
+          // Connection error
+          return {
+            result: DeploymentResult.ConnectionError,
+            message: 'Could not connect to the server. Check your network connection and server URL.'
+          };
+        }
       }
+
       this.logger.log('Authentication successful');
 
       // Clear app if requested

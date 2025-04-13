@@ -19,6 +19,10 @@ export class TestServer {
   private deploymentHandler: ((appId: string, fileBuffer: Buffer) => boolean) | null = null;
   private clearHandler: ((appId: string) => boolean) | null = null;
 
+  // Configuration flags for testing different scenarios
+  private simulateConnectionError = false;
+  private simulateAuthError = false;
+
   constructor() {
     this.app = express();
     this.storage = multer.memoryStorage();
@@ -77,15 +81,67 @@ export class TestServer {
   }
 
   /**
+   * Configure the server to simulate a connection error scenario
+   */
+  public enableConnectionErrorSimulation(enable: boolean = true): void {
+    this.simulateConnectionError = enable;
+  }
+
+  /**
+   * Configure the server to simulate an authentication error
+   */
+  public enableAuthErrorSimulation(enable: boolean = true): void {
+    this.simulateAuthError = enable;
+  }
+
+  /**
+   * Configure the valid credentials for testing different auth scenarios
+   */
+  public setValidCredentials(username: string, password: string): void {
+    this.validCredentials = { username, password };
+  }
+
+  /**
+   * Get a URL that will always return a server error (500)
+   */
+  public getErrorEndpointUrl(): string {
+    if (!this.server) {
+      throw new Error('Server not started');
+    }
+    const address = this.server.address() as AddressInfo;
+    return `http://localhost:${address.port}/api/auth/error`;
+  }
+
+  /**
+   * Get a URL that will simulate a connection error (server not responding)
+   */
+  public getConnectionErrorUrl(): string {
+    return 'http://non-existent-server.example.test';
+  }
+
+  /**
    * Set up the API routes that mimic the Noumena Cloud API
    */
   private setupRoutes(): void {
     // Authentication endpoint
     this.app.post('/api/auth/login', express.urlencoded({ extended: true }), (req: express.Request, res: express.Response) => {
+      // Simulate connection error if enabled
+      if (this.simulateConnectionError) {
+        // Close the connection without sending a response
+        req.socket.destroy();
+        return;
+      }
+
       const { username, password, grant_type } = req.body;
 
       if (grant_type !== 'password') {
         res.status(400).json({ error: 'Invalid grant type' });
+        return;
+      }
+
+      // Simulate auth error if enabled
+      if (this.simulateAuthError) {
+        res.status(401).json({ error: 'Authentication failed' });
         return;
       }
 
@@ -99,8 +155,26 @@ export class TestServer {
       res.status(401).json({ error: 'Invalid credentials' });
     });
 
+    // Server error endpoint for testing
+    this.app.post('/api/auth/error', express.urlencoded({ extended: true }), (req: express.Request, res: express.Response) => {
+      res.status(500).json({ error: 'Internal server error' });
+    });
+
+    // Connection error simulation endpoint
+    this.app.post('/api/auth/connection-error', (req: express.Request, res: express.Response) => {
+      // Simulate a connection error by destroying the socket
+      req.socket.destroy();
+    });
+
     // Authorization middleware
     const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      // Simulate connection error if enabled
+      if (this.simulateConnectionError) {
+        // Close the connection without sending a response
+        req.socket.destroy();
+        return;
+      }
+
       const authHeader = req.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith('Bearer ')) {

@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as path from 'path';
-import { BinaryManager } from '../../server/binary/BinaryManager';
-import { VersionManager } from '../../server/binary/VersionManager';
-import { DownloadManager, ProgressCallback } from '../../server/binary/DownloadManager';
+import { BinaryManager } from '../../../server/binary/BinaryManager';
+import { VersionManager } from '../../../server/binary/VersionManager';
+import { DownloadManager, ProgressCallback } from '../../../server/binary/DownloadManager';
 
 // Define a type for our stubbed download manager for better type checking
 type StubDownloadManager = DownloadManager & {
