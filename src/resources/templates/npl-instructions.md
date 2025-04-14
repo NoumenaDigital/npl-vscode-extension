@@ -603,6 +603,7 @@ protocol[issuer, payee] Iou(
         return amountOwed();
     };
 };
+```
 
 ## Common NPL Patterns
 
@@ -614,4 +615,3 @@ protocol[issuer, payee] Iou(
 5. **Helper functions**: Creating private functions for reusable logic
 
 <!-- END NPL DEVELOPMENT SECTION -->
-```
