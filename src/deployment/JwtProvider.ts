@@ -1,20 +1,20 @@
 import * as https from 'https';
 import * as http from 'http';
 import * as querystring from 'querystring';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 
 export interface JwtProviderOptions {
   username: string;
   password: string;
   authUrl: string;
-  logger: Logger;
+  logger: ILogger;
 }
 
 export class JwtProvider {
   private readonly username: string;
   private readonly password: string;
   private readonly authUrl: string;
-  private logger: Logger;
+  private logger: ILogger;
 
   constructor(options: JwtProviderOptions) {
     this.username = options.username;

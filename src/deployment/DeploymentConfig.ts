@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 import { FileUtils } from '../utils/FileUtils';
 
 export interface DeploymentConfig {
@@ -14,9 +14,9 @@ export interface DeploymentConfig {
 
 export class DeploymentConfigManager {
   private static readonly CONFIG_FILE_NAME = 'npl-deploy.json';
-  private logger: Logger;
+  private logger: ILogger;
 
-  constructor(logger: Logger) {
+  constructor(logger: ILogger) {
     this.logger = logger;
   }
 

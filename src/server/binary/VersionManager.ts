@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Logger } from '../../utils/Logger';
+import { ILogger } from '../../utils/Logger';
 import { HttpClientFactory } from '../../utils/HttpClient';
 
 export interface ServerVersion {
@@ -19,12 +19,12 @@ export interface GithubRelease {
 
 export class VersionManager {
   static readonly VERSIONS_FILE = 'server-versions.json';
-  private static _logger: Logger | undefined;
+  private static _logger: ILogger | undefined;
 
   /**
    * Sets the logger for the VersionManager
    */
-  static setLogger(logger: Logger): void {
+  static setLogger(logger: ILogger): void {
     this._logger = logger;
     // Also set the logger for the HttpClient
     HttpClientFactory.setLogger(logger);

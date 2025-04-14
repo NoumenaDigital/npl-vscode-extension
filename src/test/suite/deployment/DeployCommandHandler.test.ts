@@ -7,7 +7,14 @@ import * as fs from 'fs';
 import { DeployCommandHandler } from '../../../deployment/DeployCommandHandler';
 import { DeploymentResult } from '../../../deployment/DeploymentService';
 import { TestLogger } from './TestLogger';
-import { Logger } from '../../../utils/Logger';
+import {
+  IMockExtensionContext,
+  IMockSecretStorage,
+  IMockDeploymentConfigManager,
+  IMockDeploymentService,
+  IMockCredentialManager
+} from './interfaces';
+import { DeploymentConfig } from '../../../deployment/DeploymentConfig';
 
 const TEST_VALUE = 'test-value';
 const TEST_URL = 'https://test.example.com';
@@ -20,14 +27,14 @@ suite('DeployCommandHandler Tests', () => {
   let logger: TestLogger;
   let sandbox: sinon.SinonSandbox;
   let deployCommandHandler: DeployCommandHandler;
-  let mockContext: vscode.ExtensionContext;
+  let mockContext: IMockExtensionContext;
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let tempDir: string;
   let mockWindow: any;
   let workspaceFolders: vscode.WorkspaceFolder[];
-  let mockConfigManager: any;
-  let mockDeploymentService: any;
-  let mockCredentialManager: any;
+  let mockConfigManager: IMockDeploymentConfigManager;
+  let mockDeploymentService: IMockDeploymentService;
+  let mockCredentialManager: IMockCredentialManager;
 
   setup(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'npl-command-test-'));
@@ -36,7 +43,7 @@ suite('DeployCommandHandler Tests', () => {
 
     sandbox = sinon.createSandbox();
 
-    const mockSecretStorage = {
+    const mockSecretStorage: IMockSecretStorage = {
       store: sinon.stub().resolves(),
       get: sinon.stub().resolves(TEST_PASSWORD),
       delete: sinon.stub().resolves()
@@ -44,7 +51,7 @@ suite('DeployCommandHandler Tests', () => {
 
     mockContext = {
       secrets: mockSecretStorage
-    } as unknown as vscode.ExtensionContext;
+    };
 
     mockWorkspaceFolder = {
       uri: vscode.Uri.file(tempDir),
@@ -68,27 +75,32 @@ suite('DeployCommandHandler Tests', () => {
     // This avoids the "Cannot set property workspaceFolders" error
     sandbox.stub(vscode.workspace, 'workspaceFolders').get(() => workspaceFolders);
 
+    // Create stubs with the correct types
     mockConfigManager = {
-      loadConfig: sinon.stub().resolves(undefined),
-      saveConfig: sinon.stub().resolves(),
-      getConfigFilePath: sinon.stub().resolves(path.join(tempDir, 'npl-deploy.json'))
+      loadConfig: sinon.stub<[vscode.WorkspaceFolder], Promise<DeploymentConfig | undefined>>().resolves(undefined),
+      saveConfig: sinon.stub<[vscode.WorkspaceFolder, DeploymentConfig], Promise<void>>().resolves(),
+      getConfigFilePath: sinon.stub<[vscode.WorkspaceFolder], Promise<string>>().resolves(path.join(tempDir, 'npl-deploy.json'))
     };
 
     mockDeploymentService = {
-      deploy: sinon.stub().resolves({
+      deploy: sinon.stub<[vscode.WorkspaceFolder, DeploymentConfig], Promise<{
+        result: DeploymentResult;
+        message: string;
+        error?: Error;
+      }>>().resolves({
         result: DeploymentResult.Success,
         message: 'Successfully deployed.'
       })
     };
 
     mockCredentialManager = {
-      storePassword: sinon.stub().resolves(),
-      getPassword: sinon.stub().resolves(TEST_PASSWORD),
-      deletePassword: sinon.stub().resolves()
+      storePassword: sinon.stub<[string, string, string], Promise<void>>().resolves(),
+      getPassword: sinon.stub<[string, string], Promise<string | undefined>>().resolves(TEST_PASSWORD),
+      deletePassword: sinon.stub<[string, string], Promise<void>>().resolves()
     };
 
-    // Create deploy command handler with type cast
-    deployCommandHandler = new DeployCommandHandler(logger as unknown as Logger, mockContext);
+    // Create deploy command handler
+    deployCommandHandler = new DeployCommandHandler(logger, mockContext as unknown as vscode.ExtensionContext);
 
     // Replace the dependencies with our mocks
     (deployCommandHandler as any).configManager = mockConfigManager;

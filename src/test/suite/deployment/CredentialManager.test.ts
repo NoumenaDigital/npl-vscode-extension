@@ -3,13 +3,13 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import { CredentialManager } from '../../../deployment/CredentialManager';
 import { TestLogger } from './TestLogger';
-import { Logger } from '../../../utils/Logger';
+import { IMockExtensionContext, IMockSecretStorage } from './interfaces';
 
 suite('CredentialManager Tests', () => {
   let logger: TestLogger;
   let sandbox: sinon.SinonSandbox;
-  let mockSecretStorage: any;
-  let mockContext: vscode.ExtensionContext;
+  let mockSecretStorage: IMockSecretStorage;
+  let mockContext: IMockExtensionContext;
   let credentialManager: CredentialManager;
 
   setup(async () => {
@@ -18,16 +18,16 @@ suite('CredentialManager Tests', () => {
     sandbox = sinon.createSandbox();
 
     mockSecretStorage = {
-      store: sinon.stub().resolves(),
+      store: sinon.stub(),
       get: sinon.stub().resolves('testpassword'),
-      delete: sinon.stub().resolves()
+      delete: sinon.stub()
     };
 
     mockContext = {
       secrets: mockSecretStorage
-    } as unknown as vscode.ExtensionContext;
+    };
 
-    credentialManager = new CredentialManager(logger as unknown as Logger, mockContext);
+    credentialManager = new CredentialManager(logger, mockContext as unknown as vscode.ExtensionContext);
   });
 
   teardown(async () => {

@@ -1,16 +1,16 @@
 import * as vscode from "vscode";
 import { DeploymentConfig, DeploymentConfigManager } from "./DeploymentConfig";
 import { DeploymentService } from "./DeploymentService";
-import { Logger } from "../utils/Logger";
+import { ILogger } from "../utils/Logger";
 import { CredentialManager } from "./CredentialManager";
 
 export class DeployCommandHandler {
-  private logger: Logger;
+  private logger: ILogger;
   private configManager: DeploymentConfigManager;
   private deploymentService: DeploymentService;
   private credentialManager: CredentialManager;
 
-  constructor(logger: Logger, context: vscode.ExtensionContext) {
+  constructor(logger: ILogger, context: vscode.ExtensionContext) {
     this.logger = logger;
     this.configManager = new DeploymentConfigManager(logger);
     this.deploymentService = new DeploymentService(logger, context);

@@ -4,6 +4,7 @@ import * as path from 'path';
 import { VersionManager } from '../../server/binary/VersionManager';
 import * as vscode from 'vscode';
 import { BinaryManager } from '../../server/binary/BinaryManager';
+import { ILogger } from '../../utils/Logger';
 
 suite('VersionManager Test Suite', () => {
   let sandbox: sinon.SinonSandbox;

@@ -1,11 +1,11 @@
 import * as fs from 'fs';
 import archiver from 'archiver';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 
 export class ZipProducer {
-  private logger: Logger;
+  private logger: ILogger;
 
-  constructor(logger: Logger) {
+  constructor(logger: ILogger) {
     this.logger = logger;
   }
 

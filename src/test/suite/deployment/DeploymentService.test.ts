@@ -8,14 +8,14 @@ import { DeploymentService, DeploymentResult } from '../../../deployment/Deploym
 import { DeploymentConfig } from '../../../deployment/DeploymentConfig';
 import { TestServer } from './TestServer';
 import { TestLogger } from './TestLogger';
-import { Logger } from '../../../utils/Logger';
+import { IMockExtensionContext, IMockSecretStorage } from './interfaces';
 
 suite('DeploymentService Tests', () => {
   let logger: TestLogger;
   let sandbox: sinon.SinonSandbox;
   let server: TestServer;
   let deploymentService: DeploymentService;
-  let mockContext: vscode.ExtensionContext;
+  let mockContext: IMockExtensionContext;
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let tempDir: string;
   let mockWindow: any;
@@ -40,15 +40,15 @@ suite('DeploymentService Tests', () => {
     logger = new TestLogger();
     sandbox = sinon.createSandbox();
 
-    const mockSecretStorage = {
-      store: sinon.stub().resolves(),
+    const mockSecretStorage: IMockSecretStorage = {
+      store: sinon.stub(),
       get: sinon.stub().resolves('testpassword'),
-      delete: sinon.stub().resolves()
+      delete: sinon.stub()
     };
 
     mockContext = {
       secrets: mockSecretStorage
-    } as unknown as vscode.ExtensionContext;
+    };
 
     mockWorkspaceFolder = {
       uri: vscode.Uri.file(tempDir),
@@ -63,7 +63,7 @@ suite('DeploymentService Tests', () => {
 
     server = new TestServer().start();
 
-    deploymentService = new DeploymentService(logger as unknown as Logger, mockContext);
+    deploymentService = new DeploymentService(logger, mockContext as unknown as vscode.ExtensionContext);
   });
 
   teardown(async () => {

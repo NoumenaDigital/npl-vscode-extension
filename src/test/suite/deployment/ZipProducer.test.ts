@@ -23,7 +23,7 @@ suite('ZipProducer Tests', () => {
 
         sandbox = sinon.createSandbox();
 
-        zipProducer = new ZipProducer(logger as unknown as Logger);
+        zipProducer = new ZipProducer(logger);
     });
 
     teardown(() => {

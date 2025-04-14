@@ -29,7 +29,7 @@ suite('DeploymentConfig Tests', () => {
       index: 0
     };
 
-    configManager = new DeploymentConfigManager(logger as unknown as Logger);
+    configManager = new DeploymentConfigManager(logger);
   });
 
   teardown(async () => {

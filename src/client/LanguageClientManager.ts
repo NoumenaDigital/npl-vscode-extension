@@ -6,15 +6,15 @@ import {
   ErrorAction,
   CloseAction
 } from 'vscode-languageclient/node';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 import { ServerManager } from '../server/ServerManager';
 
 export class LanguageClientManager {
   private client: LanguageClient | undefined;
-  private logger: Logger;
+  private logger: ILogger;
   private serverManager: ServerManager;
 
-  constructor(logger: Logger, serverManager: ServerManager) {
+  constructor(logger: ILogger, serverManager: ServerManager) {
     this.logger = logger;
     this.serverManager = serverManager;
   }

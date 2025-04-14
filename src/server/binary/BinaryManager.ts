@@ -2,16 +2,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ProgressCallback, DownloadManagerFactory, DownloadManager } from './DownloadManager';
 import { VersionManager } from './VersionManager';
-import { Logger } from '../../utils/Logger';
+import { ILogger } from '../../utils/Logger';
 
 export class BinaryManager {
   private static _downloadManager = DownloadManagerFactory.create();
-  private static _logger: Logger | undefined;
+  private static _logger: ILogger | undefined;
 
   /**
    * Sets the logger for the BinaryManager
    */
-  static setLogger(logger: Logger): void {
+  static setLogger(logger: ILogger): void {
     this._logger = logger;
     // Pass the logger to the DownloadManagerFactory
     DownloadManagerFactory.setLogger(logger);

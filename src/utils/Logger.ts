@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
 
-export class Logger {
+export interface ILogger {
+  log(message: string): void;
+  logInfo(message: string): void;
+  logWarning(message: string): void;
+  logError(message: string, error?: any, metadata?: Record<string, any>): void;
+  show(): void;
+  getOutputChannel(): vscode.OutputChannel;
+}
+
+export class Logger implements ILogger {
   private outputChannel: vscode.OutputChannel;
 
   constructor(name: string) {

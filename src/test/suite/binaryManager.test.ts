@@ -4,6 +4,7 @@ import * as path from 'path';
 import { BinaryManager } from '../../server/binary/BinaryManager';
 import { VersionManager } from '../../server/binary/VersionManager';
 import { DownloadManager, ProgressCallback } from '../../server/binary/DownloadManager';
+import { ILogger } from '../../utils/Logger';
 
 // Define a type for our stubbed download manager for better type checking
 type StubDownloadManager = DownloadManager & {

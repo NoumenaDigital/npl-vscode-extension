@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { Logger } from "../utils/Logger";
+import { ILogger } from "../utils/Logger";
 
 export class CredentialManager {
-  private logger: Logger;
+  private logger: ILogger;
   private secretStorage: vscode.SecretStorage;
 
-  constructor(logger: Logger, context: vscode.ExtensionContext) {
+  constructor(logger: ILogger, context: vscode.ExtensionContext) {
     this.logger = logger;
     this.secretStorage = context.secrets;
   }

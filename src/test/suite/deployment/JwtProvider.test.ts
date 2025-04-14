@@ -33,7 +33,7 @@ suite('JwtProvider Tests', () => {
       username: 'testuser',
       password: 'testpass',
       authUrl: `${server.getBaseUrl()}/api/auth/login`,
-      logger: logger as unknown as Logger
+      logger: logger
     });
 
     const token = await jwtProvider.provideJwt();
@@ -48,7 +48,7 @@ suite('JwtProvider Tests', () => {
       username: 'testuser',
       password: 'testpass',
       authUrl: `${server.getBaseUrl()}/api/auth/login`,
-      logger: logger as unknown as Logger
+      logger: logger
     });
 
     const logErrorSpy = sandbox.spy(logger, 'logError');

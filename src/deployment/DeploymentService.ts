@@ -4,7 +4,7 @@ import * as https from 'https';
 import { CredentialManager } from './CredentialManager';
 import { ZipProducer } from './ZipProducer';
 import { JwtProvider } from './JwtProvider';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 import { DeploymentConfig } from './DeploymentConfig';
 
 export enum DeploymentResult {
@@ -25,11 +25,11 @@ export interface DeploymentStatus {
 }
 
 export class DeploymentService {
-  private readonly logger: Logger;
+  private readonly logger: ILogger;
   private credentialManager: CredentialManager;
   private zipProducer: ZipProducer;
 
-  constructor(logger: Logger, context: vscode.ExtensionContext) {
+  constructor(logger: ILogger, context: vscode.ExtensionContext) {
     this.logger = logger;
     this.credentialManager = new CredentialManager(logger, context);
     this.zipProducer = new ZipProducer(logger);

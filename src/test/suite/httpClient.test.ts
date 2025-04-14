@@ -3,6 +3,7 @@ import * as sinon from 'sinon';
 import { ClientRequest, IncomingMessage } from 'http';
 import { HttpClient, IHttpRequester } from '../../utils/HttpClient';
 import { EventEmitter } from 'events';
+import { ILogger } from '../../utils/Logger';
 
 function createMockRequest(): ClientRequest & EventEmitter {
   const emitter = new EventEmitter() as ClientRequest & EventEmitter;
