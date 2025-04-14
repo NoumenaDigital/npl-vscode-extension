@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as dotenv from 'dotenv';
 
 suite('Extension E2E Test Suite', () => {
 	let sandbox: sinon.SinonSandbox;
@@ -12,14 +13,16 @@ suite('Extension E2E Test Suite', () => {
 	setup(async () => {
 		sandbox = sinon.createSandbox();
 
+		// Load environment variables from .env file if available
+		const rootPath = path.resolve(__dirname, '../../../');
+		dotenv.config({ path: path.join(rootPath, '.env') });
+
 		// Check for GitHub token, log warning if not available
 		const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 		if (!token) {
 			console.warn('WARNING: No GitHub token found in environment variables. This may cause rate limiting issues in CI.');
 			console.warn('Set GITHUB_TOKEN or GH_TOKEN environment variable with a valid GitHub PAT to avoid this.');
 		}
-
-		const rootPath = path.resolve(__dirname, '../../../');
 
 		syntaxErrorFilePath = path.join(rootPath, 'src', 'test', 'fixtures', 'syntax-error.npl');
 		validFilePath = path.join(rootPath, 'src', 'test', 'fixtures', 'no-syntax-error.npl');

@@ -2,7 +2,7 @@ import * as net from 'net';
 import * as childProcess from 'child_process';
 import { StreamInfo } from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
-import { Logger } from '../utils/Logger';
+import { ILogger } from '../utils/Logger';
 import { ProgressCallback } from './binary/DownloadManager';
 import { VersionManager } from './binary/VersionManager';
 import { BinaryManager } from './binary/BinaryManager';
@@ -10,10 +10,10 @@ import * as fs from 'fs';
 
 export class ServerManager {
   private serverProcess: childProcess.ChildProcess | undefined;
-  private logger: Logger;
+  private logger: ILogger;
   private readonly DEFAULT_PORT = 5007;
 
-  constructor(logger: Logger) {
+  constructor(logger: ILogger) {
     this.logger = logger;
   }
 

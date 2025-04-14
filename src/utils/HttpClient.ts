@@ -1,6 +1,6 @@
 import * as https from 'https';
 import { IncomingMessage, ClientRequest } from 'http';
-import { Logger } from './Logger';
+import { ILogger } from './Logger';
 
 export interface IHttpClient {
   get<T>(url: string, headers?: Record<string, string>): Promise<T>;
@@ -19,7 +19,7 @@ export class HttpsRequester implements IHttpRequester {
 export class HttpClient implements IHttpClient {
   constructor(
     private readonly requester: IHttpRequester = new HttpsRequester(),
-    private readonly logger?: Logger
+    private readonly logger?: ILogger
   ) {}
 
   get<T>(url: string, headers: Record<string, string> = {}): Promise<T> {
@@ -80,10 +80,10 @@ export class HttpClient implements IHttpClient {
 }
 
 export class HttpClientFactory {
-  private static _logger: Logger | undefined;
+  private static _logger: ILogger | undefined;
   private static _instance: HttpClient | undefined;
 
-  static setLogger(logger: Logger): void {
+  static setLogger(logger: ILogger): void {
     this._logger = logger;
     // Create a new instance with the logger if needed
     if (this._instance) {

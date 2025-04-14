@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as https from 'https';
 import { IncomingMessage, ClientRequest } from 'http';
 import * as path from 'path';
-import { Logger } from '../../utils/Logger';
+import { ILogger } from '../../utils/Logger';
 
 export interface DownloadProgress {
   message?: string;
@@ -28,7 +28,7 @@ export class DownloadManager {
   constructor(
     private readonly fs: IFileSystem,
     private readonly https: IHttpClient,
-    private readonly logger?: Logger
+    private readonly logger?: ILogger
   ) {}
 
   async downloadFile(
@@ -133,12 +133,12 @@ export class DownloadManager {
 
 export class DownloadManagerFactory {
   // Static reference to the logger that will be shared
-  private static _logger: Logger | undefined;
+  private static _logger: ILogger | undefined;
 
   /**
    * Sets the logger for all download managers
    */
-  static setLogger(logger: Logger): void {
+  static setLogger(logger: ILogger): void {
     this._logger = logger;
   }
 

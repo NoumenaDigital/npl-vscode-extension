@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
 
-export class Logger {
+export interface ILogger {
+  log(message: string): void;
+  logInfo(message: string): void;
+  logWarning(message: string): void;
+  logError(message: string, error?: any, metadata?: Record<string, any>): void;
+  show(): void;
+  getOutputChannel(): vscode.OutputChannel;
+}
+
+export class Logger implements ILogger {
   private outputChannel: vscode.OutputChannel;
 
   constructor(name: string) {
@@ -9,6 +18,14 @@ export class Logger {
 
   log(message: string) {
     this.outputChannel.appendLine(message);
+  }
+
+  logInfo(message: string) {
+    this.outputChannel.appendLine(`INFO: ${message}`);
+  }
+
+  logWarning(message: string) {
+    this.outputChannel.appendLine(`WARNING: ${message}`);
   }
 
   logError(message: string, error?: any, metadata?: Record<string, any>) {
@@ -22,6 +39,10 @@ export class Logger {
     if (error?.stack) {
       this.outputChannel.appendLine(error.stack);
     }
+  }
+
+  show() {
+    this.outputChannel.show();
   }
 
   getOutputChannel(): vscode.OutputChannel {
