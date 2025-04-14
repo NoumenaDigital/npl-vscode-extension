@@ -18,6 +18,7 @@ suite('DeploymentService Tests', () => {
   let mockContext: IMockExtensionContext;
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let tempDir: string;
+  let normalizedTempDir: string;
   let mockWindow: any;
 
   const ResultPatterns = {
@@ -42,8 +43,16 @@ suite('DeploymentService Tests', () => {
     CONNECTION_REFUSED: 'ECONNREFUSED'
   };
 
+  function normalizePath(inputPath: string): string {
+    if (process.platform === 'win32') {
+      return inputPath.toLowerCase();
+    }
+    return inputPath;
+  }
+
   setup(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'npl-deploy-test-'));
+    normalizedTempDir = normalizePath(tempDir);
 
     const testFilePath = path.join(tempDir, 'test.npl');
     fs.writeFileSync(testFilePath, 'protocol[] Test() { init {}; };');
@@ -62,7 +71,7 @@ suite('DeploymentService Tests', () => {
     };
 
     mockWorkspaceFolder = {
-      uri: vscode.Uri.file(tempDir),
+      uri: vscode.Uri.file(normalizedTempDir),
       name: 'test',
       index: 0
     };
@@ -73,7 +82,6 @@ suite('DeploymentService Tests', () => {
     mockWindow.showErrorMessage.resolves();
 
     server = new TestServer().start();
-
     deploymentService = new DeploymentService(logger, mockContext as unknown as vscode.ExtensionContext);
   });
 
@@ -87,7 +95,6 @@ suite('DeploymentService Tests', () => {
     sandbox.restore();
   });
 
-  // Helper function to check if result message matches expected pattern
   function assertResultType(result: { result: DeploymentResult; message: string }, expectedPattern: RegExp) {
     assert.ok(
       expectedPattern.test(result.message),
@@ -100,7 +107,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir, // Use normalized path
       rapidDeploy: false
     };
 
@@ -109,7 +116,6 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    // Instead of comparing enum values, check message content
     assertResultType(result, ResultPatterns.Success);
   });
 
@@ -118,7 +124,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir,
       rapidDeploy: true
     };
 
@@ -128,7 +134,6 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    // Check for success message and "cleared" in the message
     assertResultType(result, ResultPatterns.Success);
     assert.ok(
       result.message.includes('cleared'),
@@ -142,7 +147,7 @@ suite('DeploymentService Tests', () => {
         baseUrl: server.getBaseUrl(),
         appName: 'test-app',
         username: 'testuser',
-        sourcePath: tempDir,
+        sourcePath: normalizedTempDir,
         rapidDeploy: false
       };
 
@@ -166,7 +171,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: 'http://localhost:1',
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir,
       rapidDeploy: false
     };
 
@@ -180,7 +185,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir,
       rapidDeploy: false
     };
 
@@ -203,7 +208,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir,
       rapidDeploy: true
     };
 
@@ -212,8 +217,10 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    // This should return an error message about clearing the application
-    assert.ok(result.message.includes('clear'), 'Message should mention clearing the application');
+    assert.ok(
+      result.message.includes('clear'),
+      'Message should mention clearing the application'
+    );
   });
 
   test('Should handle missing password', async () => {
@@ -221,7 +228,7 @@ suite('DeploymentService Tests', () => {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: tempDir,
+      sourcePath: normalizedTempDir,
       rapidDeploy: false
     };
 
@@ -236,15 +243,16 @@ suite('DeploymentService Tests', () => {
   });
 
   test('Should handle invalid source path', async () => {
+    const invalidPath = normalizePath(path.join(tempDir, 'non-existent'));
+
     const config: DeploymentConfig = {
       baseUrl: server.getBaseUrl(),
       appName: 'test-app',
       username: 'testuser',
-      sourcePath: path.join(tempDir, 'non-existent'),
+      sourcePath: invalidPath,
       rapidDeploy: false
     };
 
-    // Deploy with path that doesn't exist
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
     assert.ok(!ResultPatterns.Success.test(result.message), 'Should not return success message');
