@@ -15,3 +15,5 @@ src/test/.DS_Store
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
 bin/
+.env
+.cursorrules
