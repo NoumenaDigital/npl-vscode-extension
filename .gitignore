@@ -16,3 +16,5 @@ src/test/.DS_Store
 /.idea/vcs.xml
 bin/
 src/test/fixtures/.vscode/
+.env
+.cursorrules
