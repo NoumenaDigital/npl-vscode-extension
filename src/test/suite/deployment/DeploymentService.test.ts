@@ -20,6 +20,18 @@ suite('DeploymentService Tests', () => {
   let tempDir: string;
   let mockWindow: any;
 
+  // Define expected enum values for cross-platform compatibility
+  const ExpectedResult = {
+    Success: 0,
+    AuthorizationError: 1,
+    Unauthorized: 2,
+    NotFound: 3,
+    ConnectionError: 4,
+    Unprocessable: 5,
+    ZipFailure: 6,
+    OtherFailure: 7
+  };
+
   const ERROR_MESSAGES = {
     UNAUTHORIZED: 'Unauthorized',
     FORBIDDEN: 'Forbidden',
@@ -90,7 +102,7 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.Success);
+    assert.strictEqual(result.result, ExpectedResult.Success);
   });
 
   test('Should deploy successfully with rapid deploy', async () => {
@@ -108,11 +120,11 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.Success);
+    assert.strictEqual(result.result, ExpectedResult.Success);
     assert.ok(result.message?.includes('cleared'), 'Message should mention app was cleared');
   });
 
-  function testHttpError(statusCode: number, expectedResult: DeploymentResult) {
+  function testHttpError(statusCode: number, expectedResult: number) {
     return async () => {
       const config: DeploymentConfig = {
         baseUrl: server.getBaseUrl(),
@@ -131,11 +143,11 @@ suite('DeploymentService Tests', () => {
     };
   }
 
-  test('Should handle 401 unauthorized response', testHttpError(401, DeploymentResult.Unauthorized));
-  test('Should handle 404 not found response', testHttpError(404, DeploymentResult.NotFound));
-  test('Should handle 409 conflict response', testHttpError(409, DeploymentResult.OtherFailure));
-  test('Should handle 422 unprocessable response', testHttpError(422, DeploymentResult.Unprocessable));
-  test('Should handle 500 server error response', testHttpError(500, DeploymentResult.OtherFailure));
+  test('Should handle 401 unauthorized response', testHttpError(401, ExpectedResult.Unauthorized));
+  test('Should handle 404 not found response', testHttpError(404, ExpectedResult.NotFound));
+  test('Should handle 409 conflict response', testHttpError(409, ExpectedResult.OtherFailure));
+  test('Should handle 422 unprocessable response', testHttpError(422, ExpectedResult.Unprocessable));
+  test('Should handle 500 server error response', testHttpError(500, ExpectedResult.OtherFailure));
 
   test('Should handle connection error', async () => {
     const config: DeploymentConfig = {
@@ -148,7 +160,7 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.ConnectionError);
+    assert.strictEqual(result.result, ExpectedResult.ConnectionError);
   });
 
   test('Should handle authentication error', async () => {
@@ -164,7 +176,7 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.AuthorizationError);
+    assert.strictEqual(result.result, ExpectedResult.AuthorizationError);
     assert.ok(
       result.message?.includes('auth') ||
       result.message?.includes('Auth') ||
@@ -188,7 +200,7 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.OtherFailure);
+    assert.strictEqual(result.result, ExpectedResult.OtherFailure);
   });
 
   test('Should handle missing password', async () => {
@@ -207,7 +219,7 @@ suite('DeploymentService Tests', () => {
 
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
-    assert.strictEqual(result.result, DeploymentResult.AuthorizationError);
+    assert.strictEqual(result.result, ExpectedResult.AuthorizationError);
   });
 
   test('Should handle invalid source path', async () => {
@@ -223,7 +235,7 @@ suite('DeploymentService Tests', () => {
     const result = await deploymentService.deploy(mockWorkspaceFolder, config);
 
     // Check that an error was returned (exact enum value may change over time)
-    assert.ok(result.result !== DeploymentResult.Success, 'Should not return success');
+    assert.ok(result.result !== ExpectedResult.Success, 'Should not return success');
     assert.ok(result.error instanceof Error, 'Should return an error');
   });
 });

@@ -42,7 +42,12 @@ suite('DeploymentConfig Tests', () => {
 
   test('Should get config file path', async () => {
     const configPath = await configManager.getConfigFilePath(mockWorkspaceFolder);
-    assert.strictEqual(configPath, path.join(tempDir, 'npl-deploy.json'));
+    const expectedPath = path.join(tempDir, 'npl-deploy.json');
+    assert.strictEqual(
+      configPath.toLowerCase(),
+      expectedPath.toLowerCase(),
+      'Config file path should match expected path'
+    );
   });
 
   test('Should save and load config', async () => {

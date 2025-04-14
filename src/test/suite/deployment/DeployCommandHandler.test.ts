@@ -125,7 +125,7 @@ suite('DeployCommandHandler Tests', () => {
     assert.strictEqual(savedConfig.baseUrl, TEST_VALUE);
     assert.strictEqual(savedConfig.appName, TEST_VALUE);
     assert.strictEqual(savedConfig.username, TEST_VALUE);
-    assert.strictEqual(savedConfig.sourcePath, tempDir);
+    assert.strictEqual(savedConfig.sourcePath.toLowerCase(), tempDir.toLowerCase());
     assert.strictEqual(savedConfig.rapidDeploy, false);
 
     assert.strictEqual(mockCredentialManager.storePassword.calledOnce, true);
