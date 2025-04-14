@@ -31,75 +31,77 @@ suite('LanguageClientManager Test Suite', () => {
   });
 
   test('buildWorkspaceFoldersList - Uses VS Code folders when settings are empty', () => {
+    const workspacePath = path.normalize('/workspace/project1');
     const vscodeFolders = [
-      createMockWorkspaceFolder('/workspace/project1', 'project1', 0)
+      createMockWorkspaceFolder(workspacePath, 'project1', 0)
     ];
     const result = (clientManager as any).buildWorkspaceFoldersList(undefined, undefined, vscodeFolders);
 
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].uri.fsPath, '/workspace/project1');
+    assert.strictEqual(path.normalize(result[0].uri.fsPath), workspacePath);
     assert.strictEqual(result[0].name, 'project1');
   });
 
   test('buildWorkspaceFoldersList - Uses NPL.sources setting', () => {
-    const sourcesPath = '/custom/sources';
+    const sourcesPath = path.normalize('/custom/sources');
     const result = (clientManager as any).buildWorkspaceFoldersList(sourcesPath, undefined, []);
 
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].uri.fsPath, sourcesPath);
+    assert.strictEqual(path.normalize(result[0].uri.fsPath), sourcesPath);
     assert.strictEqual(result[0].name, 'NPL Sources');
   });
 
    test('buildWorkspaceFoldersList - Uses NPL.sources and ignores VS Code folders', () => {
-     const sourcesPath = '/custom/sources';
+     const sourcesPath = path.normalize('/custom/sources');
      const vscodeFolders = [
        createMockWorkspaceFolder('/workspace/project1', 'project1', 0)
      ];
      const result = (clientManager as any).buildWorkspaceFoldersList(sourcesPath, undefined, vscodeFolders);
 
      assert.strictEqual(result.length, 1);
-     assert.strictEqual(result[0].uri.fsPath, sourcesPath);
+     assert.strictEqual(path.normalize(result[0].uri.fsPath), sourcesPath);
      assert.strictEqual(result[0].name, 'NPL Sources');
    });
 
   test('buildWorkspaceFoldersList - Adds NPL.testSources setting', () => {
-    const sourcesPath = '/custom/sources';
-    const testSourcesPath = '/custom/tests';
+    const sourcesPath = path.normalize('/custom/sources');
+    const testSourcesPath = path.normalize('/custom/tests');
     const result = (clientManager as any).buildWorkspaceFoldersList(sourcesPath, testSourcesPath, []);
 
     assert.strictEqual(result.length, 2);
-    assert.strictEqual(result[0].uri.fsPath, sourcesPath);
+    assert.strictEqual(path.normalize(result[0].uri.fsPath), sourcesPath);
     assert.strictEqual(result[0].name, 'NPL Sources');
-    assert.strictEqual(result[1].uri.fsPath, testSourcesPath);
+    assert.strictEqual(path.normalize(result[1].uri.fsPath), testSourcesPath);
     assert.strictEqual(result[1].name, 'NPL Test Sources');
   });
 
   test('buildWorkspaceFoldersList - Uses VS Code folders and adds NPL.testSources', () => {
+     const workspacePath = path.normalize('/workspace/project1');
      const vscodeFolders = [
-       createMockWorkspaceFolder('/workspace/project1', 'project1', 0)
+       createMockWorkspaceFolder(workspacePath, 'project1', 0)
      ];
-    const testSourcesPath = '/custom/tests';
+    const testSourcesPath = path.normalize('/custom/tests');
      const result = (clientManager as any).buildWorkspaceFoldersList(undefined, testSourcesPath, vscodeFolders);
 
      assert.strictEqual(result.length, 2);
-     assert.strictEqual(result[0].uri.fsPath, '/workspace/project1');
+     assert.strictEqual(path.normalize(result[0].uri.fsPath), workspacePath);
      assert.strictEqual(result[0].name, 'project1');
-     assert.strictEqual(result[1].uri.fsPath, testSourcesPath);
+     assert.strictEqual(path.normalize(result[1].uri.fsPath), testSourcesPath);
      assert.strictEqual(result[1].name, 'NPL Test Sources');
   });
 
   test('buildWorkspaceFoldersList - Does not duplicate testSources if inside sources', () => {
-    const sourcesPath = '/custom/path';
+    const sourcesPath = path.normalize('/custom/path');
     const testSourcesPath = path.join(sourcesPath, 'tests'); // Use path.join for platform independence
     const result = (clientManager as any).buildWorkspaceFoldersList(sourcesPath, testSourcesPath, []);
 
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].uri.fsPath, sourcesPath);
+    assert.strictEqual(path.normalize(result[0].uri.fsPath), sourcesPath);
     assert.strictEqual(result[0].name, 'NPL Sources');
   });
 
   test('buildWorkspaceFoldersList - Does not duplicate testSources if inside VS Code workspace folders', () => {
-    const workspacePath = '/workspace/project1';
+    const workspacePath = path.normalize('/workspace/project1');
     const testSourcesPath = path.join(workspacePath, 'tests'); // Use path.join
     const vscodeFolders = [
       createMockWorkspaceFolder(workspacePath, 'project1', 0)
@@ -107,7 +109,7 @@ suite('LanguageClientManager Test Suite', () => {
     const result = (clientManager as any).buildWorkspaceFoldersList(undefined, testSourcesPath, vscodeFolders);
 
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].uri.fsPath, workspacePath);
+    assert.strictEqual(path.normalize(result[0].uri.fsPath), workspacePath);
     assert.strictEqual(result[0].name, 'project1');
   });
 
