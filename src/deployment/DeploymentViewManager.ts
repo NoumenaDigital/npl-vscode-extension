@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ILogger } from '../utils/Logger';
 import { DeployCommandHandler } from './DeployCommandHandler';
 import { DeploymentTreeProvider, DeploymentItem } from './DeploymentTreeProvider';
@@ -14,6 +15,7 @@ export class DeploymentViewManager {
   private logger: ILogger;
   private deployCommandHandler: DeployCommandHandler;
   private configManager: DeploymentConfigManager;
+  private disposables: vscode.Disposable[] = [];
 
   constructor(
     context: vscode.ExtensionContext,
@@ -42,6 +44,20 @@ export class DeploymentViewManager {
 
     // Add the tree view to subscriptions
     context.subscriptions.push(this.treeView);
+
+    // Add the tree provider's dispose method to context subscriptions
+    context.subscriptions.push({ dispose: () => this.deploymentTreeProvider.dispose() });
+
+    // Store disposables for later cleanup
+    this.disposables.push(this.treeView);
+  }
+
+  /**
+   * Dispose of resources
+   */
+  public dispose(): void {
+    this.disposables.forEach(d => d.dispose());
+    this.deploymentTreeProvider.dispose();
   }
 
   /**
@@ -51,7 +67,7 @@ export class DeploymentViewManager {
     // Register the refresh command
     context.subscriptions.push(
       vscode.commands.registerCommand('npl.refreshDeploymentView', () => {
-        this.deploymentTreeProvider.clearCache();
+        this.deploymentTreeProvider.forceRefresh();
       })
     );
 
@@ -80,19 +96,42 @@ export class DeploymentViewManager {
       })
     );
 
+    // Register command to change source folder
+    context.subscriptions.push(
+      vscode.commands.registerCommand('npl.changeSourceFolder', async (item: DeploymentItem) => {
+        if (item.itemType === 'application' && item.app) {
+          await this.changeSourceFolder(item.app);
+          this.deploymentTreeProvider.refresh();
+        }
+      })
+    );
+
     // Register command to open configuration
     context.subscriptions.push(
       vscode.commands.registerCommand('npl.openDeploymentConfig', async () => {
         await this.deployCommandHandler.configureDeployment();
-        this.deploymentTreeProvider.reloadConfig();
+        this.deploymentTreeProvider.forceRefresh();
       })
     );
 
     // Register command to refresh applications list
     context.subscriptions.push(
-      vscode.commands.registerCommand('npl.refreshApplicationsList', async () => {
-        await this.deployCommandHandler.refreshApplications();
-        this.deploymentTreeProvider.reloadConfig();
+      vscode.commands.registerCommand('npl.refreshApplicationsList', async (item?: DeploymentItem) => {
+        // If the item was clicked from tree view, provide feedback
+        if (item && item.id === 'login-refresh-apps') {
+          vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Refreshing applications...',
+            cancellable: false
+          }, async () => {
+            await this.deployCommandHandler.refreshApplications();
+            this.deploymentTreeProvider.forceRefresh();
+          });
+        } else {
+          // Direct command invocation
+          await this.deployCommandHandler.refreshApplications();
+          this.deploymentTreeProvider.forceRefresh();
+        }
       })
     );
   }
@@ -145,9 +184,78 @@ export class DeploymentViewManager {
   }
 
   /**
+   * Change source folder for an application
+   */
+  private async changeSourceFolder(app: Application): Promise<void> {
+    try {
+      // Get the workspace folder
+      if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('No workspace folder opened');
+        return;
+      }
+
+      const workspaceFolder = vscode.workspace.workspaceFolders[0];
+      const config = await this.configManager.loadConfig(workspaceFolder);
+
+      if (!config) {
+        vscode.window.showErrorMessage('No deployment configuration found');
+        return;
+      }
+
+      // Default path to choose from
+      const defaultPath = app.sourcePath || config.sourcePath || workspaceFolder.uri.fsPath;
+
+      // Show open folder dialog
+      const selectedPaths = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        defaultUri: vscode.Uri.file(defaultPath),
+        openLabel: 'Select Source Folder',
+        title: `Select source folder for ${app.name}`
+      });
+
+      if (selectedPaths && selectedPaths.length > 0) {
+        const selectedPath = selectedPaths[0].fsPath;
+
+        // Update the app's source path
+        await this.configManager.updateApplicationSourcePath(
+          workspaceFolder,
+          app.id,
+          selectedPath
+        );
+
+        // Also update the passed app instance
+        app.sourcePath = selectedPath;
+
+        // Show confirmation
+        const relativePath = path.relative(workspaceFolder.uri.fsPath, selectedPath);
+        const displayPath = relativePath === '' ? '.' : relativePath;
+
+        vscode.window.showInformationMessage(
+          `Source folder for ${app.name} set to: ${displayPath}`
+        );
+
+        // Force refresh to update the UI
+        this.deploymentTreeProvider.forceRefresh();
+      }
+    } catch (error) {
+      this.logger.logError('Error changing source folder', error);
+      vscode.window.showErrorMessage(`Failed to change source folder: ${error}`);
+    }
+  }
+
+  /**
    * Refresh the tree view
    */
   public refresh(): void {
     this.deploymentTreeProvider.refresh();
+  }
+
+  /**
+   * Force a complete refresh including clearing the cache
+   */
+  public forceRefresh(): void {
+    this.deploymentTreeProvider.forceRefresh();
   }
 }

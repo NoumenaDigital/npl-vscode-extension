@@ -12,6 +12,7 @@ export interface Application {
   tenantName: string;
   rapidDeploy: boolean;
   skipRapidDeployWarning?: boolean;
+  sourcePath?: string;
 }
 
 export interface DeploymentConfig {
@@ -89,6 +90,29 @@ export class DeploymentConfigManager {
       }
     } catch (error) {
       this.logger.logError('Failed to update last deployed app', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update the source path for a specific application
+   */
+  public async updateApplicationSourcePath(
+    workspaceFolder: vscode.WorkspaceFolder,
+    appId: string,
+    sourcePath: string
+  ): Promise<void> {
+    try {
+      const config = await this.loadConfig(workspaceFolder);
+      if (config) {
+        const app = config.applications.find(a => a.id === appId);
+        if (app) {
+          app.sourcePath = sourcePath;
+          await this.saveConfig(workspaceFolder, config);
+        }
+      }
+    } catch (error) {
+      this.logger.logError('Failed to update application source path', error);
       throw error;
     }
   }

@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ILogger } from '../utils/Logger';
 import { Application, DeploymentConfig, DeploymentConfigManager } from './DeploymentConfig';
 import { DeployCommandHandler } from './DeployCommandHandler';
+
+/**
+ * Item types for the deployment tree
+ */
+export type DeploymentItemType = 'tenant' | 'application' | 'login' | 'logout';
 
 /**
  * Represents a tree item in the deployment tree view
@@ -10,10 +16,12 @@ export class DeploymentItem extends vscode.TreeItem {
   constructor(
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly itemType: 'tenant' | 'application',
+    public readonly itemType: DeploymentItemType,
     public readonly id: string,
     public readonly children?: DeploymentItem[],
-    public readonly app?: Application
+    public readonly app?: Application,
+    private readonly workspaceFolder?: vscode.WorkspaceFolder,
+    iconOverride?: vscode.ThemeIcon
   ) {
     super(label, collapsibleState);
 
@@ -30,12 +38,51 @@ export class DeploymentItem extends vscode.TreeItem {
         ? new vscode.ThemeIcon('rocket')
         : new vscode.ThemeIcon('package');
 
-      this.tooltip = `Application: ${label}\nID: ${id}\nTenant: ${app?.tenantName}`;
+      // Create a detailed tooltip with source path if available
+      let tooltipText = `Application: ${label}\nID: ${id}\nTenant: ${app?.tenantName}`;
+
+      if (app?.sourcePath) {
+        // Show relative path if possible
+        let displayPath = app.sourcePath;
+        if (this.workspaceFolder) {
+          const relativePath = path.relative(this.workspaceFolder.uri.fsPath, app.sourcePath);
+          displayPath = relativePath === '' ? '.' : relativePath;
+        }
+        tooltipText += `\nSource: ${displayPath}`;
+      } else {
+        tooltipText += '\nSource: Default workspace path';
+      }
+
+      if (app?.rapidDeploy) {
+        tooltipText += '\nRapid Deploy: Enabled';
+      }
+
+      this.tooltip = tooltipText;
 
       // Add status badges or icons based on app state
       if (app) {
         this.description = app.tenantName;
       }
+    } else if (itemType === 'login') {
+      // Special type for login items
+      this.iconPath = iconOverride || new vscode.ThemeIcon('person-add');
+      this.tooltip = 'Sign in to Noumena Cloud to view and deploy your applications';
+
+      // Add a command to execute when clicked
+      this.command = {
+        title: 'Sign in to Noumena Cloud',
+        command: 'npl.loginToNoumenaCloud'
+      };
+    } else if (itemType === 'logout') {
+      // Special type for logout items
+      this.iconPath = iconOverride || new vscode.ThemeIcon('person-delete');
+      this.tooltip = 'Sign out from Noumena Cloud';
+
+      // Add a command to execute when clicked
+      this.command = {
+        title: 'Sign out',
+        command: 'npl.cleanCredentials'
+      };
     }
   }
 }
@@ -52,6 +99,8 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
   private configManager: DeploymentConfigManager;
   private workspaceFolder: vscode.WorkspaceFolder | undefined;
   private lastConfig: DeploymentConfig | undefined;
+  private currentAuthState: boolean = false;
+  private disposables: vscode.Disposable[] = [];
 
   constructor(logger: ILogger, deployCommandHandler: DeployCommandHandler, configManager: DeploymentConfigManager) {
     this.logger = logger;
@@ -62,6 +111,34 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
       this.workspaceFolder = vscode.workspace.workspaceFolders[0];
     }
+
+    // Initialize current auth state
+    this.currentAuthState = this.isAuthenticated();
+
+    // Listen for configuration changes
+    this.disposables.push(
+      vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('NPL.deployment.isAuthenticated')) {
+          const newAuthState = this.isAuthenticated();
+
+          // Only refresh if auth state actually changed
+          if (newAuthState !== this.currentAuthState) {
+            this.logger.log(`Authentication state changed: ${this.currentAuthState} -> ${newAuthState}`);
+            this.currentAuthState = newAuthState;
+
+            // Force full refresh on auth state change
+            this.forceRefresh();
+          }
+        }
+      })
+    );
+  }
+
+  /**
+   * Dispose of resources
+   */
+  public dispose(): void {
+    this.disposables.forEach(d => d.dispose());
   }
 
   /**
@@ -72,10 +149,25 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
   }
 
   /**
+   * Force a complete refresh of the tree view including cached data
+   */
+  public forceRefresh(): void {
+    this.lastConfig = undefined;
+    this.refresh();
+  }
+
+  /**
    * Get the tree item for the given element
    */
   getTreeItem(element: DeploymentItem): vscode.TreeItem {
     return element;
+  }
+
+  /**
+   * Check if the user is currently authenticated
+   */
+  private isAuthenticated(): boolean {
+    return vscode.workspace.getConfiguration('NPL').get('deployment.isAuthenticated') === true;
   }
 
   /**
@@ -93,20 +185,52 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
     }
 
     try {
-      // Load config if not already loaded
-      if (!this.lastConfig) {
-        this.lastConfig = await this.configManager.loadConfig(this.workspaceFolder);
+      // First check if the user is authenticated
+      const isAuthenticated = this.isAuthenticated();
+      this.currentAuthState = isAuthenticated;
+
+      // If not authenticated, just show the login prompt
+      if (!isAuthenticated) {
+        this.lastConfig = undefined; // Clear the cached config
+        return [
+          new DeploymentItem(
+            'Sign in to Noumena Cloud',
+            vscode.TreeItemCollapsibleState.None,
+            'login',
+            'login',
+            undefined,
+            undefined,
+            undefined,
+            new vscode.ThemeIcon('person-add')
+          )
+        ];
       }
+
+      // If authenticated, ensure we have the latest config
+      this.lastConfig = await this.configManager.loadConfig(this.workspaceFolder);
 
       // If no config or no element, show root items
       if (!element) {
-        if (!this.lastConfig) {
-          return [new DeploymentItem(
-            'Configure Deployment',
-            vscode.TreeItemCollapsibleState.None,
-            'tenant',
-            'configure'
-          )];
+        // If config exists but no applications
+        if (!this.lastConfig || !this.lastConfig.applications || this.lastConfig.applications.length === 0) {
+          return [
+            new DeploymentItem(
+              'No applications found',
+              vscode.TreeItemCollapsibleState.None,
+              'tenant',
+              'no-apps'
+            ),
+            new DeploymentItem(
+              'Refresh applications',
+              vscode.TreeItemCollapsibleState.None,
+              'login',
+              'refresh-apps',
+              undefined,
+              undefined,
+              undefined,
+              new vscode.ThemeIcon('refresh')
+            )
+          ];
         }
 
         // Group applications by tenant
@@ -137,22 +261,13 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
           ));
         });
 
-        if (tenants.length === 0) {
-          return [new DeploymentItem(
-            'No applications found',
-            vscode.TreeItemCollapsibleState.None,
-            'tenant',
-            'no-apps'
-          )];
-        }
-
         return tenants;
       } else if (element.itemType === 'tenant') {
         // Show applications for this tenant
         const tenantId = element.id.replace('tenant-', '');
         const applications: DeploymentItem[] = [];
 
-        if (this.lastConfig.applications) {
+        if (this.lastConfig && this.lastConfig.applications) {
           for (const app of this.lastConfig.applications) {
             if (app.tenantId === tenantId) {
               applications.push(new DeploymentItem(
@@ -161,7 +276,8 @@ export class DeploymentTreeProvider implements vscode.TreeDataProvider<Deploymen
                 'application',
                 app.id,
                 undefined,
-                app
+                app,
+                this.workspaceFolder
               ));
             }
           }

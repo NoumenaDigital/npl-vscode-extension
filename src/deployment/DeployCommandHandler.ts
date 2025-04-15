@@ -1,4 +1,7 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import * as glob from "glob";
 import { Application, DeploymentConfig, DeploymentConfigManager } from "./DeploymentConfig";
 import { DeploymentService } from "./DeploymentService";
 import { ILogger } from "../utils/Logger";
@@ -79,11 +82,11 @@ export class DeployCommandHandler {
     }
   }
 
-  public async configureDeployment(): Promise<void> {
+  public async configureDeployment(): Promise<boolean> {
     try {
       const workspaceFolder = await this.getWorkspaceFolder();
       if (!workspaceFolder) {
-        return;
+        return false;
       }
 
       let config = await this.configManager.loadConfig(workspaceFolder);
@@ -93,7 +96,7 @@ export class DeployCommandHandler {
           baseUrl: 'https://portal.noumena.cloud',
           username: '',
           authType: AuthType.Basic,
-          sourcePath: '',
+          sourcePath: '', // Empty source path, will be set during deployment
           applications: []
         };
       }
@@ -106,7 +109,7 @@ export class DeployCommandHandler {
       });
 
       if (!baseUrl) {
-        return;
+        return false;
       }
 
       // Step 2: Choose auth method
@@ -124,7 +127,7 @@ export class DeployCommandHandler {
       );
 
       if (!authMethodResult) {
-        return;
+        return false;
       }
 
       const authType = authMethodResult.value;
@@ -137,7 +140,7 @@ export class DeployCommandHandler {
       });
 
       if (!username) {
-        return;
+        return false;
       }
 
       // Step 4: Get password
@@ -147,7 +150,7 @@ export class DeployCommandHandler {
       });
 
       if (!password) {
-        return;
+        return false;
       }
 
       // Store the credentials
@@ -169,7 +172,7 @@ export class DeployCommandHandler {
       if (!token) {
         this.logger.logError('Authentication failed');
         vscode.window.showErrorMessage('Failed to authenticate with the provided credentials.');
-        return;
+        return false;
       }
 
       await this.credentialManager.storeToken(baseUrl, username, token);
@@ -184,13 +187,13 @@ export class DeployCommandHandler {
       } catch (error) {
         this.logger.logError('Failed to retrieve tenants', error);
         vscode.window.showErrorMessage('Failed to retrieve tenants. Please check your connection and permissions.');
-        return;
+        return false;
       }
 
       if (tenants.length === 0) {
         this.logger.logError('No tenants found');
         vscode.window.showErrorMessage('No tenants found. You may not have access to any tenants.');
-        return;
+        return false;
       }
 
       // Step 7: Prepare list of applications from all tenants
@@ -214,39 +217,31 @@ export class DeployCommandHandler {
       if (applications.length === 0) {
         this.logger.logError('No active applications found');
         vscode.window.showErrorMessage('No active applications found. Please create an application in Noumena Cloud first.');
-        return;
+        return false;
       }
 
-      // Step 8: Get source path
-      const defaultSourcePath = config.sourcePath || workspaceFolder.uri.fsPath;
-      const sourcePath = await vscode.window.showOpenDialog({
-        canSelectFiles: false,
-        canSelectFolders: true,
-        canSelectMany: false,
-        defaultUri: vscode.Uri.file(defaultSourcePath),
-        openLabel: 'Select source folder',
-        title: 'Select the NPL source folder to deploy'
-      });
-
-      if (!sourcePath || !sourcePath[0]) {
-        return;
-      }
-
-      // Create the new config
+      // Create the new config with default empty source path
+      // We'll set source paths when deploying
       const newConfig: DeploymentConfig = {
         baseUrl,
         username,
         authType,
-        sourcePath: sourcePath[0].fsPath,
+        sourcePath: '',
         applications
       };
 
       await this.configManager.saveConfig(workspaceFolder, newConfig);
+
+      // Set the authentication state in user settings
+      await vscode.workspace.getConfiguration('NPL').update('deployment.isAuthenticated', true, vscode.ConfigurationTarget.Global);
+
       this.logger.log('Deployment configuration saved');
-      vscode.window.showInformationMessage('Deployment configuration saved successfully');
+      vscode.window.showInformationMessage('Successfully signed in to Noumena Cloud.');
+      return true;
     } catch (error) {
       this.logger.logError('Error configuring deployment', error);
-      vscode.window.showErrorMessage('Failed to configure deployment');
+      vscode.window.showErrorMessage('Failed to sign in to Noumena Cloud');
+      return false;
     }
   }
 
@@ -332,6 +327,12 @@ export class DeployCommandHandler {
         await this.configManager.saveConfig(workspaceFolder, config);
       }
 
+      // Ensure we have a source path for this application
+      const sourcePath = await this.ensureSourcePath(workspaceFolder, app, config);
+      if (!sourcePath) {
+        return; // User cancelled the source path selection
+      }
+
       // Confirm rapid deploy if needed
       if (app.rapidDeploy && !app.skipRapidDeployWarning) {
         const confirmOption = 'Yes, clear data and deploy';
@@ -357,7 +358,8 @@ export class DeployCommandHandler {
         workspaceFolder,
         config,
         app,
-        token
+        token,
+        sourcePath
       );
 
       // Update last deployed app if successful
@@ -382,10 +384,23 @@ export class DeployCommandHandler {
       }
 
       await this.credentialManager.cleanAllCredentials(config.baseUrl, config.username);
-      vscode.window.showInformationMessage('Credentials cleaned successfully');
+
+      // Clear the authentication state in user settings
+      await vscode.workspace.getConfiguration('NPL').update('deployment.isAuthenticated', false, vscode.ConfigurationTarget.Global);
+
+      // Clear the tree view data
+      await this.configManager.saveConfig(workspaceFolder, {
+        baseUrl: config.baseUrl,
+        username: '',
+        authType: config.authType,
+        sourcePath: '',
+        applications: []
+      });
+
+      vscode.window.showInformationMessage('Successfully signed out from Noumena Cloud');
     } catch (error) {
       this.logger.logError('Error cleaning credentials', error);
-      vscode.window.showErrorMessage('Failed to clean credentials');
+      vscode.window.showErrorMessage('Failed to sign out');
     }
   }
 
@@ -517,6 +532,12 @@ export class DeployCommandHandler {
         return;
       }
 
+      // Ensure we have a source path for this application
+      const sourcePath = await this.ensureSourcePath(workspaceFolder, app, config);
+      if (!sourcePath) {
+        return; // User cancelled the source path selection
+      }
+
       // Confirm rapid deploy if needed
       if (app.rapidDeploy && !app.skipRapidDeployWarning) {
         const confirmOption = 'Yes, clear data and deploy';
@@ -546,7 +567,8 @@ export class DeployCommandHandler {
         workspaceFolder,
         config,
         app,
-        token
+        token,
+        sourcePath
       );
 
       // Update last deployed app if successful
@@ -557,6 +579,230 @@ export class DeployCommandHandler {
       this.logger.logError('Error during deployment from tree view', error);
       vscode.window.showErrorMessage('Failed to deploy application');
     }
+  }
+
+  /**
+   * Detects the most likely NPL source directory within a workspace
+   * Looks for standard NPL project structure: src/main directory containing npl-X.Y folders
+   * with NPL files and migration.yaml files
+   *
+   * @param workspaceFolder The workspace folder to scan
+   * @returns The detected source folder path or undefined if not found
+   */
+  private async detectNplSourceFolder(workspaceFolder: vscode.WorkspaceFolder): Promise<string | undefined> {
+    try {
+      const rootPath = workspaceFolder.uri.fsPath;
+
+      // Main path should be src/main, not src/main/npl-X.Y
+      const mainPath = path.join(rootPath, 'src', 'main');
+
+      if (!fs.existsSync(mainPath)) {
+        this.logger.log('src/main directory not found');
+        return undefined;
+      }
+
+      // Check for npl-* subdirectories to validate it's an NPL project
+      const nplFolderPattern = path.join(mainPath, 'npl-*');
+      const nplFolders = glob.sync(nplFolderPattern, {
+        nodir: false,  // Include directories
+        mark: true     // Add / to directories
+      }).filter(p => fs.lstatSync(p).isDirectory());
+
+      if (nplFolders.length === 0) {
+        this.logger.log('No NPL source folders found matching pattern src/main/npl-*');
+        return undefined;
+      }
+
+      // Check if any of the npl-* folders contain .npl files
+      let hasNplFiles = false;
+      for (const nplFolder of nplFolders) {
+        const nplFiles = glob.sync(path.join(nplFolder, '**', '*.npl'));
+        if (nplFiles.length > 0) {
+          hasNplFiles = true;
+          break;
+        }
+      }
+
+      if (!hasNplFiles) {
+        this.logger.log('No NPL files found in src/main/npl-* directories');
+        return undefined;
+      }
+
+      // Look for migration.yaml or migration.yml file in various locations
+      const yamlDirs = [
+        mainPath,                       // src/main
+        path.join(mainPath, 'yaml'),    // src/main/yaml
+        path.join(mainPath, 'yml'),     // src/main/yml
+        path.join(rootPath, 'src', 'yaml'),  // src/yaml
+        path.join(rootPath, 'src', 'yml'),   // src/yml
+        path.join(rootPath, 'src', 'resources'), // src/resources
+      ];
+
+      for (const yamlDir of yamlDirs) {
+        if (!fs.existsSync(yamlDir)) {
+          continue;
+        }
+
+        const migrationFiles = [
+          path.join(yamlDir, 'migration.yaml'),
+          path.join(yamlDir, 'migration.yml')
+        ];
+
+        for (const migFile of migrationFiles) {
+          if (fs.existsSync(migFile)) {
+            this.logger.log(`Found standard NPL project structure with src/main`);
+            return mainPath; // Return src/main path
+          }
+        }
+      }
+
+      // Even if we can't find the migration file, if we found NPL files, return src/main
+      if (hasNplFiles) {
+        this.logger.log(`Found NPL folder structure (no migration file found)`);
+        return mainPath; // Return src/main path
+      }
+
+      this.logger.log('No suitable NPL source folder detected');
+      return undefined;
+    } catch (error) {
+      this.logger.logError('Error detecting NPL source folder', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Ensures a source path is set for the application
+   * @param workspaceFolder The workspace folder
+   * @param app The application
+   * @param config The deployment configuration
+   * @returns The source path to use or undefined if cancelled
+   */
+  private async ensureSourcePath(
+    workspaceFolder: vscode.WorkspaceFolder,
+    app: Application,
+    config: DeploymentConfig
+  ): Promise<string | undefined> {
+    // If app has a specific source path, use it
+    if (app.sourcePath) {
+      return app.sourcePath;
+    }
+
+    // Try to detect NPL source folder with standard structure
+    const detectedPath = await this.detectNplSourceFolder(workspaceFolder);
+
+    // If config has a default source path, use it
+    if (config.sourcePath) {
+      // Ask if user wants to set a specific path for this app
+      const defaultOption = 'Use Default Path';
+      const specificOption = 'Set Application-Specific Path';
+      const detectedOption = detectedPath ? 'Use Detected NPL Folder' : undefined;
+
+      const options = [defaultOption, specificOption];
+      if (detectedOption) {
+        options.push(detectedOption);
+      }
+
+      const choice = await vscode.window.showInformationMessage(
+        `Choose source path for ${app.name}:`,
+        ...options
+      );
+
+      if (choice === specificOption) {
+        // Show folder picker
+        const sourcePath = await this.pickSourceFolder(workspaceFolder, app.name);
+        if (sourcePath) {
+          // Save the path to the app config
+          app.sourcePath = sourcePath;
+          const appInConfig = config.applications.find(a => a.id === app.id);
+          if (appInConfig) {
+            appInConfig.sourcePath = sourcePath;
+            await this.configManager.saveConfig(workspaceFolder, config);
+          }
+          return sourcePath;
+        }
+        // If user cancelled, fall back to default
+      } else if (choice === detectedOption) {
+        // Use detected NPL folder
+        app.sourcePath = detectedPath;
+        const appInConfig = config.applications.find(a => a.id === app.id);
+        if (appInConfig) {
+          appInConfig.sourcePath = detectedPath;
+          await this.configManager.saveConfig(workspaceFolder, config);
+        }
+        return detectedPath;
+      }
+
+      return config.sourcePath;
+    }
+
+    // No source path set, need to prompt
+    this.logger.log('No source path configured. Prompting for source folder...');
+
+    if (detectedPath) {
+      const useDetected = 'Use Detected NPL Folder';
+      const chooseDifferent = 'Choose Different Folder';
+
+      const choice = await vscode.window.showInformationMessage(
+        `Found NPL source folder: ${path.relative(workspaceFolder.uri.fsPath, detectedPath)}. Use this folder?`,
+        useDetected,
+        chooseDifferent
+      );
+
+      if (choice === useDetected) {
+        // Save the detected path
+        app.sourcePath = detectedPath;
+        const appInConfig = config.applications.find(a => a.id === app.id);
+        if (appInConfig) {
+          appInConfig.sourcePath = detectedPath;
+        }
+        await this.configManager.saveConfig(workspaceFolder, config);
+
+        return detectedPath;
+      }
+      // If user chose different, continue to folder picker
+    }
+
+    const sourcePath = await this.pickSourceFolder(workspaceFolder, app.name);
+    if (!sourcePath) {
+      return undefined; // User cancelled
+    }
+
+    // Save the path to both app and config
+    app.sourcePath = sourcePath;
+    const appInConfig = config.applications.find(a => a.id === app.id);
+    if (appInConfig) {
+      appInConfig.sourcePath = sourcePath;
+    }
+    await this.configManager.saveConfig(workspaceFolder, config);
+
+    return sourcePath;
+  }
+
+  /**
+   * Shows a folder picker dialog to select a source folder
+   * @param workspaceFolder The workspace folder
+   * @param appName The application name for display
+   * @returns The selected path or undefined if cancelled
+   */
+  private async pickSourceFolder(
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string
+  ): Promise<string | undefined> {
+    // Show open folder dialog
+    const selectedPaths = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      defaultUri: vscode.Uri.file(workspaceFolder.uri.fsPath),
+      openLabel: 'Select Source Folder',
+      title: `Select source folder for ${appName}`
+    });
+
+    if (selectedPaths && selectedPaths.length > 0) {
+      return selectedPaths[0].fsPath;
+    }
+
+    return undefined;
   }
 
   private async getWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {

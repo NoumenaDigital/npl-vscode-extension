@@ -39,15 +39,21 @@ export class DeploymentService {
     workspaceFolder: vscode.WorkspaceFolder,
     config: DeploymentConfig,
     app: Application,
-    token: string
+    token: string,
+    sourcePath?: string
   ): Promise<DeploymentStatus> {
     this.logger.show();
     this.logger.log(`Starting deployment to ${config.baseUrl} for app ${app.name} (${app.id})...`);
 
     try {
       this.logger.log('Creating deployment package...');
+
+      // Use the provided source path, app-specific path, or the default config path
+      const pathToUse = sourcePath || app.sourcePath || config.sourcePath;
+
+      this.logger.log(`Using source path: ${pathToUse}`);
       const zipBuffer = await this.zipProducer.produceZip(
-        config.sourcePath,
+        pathToUse,
         workspaceFolder.uri.fsPath
       );
       this.logger.log(`Deployment package created (${Math.round(zipBuffer.length / 1024)} KB)`);

@@ -7,6 +7,7 @@ import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
 import { DeployCommandHandler } from './deployment/DeployCommandHandler';
 import { DeploymentViewManager } from './deployment/DeploymentViewManager';
+import { DeploymentConfigManager } from './deployment/DeploymentConfig';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -34,6 +35,9 @@ export async function activate(context: vscode.ExtensionContext) {
   VersionManager.setLogger(languageServerLogger);
   HttpClientFactory.setLogger(deploymentLogger);
 
+  // Check if the user is already authenticated
+  await checkAuthenticationState(context, deploymentViewManager);
+
   try {
     context.subscriptions.push(
       vscode.commands.registerCommand('npl.selectServerVersion', () => {
@@ -43,6 +47,19 @@ export async function activate(context: vscode.ExtensionContext) {
         serverManager.cleanServerFiles(context);
       }),
       // Register deployment commands
+      vscode.commands.registerCommand('npl.loginToNoumenaCloud', async () => {
+        vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: 'Signing in to Noumena Cloud...',
+          cancellable: false
+        }, async () => {
+          const success = await deployCommandHandler.configureDeployment();
+          if (success) {
+            // If login succeeded, refresh the view
+            deploymentViewManager.refresh();
+          }
+        });
+      }),
       vscode.commands.registerCommand('npl.configureDeployment', () => {
         deployCommandHandler.configureDeployment();
         // Refresh the deployment view after configuration
@@ -53,6 +70,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }),
       vscode.commands.registerCommand('npl.cleanCredentials', () => {
         deployCommandHandler.cleanCredentials();
+        // Refresh the view after signing out
+        deploymentViewManager.refresh();
       })
     );
 
@@ -61,6 +80,37 @@ export async function activate(context: vscode.ExtensionContext) {
     languageServerLogger.logError('Failed to start NPL Language Server', err);
     await clientManager.stop();
     throw err;
+  }
+
+  // Register listener for configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(event => {
+      // If deployment-related settings changed, refresh the view
+      if (event.affectsConfiguration('npl.deployment')) {
+        deploymentViewManager.forceRefresh();
+      }
+    })
+  );
+}
+
+/**
+ * Check if the user is already authenticated and set the authentication state accordingly
+ */
+async function checkAuthenticationState(
+  context: vscode.ExtensionContext,
+  deploymentViewManager: DeploymentViewManager
+): Promise<void> {
+  const config = vscode.workspace.getConfiguration('npl.deployment');
+  const isAuthenticated = config.get<boolean>('authenticated') || false;
+
+  // Validate token if authenticated
+  if (isAuthenticated) {
+    const token = config.get<string>('token');
+    if (!token) {
+      // Token missing but marked as authenticated - fix the state
+      await config.update('authenticated', false, true);
+      deploymentViewManager.forceRefresh();
+    }
   }
 }
 

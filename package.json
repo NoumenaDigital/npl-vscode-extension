@@ -50,6 +50,11 @@
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
+        },
+        "NPL.deployment.isAuthenticated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the user is authenticated to Noumena Cloud."
         }
       }
     },
@@ -75,12 +80,17 @@
         {
           "command": "npl.refreshApplicationsList",
           "when": "view == nplDeploymentView",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
-          "command": "npl.openDeploymentConfig",
-          "when": "view == nplDeploymentView",
-          "group": "navigation"
+          "command": "npl.loginToNoumenaCloud",
+          "when": "view == nplDeploymentView && !config.NPL.deployment.isAuthenticated",
+          "group": "account@1"
+        },
+        {
+          "command": "npl.cleanCredentials",
+          "when": "view == nplDeploymentView && config.NPL.deployment.isAuthenticated",
+          "group": "account@2"
         }
       ],
       "view/item/context": [
@@ -91,6 +101,11 @@
         },
         {
           "command": "npl.configureRapidDeploy",
+          "when": "view == nplDeploymentView && viewItem == application",
+          "group": "1_modification"
+        },
+        {
+          "command": "npl.changeSourceFolder",
           "when": "view == nplDeploymentView && viewItem == application",
           "group": "1_modification"
         }
@@ -106,6 +121,11 @@
         "title": "NPL: Clean Language Server Files and Reset"
       },
       {
+        "command": "npl.loginToNoumenaCloud",
+        "title": "Sign in to Noumena Cloud",
+        "icon": "$(person-add)"
+      },
+      {
         "command": "npl.configureDeployment",
         "title": "NPL: Configure Noumena Cloud Deployment"
       },
@@ -115,7 +135,8 @@
       },
       {
         "command": "npl.cleanCredentials",
-        "title": "NPL: Clean Deployment Credentials"
+        "title": "Sign out",
+        "icon": "$(person-delete)"
       },
       {
         "command": "npl.refreshDeploymentView",
@@ -138,8 +159,13 @@
       },
       {
         "command": "npl.refreshApplicationsList",
-        "title": "Refresh Applications",
-        "icon": "$(sync)"
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "npl.changeSourceFolder",
+        "title": "Change Source Folder",
+        "icon": "$(folder)"
       }
     ]
   },
@@ -156,6 +182,7 @@
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
+    "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.10",
     "@types/sinon": "^17.0.4",
@@ -176,6 +203,7 @@
   },
   "dependencies": {
     "archiver": "^7.0.1",
+    "glob": "^8.1.0",
     "vscode-languageclient": "^9.0.1"
   }
 }
