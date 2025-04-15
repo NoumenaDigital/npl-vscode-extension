@@ -68,19 +68,19 @@
     "commands": [
       {
         "command": "npl.selectServerVersion",
-        "title": "NPL: Select Language Server Version"
+        "title": "NPL: Select Language Server version"
       },
       {
         "command": "npl.cleanServerFiles",
-        "title": "NPL: Clean Language Server Files and Reset"
+        "title": "NPL: Clean Language Server files and reset"
       },
       {
         "command": "npl.selectSources",
-        "title": "NPL: Select NPL Sources"
+        "title": "NPL: Select NPL sources"
       },
       {
         "command": "npl.selectTestSources",
-        "title": "NPL: Select NPL Test Sources"
+        "title": "NPL: Select NPL test sources"
       }
     ]
   },
