@@ -5,7 +5,7 @@ import { CredentialManager } from './CredentialManager';
 import { ZipProducer } from './ZipProducer';
 import { JwtProvider } from './JwtProvider';
 import { ILogger } from '../utils/Logger';
-import { DeploymentConfig } from './DeploymentConfig';
+import { DeploymentConfig, Application } from './DeploymentConfig';
 
 export enum DeploymentResult {
   Success,
@@ -35,35 +35,16 @@ export class DeploymentService {
     this.zipProducer = new ZipProducer(logger);
   }
 
-  public async deploy(workspaceFolder: vscode.WorkspaceFolder, config: DeploymentConfig): Promise<DeploymentStatus> {
+  public async deployToApplication(
+    workspaceFolder: vscode.WorkspaceFolder,
+    config: DeploymentConfig,
+    app: Application,
+    token: string
+  ): Promise<DeploymentStatus> {
     this.logger.show();
-    this.logger.log(`Starting deployment to ${config.baseUrl} for app ${config.appName}...`);
+    this.logger.log(`Starting deployment to ${config.baseUrl} for app ${app.name} (${app.id})...`);
 
     try {
-      const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
-      if (!password) {
-        const passwordInput = await vscode.window.showInputBox({
-          prompt: 'Enter your password for Noumena Cloud',
-          password: true
-        });
-
-        if (!passwordInput) {
-          return {
-            result: DeploymentResult.AuthorizationError,
-            message: 'Password is required for deployment'
-          };
-        }
-
-        await this.credentialManager.storePassword(config.baseUrl, config.username, passwordInput);
-      }
-
-      const jwtProvider = new JwtProvider({
-        username: config.username,
-        password: password || '',
-        authUrl: `${config.baseUrl}/api/auth/login`,
-        logger: this.logger
-      });
-
       this.logger.log('Creating deployment package...');
       const zipBuffer = await this.zipProducer.produceZip(
         config.sourcePath,
@@ -71,50 +52,9 @@ export class DeploymentService {
       );
       this.logger.log(`Deployment package created (${Math.round(zipBuffer.length / 1024)} KB)`);
 
-      this.logger.log('Authenticating...');
-      const tokenPromise = jwtProvider.provideJwt();
-      const timeoutPromise = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), 3000);
-      });
-
-      const token = await Promise.race([tokenPromise, timeoutPromise]);
-
-      if (!token) {
-        try {
-          const url = new URL(config.baseUrl);
-          await new Promise<void>((resolve, reject) => {
-            const protocol = url.protocol === 'https:' ? https : http;
-            const req = protocol.request(
-              {
-                hostname: url.hostname,
-                port: url.port || (url.protocol === 'https:' ? 443 : 80),
-                path: '/',
-                method: 'HEAD',
-                timeout: 2000
-              },
-              () => resolve()
-            );
-            req.on('error', () => reject(new Error('ECONNREFUSED')));
-            req.end();
-          });
-
-          return {
-            result: DeploymentResult.AuthorizationError,
-            message: 'Failed to retrieve authentication token. Check your credentials.'
-          };
-        } catch (error) {
-          return {
-            result: DeploymentResult.ConnectionError,
-            message: 'Could not connect to the server. Check your network connection and server URL.'
-          };
-        }
-      }
-
-      this.logger.log('Authentication successful');
-
-      if (config.rapidDeploy) {
+      if (app.rapidDeploy) {
         this.logger.log('Clearing existing application...');
-        const clearResult = await this.clearApplication(config.baseUrl, config.appName, token);
+        const clearResult = await this.clearApplication(config.baseUrl, app.id, token);
         if (!clearResult.success) {
           return {
             result: DeploymentResult.OtherFailure,
@@ -126,14 +66,14 @@ export class DeploymentService {
       }
 
       this.logger.log('Uploading deployment package...');
-      const deployResult = await this.uploadDeployment(config.baseUrl, config.appName, token, zipBuffer);
+      const deployResult = await this.uploadDeployment(config.baseUrl, app.id, token, zipBuffer);
 
       if (deployResult.success) {
         this.logger.log('Deployment completed successfully!');
         vscode.window.showInformationMessage('NPL application deployed successfully!');
         return {
           result: DeploymentResult.Success,
-          message: config.rapidDeploy
+          message: app.rapidDeploy
             ? 'Successfully deployed. Application was cleared.'
             : 'Successfully deployed.'
         };
@@ -197,6 +137,93 @@ export class DeploymentService {
           error: new Error('Unknown error')
         };
       }
+    }
+  }
+
+  /**
+   * @deprecated Use deployToApplication instead
+   */
+  public async deploy(workspaceFolder: vscode.WorkspaceFolder, config: any): Promise<DeploymentStatus> {
+    this.logger.log("The deploy method is deprecated. Using deployToApplication instead.");
+
+    if (!config.applications || config.applications.length === 0) {
+      return {
+        result: DeploymentResult.OtherFailure,
+        message: "No applications configured. Please reconfigure deployment."
+      };
+    }
+
+    // For backward compatibility with the old config format
+    let appId = '';
+    let rapidDeploy = false;
+
+    if (config.appName) {
+      // Legacy config
+      appId = config.appName;
+      rapidDeploy = !!config.rapidDeploy;
+    } else if (config.lastDeployedAppId) {
+      // New config with a last deployed app
+      const lastDeployedApp = config.applications.find(a => a.id === config.lastDeployedAppId);
+      if (lastDeployedApp) {
+        appId = lastDeployedApp.id;
+        rapidDeploy = !!lastDeployedApp.rapidDeploy;
+      } else {
+        // Just use the first app
+        appId = config.applications[0].id;
+        rapidDeploy = !!config.applications[0].rapidDeploy;
+      }
+    } else if (config.applications.length > 0) {
+      // Just use the first app
+      appId = config.applications[0].id;
+      rapidDeploy = !!config.applications[0].rapidDeploy;
+    }
+
+    if (!appId) {
+      return {
+        result: DeploymentResult.OtherFailure,
+        message: "No application ID found for deployment."
+      };
+    }
+
+    try {
+      const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
+      if (!password) {
+        return {
+          result: DeploymentResult.AuthorizationError,
+          message: 'Password is required for deployment'
+        };
+      }
+
+      const jwtProvider = new JwtProvider({
+        username: config.username,
+        password: password,
+        authUrl: `${config.baseUrl}/api/auth/login`,
+        authType: config.authType,
+        logger: this.logger
+      });
+
+      const token = await jwtProvider.provideJwt();
+      if (!token) {
+        return {
+          result: DeploymentResult.AuthorizationError,
+          message: 'Failed to retrieve authentication token.'
+        };
+      }
+
+      const app = config.applications.find(a => a.id === appId) || {
+        id: appId,
+        name: appId,
+        rapidDeploy
+      };
+
+      return await this.deployToApplication(workspaceFolder, config, app, token);
+    } catch (error) {
+      this.logger.logError('Error during legacy deployment', error);
+      return {
+        result: DeploymentResult.OtherFailure,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error : new Error('Unknown error')
+      };
     }
   }
 
