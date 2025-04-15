@@ -53,6 +53,49 @@
         }
       }
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nplDeployment",
+          "title": "NPL Deployment",
+          "icon": "icon.png"
+        }
+      ]
+    },
+    "views": {
+      "nplDeployment": [
+        {
+          "id": "nplDeploymentView",
+          "name": "Applications"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "npl.refreshApplicationsList",
+          "when": "view == nplDeploymentView",
+          "group": "navigation"
+        },
+        {
+          "command": "npl.openDeploymentConfig",
+          "when": "view == nplDeploymentView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "npl.deploySelectedApplication",
+          "when": "view == nplDeploymentView && viewItem == application",
+          "group": "inline"
+        },
+        {
+          "command": "npl.configureRapidDeploy",
+          "when": "view == nplDeploymentView && viewItem == application",
+          "group": "1_modification"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "npl.selectServerVersion",
@@ -73,6 +116,30 @@
       {
         "command": "npl.cleanCredentials",
         "title": "NPL: Clean Deployment Credentials"
+      },
+      {
+        "command": "npl.refreshDeploymentView",
+        "title": "NPL: Refresh Deployment View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "npl.deploySelectedApplication",
+        "title": "Deploy",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "npl.configureRapidDeploy",
+        "title": "Configure Rapid Deploy"
+      },
+      {
+        "command": "npl.openDeploymentConfig",
+        "title": "Configure Deployment",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "npl.refreshApplicationsList",
+        "title": "Refresh Applications",
+        "icon": "$(sync)"
       }
     ]
   },

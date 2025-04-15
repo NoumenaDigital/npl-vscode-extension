@@ -6,10 +6,12 @@ import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
 import { DeployCommandHandler } from './deployment/DeployCommandHandler';
+import { DeploymentViewManager } from './deployment/DeploymentViewManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
 let deployCommandHandler: DeployCommandHandler;
+let deploymentViewManager: DeploymentViewManager;
 
 export async function activate(context: vscode.ExtensionContext) {
   // Create separate loggers for different components
@@ -23,6 +25,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // Use the deployment logger for deployment components
   // Pass the extension context to use for secrets storage
   deployCommandHandler = new DeployCommandHandler(deploymentLogger, context);
+
+  // Initialize the deployment view
+  deploymentViewManager = new DeploymentViewManager(context, deploymentLogger, deployCommandHandler);
 
   // Initialize managers with appropriate loggers
   BinaryManager.setLogger(languageServerLogger);
@@ -40,6 +45,8 @@ export async function activate(context: vscode.ExtensionContext) {
       // Register deployment commands
       vscode.commands.registerCommand('npl.configureDeployment', () => {
         deployCommandHandler.configureDeployment();
+        // Refresh the deployment view after configuration
+        deploymentViewManager.refresh();
       }),
       vscode.commands.registerCommand('npl.deployApplication', () => {
         deployCommandHandler.deployApplication();

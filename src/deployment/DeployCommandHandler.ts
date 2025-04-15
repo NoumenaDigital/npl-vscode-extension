@@ -18,6 +18,67 @@ export class DeployCommandHandler {
     this.credentialManager = new CredentialManager(logger, context);
   }
 
+  /**
+   * Gets a fresh authentication token for the given configuration
+   * @param config The deployment configuration
+   * @returns A fresh token or undefined if authentication fails
+   */
+  private async getFreshToken(config: DeploymentConfig): Promise<string | undefined> {
+    try {
+      // Always get the stored password
+      const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
+      if (!password) {
+        const passwordInput = await vscode.window.showInputBox({
+          prompt: 'Enter your password for Noumena Cloud',
+          password: true
+        });
+
+        if (!passwordInput) {
+          return undefined;
+        }
+
+        await this.credentialManager.storePassword(config.baseUrl, config.username, passwordInput);
+
+        // Use the new password
+        const jwtProvider = new JwtProvider({
+          username: config.username,
+          password: passwordInput,
+          authUrl: `${config.baseUrl}/api/auth/login`,
+          authType: config.authType,
+          logger: this.logger
+        });
+
+        const newToken = await jwtProvider.provideJwt();
+        // Handle null token case
+        if (newToken) {
+          await this.credentialManager.storeToken(config.baseUrl, config.username, newToken);
+          return newToken;
+        }
+        return undefined;
+      }
+
+      // Always get a fresh token with the stored password
+      const jwtProvider = new JwtProvider({
+        username: config.username,
+        password: password,
+        authUrl: `${config.baseUrl}/api/auth/login`,
+        authType: config.authType,
+        logger: this.logger
+      });
+
+      const newToken = await jwtProvider.provideJwt();
+      // Handle null token case
+      if (newToken) {
+        await this.credentialManager.storeToken(config.baseUrl, config.username, newToken);
+        return newToken;
+      }
+      return undefined;
+    } catch (error) {
+      this.logger.logError("Error getting fresh token", error);
+      return undefined;
+    }
+  }
+
   public async configureDeployment(): Promise<void> {
     try {
       const workspaceFolder = await this.getWorkspaceFolder();
@@ -215,39 +276,11 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Get token (reuse existing or get a new one)
-      let token = await this.credentialManager.getToken(config.baseUrl, config.username);
+      // Always get a fresh token
+      const token = await this.getFreshToken(config);
       if (!token) {
-        const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
-        if (!password) {
-          const passwordInput = await vscode.window.showInputBox({
-            prompt: 'Enter your password for Noumena Cloud',
-            password: true
-          });
-
-          if (!passwordInput) {
-            return;
-          }
-
-          await this.credentialManager.storePassword(config.baseUrl, config.username, passwordInput);
-        }
-
-        const jwtProvider = new JwtProvider({
-          username: config.username,
-          password: password || '',
-          authUrl: `${config.baseUrl}/api/auth/login`,
-          authType: config.authType,
-          logger: this.logger
-        });
-
-        const newToken = await jwtProvider.provideJwt();
-        if (!newToken) {
-          vscode.window.showErrorMessage('Failed to authenticate. Please check your credentials.');
-          return;
-        }
-
-        await this.credentialManager.storeToken(config.baseUrl, config.username, newToken);
-        token = newToken;
+        vscode.window.showErrorMessage('Failed to authenticate. Please check your credentials.');
+        return;
       }
 
       // Create application quick pick items
@@ -369,39 +402,11 @@ export class DeployCommandHandler {
         return;
       }
 
-      // Get token (reuse existing or get a new one)
-      let token = await this.credentialManager.getToken(config.baseUrl, config.username);
+      // Always get a fresh token
+      const token = await this.getFreshToken(config);
       if (!token) {
-        const password = await this.credentialManager.getPassword(config.baseUrl, config.username);
-        if (!password) {
-          const passwordInput = await vscode.window.showInputBox({
-            prompt: 'Enter your password for Noumena Cloud',
-            password: true
-          });
-
-          if (!passwordInput) {
-            return;
-          }
-
-          await this.credentialManager.storePassword(config.baseUrl, config.username, passwordInput);
-        }
-
-        const jwtProvider = new JwtProvider({
-          username: config.username,
-          password: password || '',
-          authUrl: `${config.baseUrl}/api/auth/login`,
-          authType: config.authType,
-          logger: this.logger
-        });
-
-        const newToken = await jwtProvider.provideJwt();
-        if (!newToken) {
-          vscode.window.showErrorMessage('Failed to authenticate. Please check your credentials.');
-          return;
-        }
-
-        await this.credentialManager.storeToken(config.baseUrl, config.username, newToken);
-        token = newToken;
+        vscode.window.showErrorMessage('Failed to authenticate. Please check your credentials.');
+        return;
       }
 
       // Store application settings (rapid deploy, warnings) for later
@@ -421,26 +426,29 @@ export class DeployCommandHandler {
 
       const jwtProvider = new JwtProvider({
         username: config.username,
-        password: '',
+        password: '',  // We don't need the password here
         authUrl: `${config.baseUrl}/api/auth/login`,
         authType: config.authType,
         logger: this.logger
       });
-      // Override the provideJwt method to use our existing token
-      const originalProvideJwt = jwtProvider.provideJwt;
-      jwtProvider.provideJwt = async () => token;
+
+      // Set the token directly instead of overriding provideJwt
+      jwtProvider.setToken(token);
 
       let tenants: Tenant[];
       try {
         tenants = await jwtProvider.getTenants(config.baseUrl);
-        // Restore the original method
-        jwtProvider.provideJwt = originalProvideJwt;
         this.logger.log(`Retrieved ${tenants.length} tenant(s)`);
       } catch (error) {
-        // Restore the original method
-        jwtProvider.provideJwt = originalProvideJwt;
         this.logger.logError('Failed to retrieve tenants', error);
-        vscode.window.showErrorMessage('Failed to refresh applications. Please check your connection and permissions.');
+
+        // Check if the error is related to authentication
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('Authentication failed') || errorMsg.includes('401')) {
+          vscode.window.showErrorMessage('Your session has expired. Please try again to get a new token.');
+        } else {
+          vscode.window.showErrorMessage('Failed to refresh applications. Please check your connection and permissions.');
+        }
         return;
       }
 
@@ -482,6 +490,72 @@ export class DeployCommandHandler {
     } catch (error) {
       this.logger.logError('Error refreshing applications', error);
       vscode.window.showErrorMessage('Failed to refresh applications');
+    }
+  }
+
+  /**
+   * Deploy a specific application from the tree view
+   * @param app The application to deploy
+   */
+  public async deployFromTreeView(app: Application): Promise<void> {
+    try {
+      const workspaceFolder = await this.getWorkspaceFolder();
+      if (!workspaceFolder) {
+        return;
+      }
+
+      const config = await this.configManager.loadConfig(workspaceFolder);
+      if (!config) {
+        vscode.window.showErrorMessage('No deployment configuration found. Please configure deployment first.');
+        return;
+      }
+
+      // Always get a fresh token
+      const token = await this.getFreshToken(config);
+      if (!token) {
+        vscode.window.showErrorMessage('Failed to authenticate. Please check your credentials.');
+        return;
+      }
+
+      // Confirm rapid deploy if needed
+      if (app.rapidDeploy && !app.skipRapidDeployWarning) {
+        const confirmOption = 'Yes, clear data and deploy';
+        const dontWarnOption = 'Yes, and don\'t warn me again';
+
+        const selection = await vscode.window.showWarningMessage(
+          `This will DELETE ALL DATA in ${app.name} before deployment. Are you sure?`,
+          { modal: true },
+          confirmOption,
+          dontWarnOption
+        );
+
+        if (selection === dontWarnOption) {
+          // Update the app in the config
+          const appInConfig = config.applications.find(a => a.id === app.id);
+          if (appInConfig) {
+            appInConfig.skipRapidDeployWarning = true;
+            await this.configManager.saveConfig(workspaceFolder, config);
+          }
+        } else if (selection !== confirmOption) {
+          return;
+        }
+      }
+
+      // Deploy the application
+      await this.deploymentService.deployToApplication(
+        workspaceFolder,
+        config,
+        app,
+        token
+      );
+
+      // Update last deployed app if successful
+      await this.configManager.updateLastDeployedApp(workspaceFolder, app.id);
+
+      vscode.window.showInformationMessage(`Successfully deployed to ${app.name}`);
+    } catch (error) {
+      this.logger.logError('Error during deployment from tree view', error);
+      vscode.window.showErrorMessage('Failed to deploy application');
     }
   }
 

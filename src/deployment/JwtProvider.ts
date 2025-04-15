@@ -43,6 +43,14 @@ export class JwtProvider {
     this.logger = options.logger;
   }
 
+  /**
+   * Set an existing token for use in API calls
+   * @param token The token to use
+   */
+  public setToken(token: string): void {
+    this.token = token;
+  }
+
   public async provideJwt(): Promise<string | null> {
     try {
       if (this.authType === AuthType.Basic) {
@@ -128,6 +136,7 @@ export class JwtProvider {
   }
 
   public async getTenants(baseUrl: string): Promise<Tenant[]> {
+    // If no token is set, try to get one
     if (!this.token) {
       this.token = await this.provideJwt();
       if (!this.token) {
@@ -166,6 +175,10 @@ export class JwtProvider {
                 this.logger.logError('Failed to parse tenants response', error);
                 reject(new Error('Failed to parse tenants response'));
               }
+            } else if (res.statusCode === 401) {
+              // Token might be expired
+              this.logger.logError('Authentication failed. Token might be expired.');
+              reject(new Error('Authentication failed. Please log in again.'));
             } else {
               this.logger.logError(`Failed to get tenants: Status ${res.statusCode}`);
               reject(new Error(`Failed to get tenants: Status ${res.statusCode}`));
