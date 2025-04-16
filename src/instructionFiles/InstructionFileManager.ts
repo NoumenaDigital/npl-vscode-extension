@@ -68,6 +68,13 @@ export class InstructionFileManager {
     }
   };
 
+  // Define prompt modes
+  private readonly PROMPT_MODES = {
+    ASK: 'ask',
+    AUTO: 'auto',
+    DISABLED: 'disabled'
+  };
+
   // Dependencies injected via constructor
   private readonly dialogHandler: DialogHandler;
   private readonly editorTypeProvider: () => EditorType;
@@ -98,10 +105,34 @@ export class InstructionFileManager {
   }
 
   /**
+   * Gets the current prompt mode from configuration
+   */
+  private getPromptMode(): string {
+    const config = vscode.workspace.getConfiguration('NPL');
+    return config.get<string>('instructionPrompts.mode', this.PROMPT_MODES.ASK);
+  }
+
+  /**
+   * Sets the prompt mode in the configuration
+   */
+  private async setPromptMode(mode: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration('NPL');
+    await config.update('instructionPrompts.mode', mode, vscode.ConfigurationTarget.Global);
+  }
+
+  /**
    * Checks for instruction files in the workspace and handles them according to requirements
    */
   public async checkAndHandleInstructionFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     if (!workspaceFolder) {
+      return;
+    }
+
+    // Check current prompt mode
+    const promptMode = this.getPromptMode();
+
+    // If disabled, do nothing
+    if (promptMode === this.PROMPT_MODES.DISABLED) {
       return;
     }
 
@@ -110,15 +141,14 @@ export class InstructionFileManager {
     switch (editorType) {
       case EditorType.VSCode:
         // VS Code only handles Copilot instructions
-        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot);
+        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot, promptMode);
         break;
       case EditorType.Cursor:
         // Cursor only handles Cursor rules
-        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor);
+        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor, promptMode);
         break;
       default:
-        // This should not happen with our current implementation,
-        // but the default case is here for future-proofing
+        // Default case for future-proofing
         break;
     }
   }
@@ -128,20 +158,33 @@ export class InstructionFileManager {
    */
   private async checkAndHandleInstructionFile(
     workspaceFolder: vscode.WorkspaceFolder,
-    fileType: InstructionFileType
+    fileType: InstructionFileType,
+    promptMode: string
   ): Promise<void> {
     const filePath = path.join(workspaceFolder.uri.fsPath, fileType.path);
+    const isAutoMode = promptMode === this.PROMPT_MODES.AUTO;
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
-      // File doesn't exist, ask if user wants to create it
+      if (isAutoMode) {
+        // Auto mode - create without asking
+        await this.createInstructionFile(filePath, fileType.templatePath);
+        return;
+      }
+
+      // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.createMessage,
-        'Yes', 'No'
+        'Yes', 'No', 'Always apply automatically', 'Never ask again'
       );
 
       if (answer === 'Yes') {
         await this.createInstructionFile(filePath, fileType.templatePath);
+      } else if (answer === 'Always apply automatically') {
+        await this.setPromptMode(this.PROMPT_MODES.AUTO);
+        await this.createInstructionFile(filePath, fileType.templatePath);
+      } else if (answer === 'Never ask again') {
+        await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
       return;
     }
@@ -150,14 +193,25 @@ export class InstructionFileManager {
     const content = fs.readFileSync(filePath, 'utf8');
 
     if (!this.hasNplSection(content)) {
-      // No NPL section, ask if user wants to add it
+      if (isAutoMode) {
+        // Auto mode - append without asking
+        await this.appendNplSection(filePath, content, fileType.templatePath);
+        return;
+      }
+
+      // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.appendMessage,
-        'Yes', 'No'
+        'Yes', 'No', 'Always apply automatically', 'Never ask again'
       );
 
       if (answer === 'Yes') {
         await this.appendNplSection(filePath, content, fileType.templatePath);
+      } else if (answer === 'Always apply automatically') {
+        await this.setPromptMode(this.PROMPT_MODES.AUTO);
+        await this.appendNplSection(filePath, content, fileType.templatePath);
+      } else if (answer === 'Never ask again') {
+        await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
       return;
     }
@@ -166,14 +220,25 @@ export class InstructionFileManager {
     const version = this.getNplSectionVersion(content);
 
     if (version < this.CURRENT_VERSION) {
-      // Outdated version, ask if user wants to update
+      if (isAutoMode) {
+        // Auto mode - update without asking
+        await this.updateNplSection(filePath, content, fileType.templatePath);
+        return;
+      }
+
+      // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.updateMessage.replace('{0}', version.toString()),
-        'Yes', 'No'
+        'Yes', 'No', 'Always apply automatically', 'Never ask again'
       );
 
       if (answer === 'Yes') {
         await this.updateNplSection(filePath, content, fileType.templatePath);
+      } else if (answer === 'Always apply automatically') {
+        await this.setPromptMode(this.PROMPT_MODES.AUTO);
+        await this.updateNplSection(filePath, content, fileType.templatePath);
+      } else if (answer === 'Never ask again') {
+        await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
     }
     // If version is current or higher, do nothing
@@ -185,14 +250,20 @@ export class InstructionFileManager {
    * Handle Copilot instructions file
    */
   public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot);
+    const promptMode = this.getPromptMode();
+    if (promptMode !== this.PROMPT_MODES.DISABLED) {
+      await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot, promptMode);
+    }
   }
 
   /**
    * Handle Cursor rules file
    */
   public async checkAndHandleCursorRules(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor);
+    const promptMode = this.getPromptMode();
+    if (promptMode !== this.PROMPT_MODES.DISABLED) {
+      await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor, promptMode);
+    }
   }
 
   // Helper methods

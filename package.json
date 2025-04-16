@@ -50,6 +50,17 @@
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
+        },
+        "NPL.instructionPrompts.mode": {
+          "type": "string",
+          "enum": ["ask", "auto", "disabled"],
+          "enumDescriptions": [
+            "Ask before creating or updating instruction files",
+            "Automatically create or update instruction files without prompting",
+            "Never create or update instruction files"
+          ],
+          "default": "ask",
+          "description": "Controls how NPL instruction files for AI assistants are handled"
         }
       }
     },

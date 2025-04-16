@@ -27,6 +27,20 @@ class TestDialogHandler implements DialogHandler {
   }
 }
 
+// Mock for configuration settings
+class MockConfiguration {
+  private settings: Map<string, any> = new Map();
+
+  get<T>(section: string, defaultValue?: T): T {
+    return this.settings.has(section) ? this.settings.get(section) : defaultValue as T;
+  }
+
+  update(section: string, value: any): Promise<void> {
+    this.settings.set(section, value);
+    return Promise.resolve();
+  }
+}
+
 suite('InstructionFileManager Test Suite', () => {
   let tempDir: string;
   let testDialogHandler: TestDialogHandler;
@@ -270,5 +284,122 @@ suite('InstructionFileManager Test Suite', () => {
 
     assert.strictEqual(testDialogHandler.messageCount, 1);
     assert.ok(!fs.existsSync(copilotFile), 'Copilot instructions file should not exist');
+  });
+
+  test('user can disable future prompts via "Never ask again"', async function() {
+    const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
+
+    // Create a mock configuration
+    const mockConfig = new MockConfiguration();
+
+    // Save original workspace.getConfiguration
+    const originalGetConfiguration = vscode.workspace.getConfiguration;
+
+    try {
+      // Mock workspace.getConfiguration
+      vscode.workspace.getConfiguration = () => mockConfig as any;
+
+      instructionFileManager = new InstructionFileManager(testDialogHandler);
+      testDialogHandler.responseToReturn = 'Never ask again';
+
+      await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+      const copilotFile = path.join(tempDir, copilotInstructions);
+
+      assert.strictEqual(testDialogHandler.messageCount, 1);
+      assert.ok(!fs.existsSync(copilotFile), 'Copilot instructions file should not exist');
+
+      // Check that the configuration was updated
+      assert.strictEqual(mockConfig.get('instructionPrompts.mode', 'ask'), 'disabled', 'instructionPrompts.mode should be set to disabled');
+
+      // Reset dialog handler count
+      testDialogHandler.messageCount = 0;
+
+      // Try to prompt again - should be suppressed by the setting
+      await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+      // Should not show any prompts
+      assert.strictEqual(testDialogHandler.messageCount, 0, 'No prompts should be shown when in disabled mode');
+    } finally {
+      // Restore original workspace.getConfiguration
+      vscode.workspace.getConfiguration = originalGetConfiguration;
+    }
+  });
+
+  test('automatic mode applies updates without prompting', async function() {
+    const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
+
+    // Create a mock configuration
+    const mockConfig = new MockConfiguration();
+    mockConfig.update('instructionPrompts.mode', 'auto');
+
+    // Save original workspace.getConfiguration
+    const originalGetConfiguration = vscode.workspace.getConfiguration;
+
+    try {
+      // Mock workspace.getConfiguration
+      vscode.workspace.getConfiguration = () => mockConfig as any;
+
+      instructionFileManager = new InstructionFileManager(testDialogHandler);
+
+      await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+      const copilotFile = path.join(tempDir, copilotInstructions);
+
+      // Should not show any prompts in auto mode
+      assert.strictEqual(testDialogHandler.messageCount, 0, 'No prompts should be shown in auto mode');
+      assert.ok(fs.existsSync(copilotFile), 'Copilot instructions file should be created automatically');
+
+      // Verify file content
+      const content = fs.readFileSync(copilotFile, 'utf8');
+      assert.ok(content.includes(expectedVersionString), 'File should contain the correct version marker');
+    } finally {
+      // Restore original workspace.getConfiguration
+      vscode.workspace.getConfiguration = originalGetConfiguration;
+    }
+  });
+
+  test('user can switch to automatic mode', async function() {
+    const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
+
+    // Create a mock configuration
+    const mockConfig = new MockConfiguration();
+
+    // Save original workspace.getConfiguration
+    const originalGetConfiguration = vscode.workspace.getConfiguration;
+
+    try {
+      // Mock workspace.getConfiguration
+      vscode.workspace.getConfiguration = () => mockConfig as any;
+
+      instructionFileManager = new InstructionFileManager(testDialogHandler);
+      testDialogHandler.responseToReturn = 'Always apply automatically';
+
+      await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+      const copilotFile = path.join(tempDir, copilotInstructions);
+
+      assert.strictEqual(testDialogHandler.messageCount, 1);
+      assert.ok(fs.existsSync(copilotFile), 'Copilot instructions file should be created');
+
+      // Check that the configuration was updated
+      assert.strictEqual(mockConfig.get('instructionPrompts.mode', 'ask'), 'auto', 'instructionPrompts.mode should be set to auto');
+
+      // Clean up for next test
+      fs.unlinkSync(copilotFile);
+
+      // Reset dialog handler count
+      testDialogHandler.messageCount = 0;
+
+      // Try to create again - should happen automatically without prompting
+      await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
+
+      // Should not show any prompts
+      assert.strictEqual(testDialogHandler.messageCount, 0, 'No prompts should be shown in auto mode');
+      assert.ok(fs.existsSync(copilotFile), 'Copilot instructions file should be created automatically');
+    } finally {
+      // Restore original workspace.getConfiguration
+      vscode.workspace.getConfiguration = originalGetConfiguration;
+    }
   });
 });
