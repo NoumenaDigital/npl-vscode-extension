@@ -216,10 +216,9 @@ export class InstructionFileManager {
       return;
     }
 
-    // Has NPL section, check version
     const version = this.getNplSectionVersion(content);
 
-    if (version < this.CURRENT_VERSION) {
+    if (version !== undefined && version < this.CURRENT_VERSION) {
       if (isAutoMode) {
         // Auto mode - update without asking
         await this.updateNplSection(filePath, content, fileType.templatePath);
@@ -241,14 +240,8 @@ export class InstructionFileManager {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
     }
-    // If version is current or higher, do nothing
   }
 
-  // Convenience methods for backward compatibility and direct access
-
-  /**
-   * Handle Copilot instructions file
-   */
   public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     const promptMode = this.getPromptMode();
     if (promptMode !== this.PROMPT_MODES.DISABLED) {
@@ -256,9 +249,6 @@ export class InstructionFileManager {
     }
   }
 
-  /**
-   * Handle Cursor rules file
-   */
   public async checkAndHandleCursorRules(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     const promptMode = this.getPromptMode();
     if (promptMode !== this.PROMPT_MODES.DISABLED) {
@@ -266,36 +256,52 @@ export class InstructionFileManager {
     }
   }
 
-  // Helper methods
-
   private hasNplSection(content: string): boolean {
     return content.includes(this.NPL_SECTION_START);
   }
 
-  private getNplSectionVersion(content: string): number {
+  private getNplSectionVersion(content: string): number | undefined {
+    // Only match actual digit sequences (not template placeholders)
     const versionRegex = new RegExp(`${this.NPL_SECTION_START}(\\d+)`);
     const versionMatch = content.match(versionRegex);
     if (versionMatch && versionMatch[1]) {
       return parseInt(versionMatch[1], 10);
     }
-    return 0; // Default to 0 if no version found
+
+    return undefined;
   }
 
   private getTemplateContent(templatePath: string): string {
-    console.log(`Attempting to load template from: ${templatePath}`);
-    console.log(`Current directory: ${process.cwd()}`);
-    console.log(`Template exists: ${fs.existsSync(templatePath)}`);
+    try {
+      // Try primary template path
+      if (fs.existsSync(templatePath)) {
+        let content = fs.readFileSync(templatePath, 'utf8');
+        content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
+        return content;
+      }
 
-    if (fs.existsSync(templatePath)) {
-      let content = fs.readFileSync(templatePath, 'utf8');
-      // Replace version placeholder with current version
-      content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
-      console.log(`Template loaded successfully with version: ${this.CURRENT_VERSION}`);
-      return content;
+      // Try looking in the source directory (useful during development)
+      const srcTemplatePath = path.join(__dirname, '..', '..', 'src', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+      if (fs.existsSync(srcTemplatePath)) {
+        let content = fs.readFileSync(srcTemplatePath, 'utf8');
+        content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
+        return content;
+      }
+
+      // Try directly in the extension folder
+      const extensionFilePath = path.join(__dirname, '..', '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+      if (fs.existsSync(extensionFilePath)) {
+        let content = fs.readFileSync(extensionFilePath, 'utf8');
+        content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
+        return content;
+      }
+
+      // Fallback content
+      return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
+    } catch (error) {
+      console.error(`Error loading template: ${error}`);
+      return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
     }
-
-    console.log(`Template not found, using fallback content with version: ${this.CURRENT_VERSION}`);
-    return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
   }
 
   private async createInstructionFile(filePath: string, templatePath: string): Promise<void> {
@@ -309,21 +315,18 @@ export class InstructionFileManager {
   }
 
   private async appendNplSection(filePath: string, existingContent: string, templatePath: string): Promise<void> {
-    // Add NPL section to existing content
     const newContent = `${existingContent.trim()}\n\n${this.getTemplateContent(templatePath)}`;
 
     fs.writeFileSync(filePath, newContent, 'utf8');
   }
 
   private async updateNplSection(filePath: string, existingContent: string, templatePath: string): Promise<void> {
-    // Replace the old NPL section with the new one
     const newContent = this.replaceNplSection(existingContent, templatePath);
 
     fs.writeFileSync(filePath, newContent, 'utf8');
   }
 
   private replaceNplSection(content: string, templatePath: string): string {
-    // Find the NPL section start
     const startRegex = new RegExp(`${this.NPL_SECTION_START}\\d+`);
     const startMatch = content.match(startRegex);
     if (!startMatch) {
@@ -335,14 +338,11 @@ export class InstructionFileManager {
       return content;
     }
 
-    // Find the NPL section end
     const endIndex = content.indexOf(this.NPL_SECTION_END, startIndex);
     if (endIndex === -1) {
-      // If no end marker, append the entire template
       return `${content}\n\n${this.getTemplateContent(templatePath)}`;
     }
 
-    // Replace section including the end marker
     const endOfSection = endIndex + this.NPL_SECTION_END.length;
     return content.slice(0, startIndex) + this.getTemplateContent(templatePath) + content.slice(endOfSection);
   }
@@ -350,11 +350,20 @@ export class InstructionFileManager {
   // Get template path, using extension context if available
   private getTemplatePath(): string {
     if (extensionContext) {
-      // Use extension context path for more reliable resolution in debug/production
-      return path.join(extensionContext.extensionPath, 'out', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
-    } else {
-      // Fallback to relative path (less reliable)
-      return path.join(__dirname, '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+      // Production path
+      const prodPath = path.join(extensionContext.extensionPath, 'out', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+      if (fs.existsSync(prodPath)) {
+        return prodPath;
+      }
+
+      // Root resources path
+      const altPath = path.join(extensionContext.extensionPath, RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
+      if (fs.existsSync(altPath)) {
+        return altPath;
+      }
     }
+
+    // Fallback relative path
+    return path.join(__dirname, '..', RESOURCES_DIR, TEMPLATES_DIR, NPL_INSTRUCTIONS_TEMPLATE_FILENAME);
   }
 }
