@@ -62,6 +62,17 @@
           "default": "",
           "description": "Path to the NPL test sources. Leave empty to use the current workspace root.",
           "scope": "resource"
+        },
+        "NPL.instructionPrompts.mode": {
+          "type": "string",
+          "enum": ["ask", "auto", "disabled"],
+          "enumDescriptions": [
+            "Ask before creating or updating instruction files",
+            "Automatically create or update instruction files without prompting",
+            "Never create or update instruction files"
+          ],
+          "default": "ask",
+          "description": "Controls how NPL instruction files for AI assistants are handled"
         }
       }
     },
