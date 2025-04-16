@@ -32,28 +32,25 @@ These are the same errors and warnings you would get when compiling your NPL cod
 You can easily switch between different versions of the NPL Language Server to match your project's needs (e.g. using
 deprecated syntax). The versions correspond to Noumena Platform releases.
 
-You can access this feature by running the command `NPL: Select Language Server Version` from the Command Palette
-(`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS).
+### Workspace management
+
+Run the NPL source management commands in order to restrict diagnostics to specific folders. By default, all NPL files
+in your project are considered, so this is useful to avoid redefinition errors and improve performance.
 
 ## Commands
 
 Available commands can be accessed by opening the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on
-macOS) and typing "NPL":
-
-- `NPL: Select Language Server Version` - Choose which version of the language server to use
-- `NPL: Clean Language Server Files and Reset` - Clean up language server files and reset to default state
+macOS) and typing "NPL".
 
 ## Configuration
 
-The extension can be configured through VS Code settings:
-
-- `NPL.server.version`: Version of the language server to use. Use 'latest' for the most recent version, or run the
-  'NPL: Select Language Server Version' command for a visual picker with auto-download.
+The extension can be configured through the VS Code settings. To find NPL-specific settings, open the settings and
+search for "NPL".
 
 ## Installation from VSIX
 
 Some VS Code forks (like Cursor) have outdated extension marketplaces. In this case, you can install the extension
-manually using the VSIX file. Instructions can be found [here](https://www.cursor.com/how-to-install-extension).
+manually using the VSIX file by dragging it into your extensions view or running the "Install from VSIX" command.
 
 The VSIX file can also be downloaded from our
 [GitHub releases](https://github.com/NoumenaDigital/npl-vscode-extension/releases).
