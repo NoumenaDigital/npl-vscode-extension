@@ -38,19 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
       })
     );
 
-    // Handle instruction files when workspace contains NPL files
-    context.subscriptions.push(
-      vscode.workspace.onDidOpenTextDocument((document) => {
-        if (document.languageId === 'npl') {
-          handleWorkspaceInstructionFiles(logger);
-        }
-      })
-    );
-
-    // Check if we're already in a workspace with NPL files
-    if (vscode.workspace.textDocuments.some(doc => doc.languageId === 'npl')) {
-      handleWorkspaceInstructionFiles(logger);
-    }
+    handleWorkspaceInstructionFiles(logger);
 
     await clientManager.start(context);
   } catch (err) {
