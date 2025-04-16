@@ -17,8 +17,7 @@ All contributions should be submitted as pull requests. To ensure your PR is acc
 
 1. **Follow Conventional Commits** - All commit messages and PR titles must follow the
    [Conventional Commits](https://www.conventionalcommits.org/) format
-2. **Include Complete PR Description** - Replace the placeholder comment with a description of the diff, and set the
-   `Publish:` trailer to `true` or `false` depending on if it should be published to the marketplace or not
+2. **Include Complete PR Description** - Replace the placeholder comment with a description of the diff.
 3. **Include Test Coverage** - All new or modified functionality must include appropriate test coverage
 4. **Pass All Tests** - Your changes must pass all the tests, see [DEVELOPING.md](DEVELOPING.md)
 5. **Update the changelog** – If the diff added, changed, or removed user-facing features, add them to the
@@ -34,13 +33,6 @@ Our repository uses automated workflows to validate pull requests. These workflo
 
 **Important**: Workflows will only run after a CODEOWNER has approved the PR. This is a security measure to protect our
 CI/CD infrastructure.
-
-#### PR description trailers
-
-PR descriptions _should_ contain a line containing either `Publish: true` or `Publish: false`. It should be set to
-`true` if the PR contains new features or fixes that are relevant to users.
-
-An optional `Ticket: ST-XXXX` trailer referencing an internal JIRA ticket can also be specified.
 
 ## Development Process
 
