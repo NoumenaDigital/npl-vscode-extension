@@ -5,6 +5,7 @@ import { LanguageClientManager } from './client/LanguageClientManager';
 import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
+import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from './instructionFiles/InstructionFileManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -13,12 +14,20 @@ let extensionContext: vscode.ExtensionContext;
 export interface ExtensionAPI {
   restartServer: () => Promise<void>;
 }
+let instructionFileManager: InstructionFileManager;
 
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   const logger = new Logger('NPL Language Server');
   serverManager = new ServerManager(logger);
   clientManager = new LanguageClientManager(logger, serverManager);
+
+  // Set extension context for correct path resolution
+  setExtensionContext(context);
+
+  instructionFileManager = new InstructionFileManager(
+    new VsCodeDialogHandler()
+  );
 
   // Initialize managers with the same logger
   BinaryManager.setLogger(logger);
@@ -44,6 +53,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
       vscode.commands.registerCommand('npl.restartServer', restartServer)
     );
+
+    handleWorkspaceInstructionFiles(logger);
 
     await clientManager.start(context);
 
@@ -103,6 +114,26 @@ async function selectNplWorkspace(logger: Logger, type: 'sources' | 'testSources
   } catch (error) {
     logger.logError(`Failed to select NPL ${type} workspace`, error);
     vscode.window.showErrorMessage(`Failed to select NPL ${type} workspace: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Checks for Cursor rules and Copilot instructions in the workspace
+ */
+async function handleWorkspaceInstructionFiles(logger: Logger) {
+  try {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return;
+    }
+
+    // Handle instruction files for each workspace folder
+    for (const folder of workspaceFolders) {
+      await instructionFileManager.checkAndHandleInstructionFiles(folder);
+    }
+  } catch (error) {
+    logger.logError('Error handling workspace instruction files', error);
   }
 }
 
