@@ -40,6 +40,12 @@ These are critical errors to avoid when working with NPL:
     };
     ```
 
+13. **Avoid reserved keywords**: Never use these reserved keywords as variable names, parameter names, or identifiers:
+    `after`, `and`, `become`, `before`, `between`, `const`, `enum`, `else`, `final`, `for`, `function`, `guard`, `in`,
+    `init`, `initial`, `if`, `is`, `match`, `native`, `notification`, `notify`, `identifier`, `obligation`, `optional`,
+    `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
+    `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
+
 ## Key Guidelines
 
 1. All NPL files have the `.npl` extension and must start with a package declaration.
