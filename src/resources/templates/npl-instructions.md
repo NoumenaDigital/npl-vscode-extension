@@ -155,6 +155,8 @@ These are critical errors to avoid when working with NPL:
 
     Direct comparisons like `activeState() == stateName` are invalid.
 
+16. **Boolean operators**: Use `&&` and `||` for logical AND/OR. Keywords `and` and `or` are not valid in NPL.
+
 ## Key Guidelines
 
 1. All NPL files have the `.npl` extension and must start with a package declaration.
