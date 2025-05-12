@@ -1,14 +1,90 @@
 # NPL Development v{{VERSION}}
 
-When working with NPL (Noumena Protocol Language) files:
+NPL (Noumena Protocol Language) has unique syntax for defining protocol types and operations, strong typing, and a
+distinct approach to modeling permissions and state transitions.
 
-## Introduction
+## Simple Example: Payment Protocol
 
-NPL (Noumena Protocol Language) is a domain-specific language for the Noumena Protocol. It has unique syntax for
-defining protocol types and operations, strong typing, and a distinct approach to modeling permissions and state
-transitions.
+```npl
+package iou
 
-## Common AI Mistakes to Avoid
+/**
+ * Struct to represent a timestamped amount
+ * @param amount The amount of the payment
+ * @param timestamp The time at which the payment was made
+ */
+struct TimestampedAmount {
+    amount: Number,
+    timestamp: DateTime
+};
+
+/**
+ * Function to calculate the total of a list of timestamped amounts
+ * @param entries The list of timestamped amounts
+ * @return The total amount
+ */
+function total(entries: List<TimestampedAmount>) -> entries.map(function(p: TimestampedAmount) -> p.amount).sum();
+
+/**
+ * Simple IOU protocol
+ * @param issuer The party issuing the IOU
+ * @param payee The party receiving the IOU
+ * @param forAmount The initial amount of the IOU
+ */
+@api
+protocol[issuer, payee] Iou(var forAmount: Number) {
+    require(forAmount > 0, "Initial amount must be strictly positive");
+
+    initial state unpaid;
+    final state paid;
+    final state forgiven;
+
+    private var payments = listOf<TimestampedAmount>();
+
+    /**
+     * Function to calculate the amount owed
+     * @return The amount owed
+     */
+    function amountOwed() returns Number -> forAmount - total(payments);
+
+    /**
+     * Function to pay a certain amount towards the IOU, invoked by the issuer
+     * @param amount The amount to pay
+     */
+    @api
+    permission[issuer] pay(amount: Number) | unpaid {
+        require(amount > 0, "Amount must be strictly positive");
+        require(amount <= amountOwed(), "Amount may not exceed amount owed");
+
+        var p = TimestampedAmount(amount = amount, timestamp = now());
+
+        payments = payments.with(p);
+
+        if (amountOwed() == 0) {
+            become paid;
+        };
+    };
+
+    /**
+     * Function to forgive the IOU, invoked by the payee
+     */
+    @api
+    permission[payee] forgive() | unpaid {
+        become forgiven;
+    };
+
+    /**
+     * Function to get the amount owed, invoked by either party
+     * @return The amount owed
+     */
+    @api
+    permission[issuer | payee] getAmountOwed() returns Number {
+        return amountOwed();
+    };
+}
+```
+
+## Common mistakes to avoid
 
 These are critical errors to avoid when working with NPL:
 
@@ -21,7 +97,7 @@ These are critical errors to avoid when working with NPL:
 7. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition.
 8. **Method hallucinations**: Only use the standard library methods explicitly documented below.
 9. **No imports or mocks**: Define everything you need in the current file.
-10. **Keep examples simple**: Prefer examples with less than 200 lines of code.
+10. **Keep implementations simple**: Prefer small applications with less than 200 lines of code.
 11. **Type definitions outside protocols**: Always define types (structs, enums, unions, etc.) at the top level of the
     file, NEVER inside protocols.
 12. **Struct field syntax**: Struct fields use commas, not semicolons, and don't use `var`:
@@ -109,7 +185,6 @@ protocol[party1, party2] ProtocolName(
 ### Protocol Instantiation
 
 ```npl
-// Basic instantiation (only possible if protocol is annotated with @api)
 var instance = ProtocolName[alice, bob](42, "example");
 
 // With named arguments
@@ -293,52 +368,5 @@ Use ONLY these methods - do not hallucinate or invent others:
 1. **Don't hallucinate methods**: Only use methods listed above.
 2. **Immutable collections**: `with()` and `without()` create new collections.
 3. **No advanced functional operations**: No streams, reduce, unless documented above.
-
-## Simple Example: Payment Protocol
-
-```npl
-package payment;
-
-/**
- * Simple payment protocol between a payer and payee.
- * @param amount The payment amount.
- */
-@api
-protocol[payer, payee] Payment(
-  var amount: Number
-) {
-  require(amount > 0, "Amount must be positive");
-
-  initial state created;
-  final state completed;
-  final state cancelled;
-
-  /**
-   * Allows payer to make the payment.
-   */
-  @api
-  permission[payer] pay() | created {
-    // Payment logic would go here
-    become completed;
-  };
-
-  /**
-   * Allows payer to cancel the payment.
-   */
-  @api
-  permission[payer] cancel() | created {
-    become cancelled;
-  };
-
-  /**
-   * Allows either party to check the amount.
-   * @return The payment amount.
-   */
-  @api
-  permission[payer | payee] getAmount() returns Number {
-    return amount;
-  };
-};
-```
 
 <!-- END NPL DEVELOPMENT SECTION -->
