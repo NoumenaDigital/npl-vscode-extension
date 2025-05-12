@@ -122,6 +122,10 @@ These are critical errors to avoid when working with NPL:
     `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
     `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
 
+14. **No redundant getters**: Do NOT create permissions or functions that simply return a public protocol field (e.g.,
+    `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
+    accessor when additional logic is required.
+
 ## Key Guidelines
 
 1. All NPL files have the `.npl` extension and must start with a package declaration.
