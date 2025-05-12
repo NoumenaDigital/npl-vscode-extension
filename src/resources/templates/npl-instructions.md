@@ -84,6 +84,26 @@ protocol[issuer, payee] Iou(var forAmount: Number) {
 }
 ```
 
+Here are a couple of simple tests (should be placed in a DIFFERENT file, but part of the same package) for the above
+example:
+
+```npl
+@test
+function test_amount_owed_after_pay(test: Test) -> {
+    var iou = Iou['issuer', 'payee'](100);
+    iou.pay['issuer'](50);
+
+    test.assertEquals(50, iou.getAmountOwed['issuer'](), "Amount owed should reflect payment");
+};
+
+@test
+function test_pay_negative_amount(test: Test) -> {
+    var iou = Iou['issuer', 'payee'](100);
+
+    test.assertFails(function() -> iou.pay['issuer'](-10), "Paying negative amounts should fail");
+};
+```
+
 ## Common mistakes to avoid
 
 These are critical errors to avoid when working with NPL:
