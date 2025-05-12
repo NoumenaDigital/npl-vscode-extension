@@ -146,6 +146,15 @@ These are critical errors to avoid when working with NPL:
     `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
     accessor when additional logic is required.
 
+15. **Unwrap activeState() before comparing**: `activeState()` returns an `Optional<State>`. Use `getOrFail()` (or
+    another optional-handling method) before comparison, and reference the state constant via the `States` enum:
+
+    ```npl
+    activeState().getOrFail() == States.stateName; // Correct
+    ```
+
+    Direct comparisons like `activeState() == stateName` are invalid.
+
 ## Key Guidelines
 
 1. All NPL files have the `.npl` extension and must start with a package declaration.
