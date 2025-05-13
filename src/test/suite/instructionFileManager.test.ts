@@ -95,7 +95,7 @@ suite('InstructionFileManager Test Suite', () => {
       () => EditorType.VSCode
     );
 
-    testDialogHandler.responseToReturn = DialogButton.No;
+    testDialogHandler.responseToReturn = undefined; // Simulating dialog dismissal
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
     assert.strictEqual(testDialogHandler.messageCount, 1, 'VS Code should show 1 prompt');
     assert.ok(testDialogHandler.lastMessage?.includes('Copilot'));
@@ -233,20 +233,6 @@ suite('InstructionFileManager Test Suite', () => {
     const content = fs.readFileSync(cursorFile, 'utf8');
     assert.ok(content.includes(expectedVersionString));
     assert.ok(content.includes(NPL_SECTION_END));
-  });
-
-  test('user can cancel file creation', async function() {
-    const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
-
-    instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = DialogButton.No;
-
-    await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
-
-    const copilotFile = path.join(tempDir, copilotInstructions);
-
-    assert.strictEqual(testDialogHandler.messageCount, 1);
-    assert.ok(!fs.existsSync(copilotFile), 'Copilot instructions file should not exist');
   });
 
   test('user can disable future prompts via "Never ask again"', async function() {

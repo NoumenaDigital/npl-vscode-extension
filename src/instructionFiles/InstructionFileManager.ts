@@ -14,7 +14,6 @@ import {
 
 export enum DialogButton {
   Yes = 'Yes',
-  No = 'No',
   Always = 'Always',
   Never = 'Never'
 }
@@ -151,7 +150,7 @@ export class InstructionFileManager {
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.createMessage,
-        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
+        DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
@@ -177,7 +176,7 @@ export class InstructionFileManager {
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.appendMessage,
-        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
+        DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
@@ -202,7 +201,7 @@ export class InstructionFileManager {
 
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.updateMessage.replace('{0}', version.toString()),
-        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
+        DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
