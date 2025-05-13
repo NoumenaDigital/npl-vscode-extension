@@ -111,7 +111,8 @@ These are critical errors to avoid when working with NPL:
 1. **Text, not String**: NPL uses `Text` type, not `String`.
 2. **No null values**: NPL doesn't have `null` or nullable types. Use `Optional<T>` instead.
 3. **Optional handling**: Access optional values with `getOrElse()`, `getOrFail()`, or `computeIfAbsent()`.
-4. **Party limitations**: The `Party` type cannot be freely used in user-defined code.
+4. **Party limitations**: NEVER store or persist values of the `Party` type in protocol-level variables, collections, or
+   data structures.
 5. **Always use semicolons**: Required at the end of statements, permissions, protocols, etc.
 6. **No ternary operators**: Always use if-else statements instead of `?:` syntax.
 7. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition.
