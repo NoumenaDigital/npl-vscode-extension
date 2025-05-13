@@ -14,7 +14,8 @@ import {
 
 export enum DialogButton {
   Yes = 'Yes',
-  Always = 'Always',
+  Always = 'Always & auto-update',
+  AlwaysUpdate = 'Always',
   Never = 'Never'
 }
 
@@ -37,10 +38,6 @@ export class VsCodeDialogHandler implements DialogHandler {
 export enum EditorType {
   VSCode,
   Cursor
-}
-
-interface InstructionFileType {
-  path: string;
 }
 
 export class InstructionFileManager {
@@ -137,7 +134,7 @@ export class InstructionFileManager {
 
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
-        'Create AI rules file with NPL-specific instructions?',
+        'Create and maintain AI rules file with NPL-specific instructions?',
         DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
@@ -163,7 +160,7 @@ export class InstructionFileManager {
 
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
-        'Add NPL-specific rules to your AI rules file?',
+        'Add and maintain NPL-specific rules in your AI rules file?',
         DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
@@ -189,12 +186,12 @@ export class InstructionFileManager {
 
       const answer = await this.dialogHandler.showInformationMessage(
         `NPL-specific rules for AI assistance outdated (v${version}). Update to latest?`,
-        DialogButton.Yes, DialogButton.Always, DialogButton.Never
+        DialogButton.Yes, DialogButton.AlwaysUpdate, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
         await this.updateNplSection(fullPath, content, this.templatePath);
-      } else if (answer === DialogButton.Always) {
+      } else if (answer === DialogButton.AlwaysUpdate) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
         await this.updateNplSection(fullPath, content, this.templatePath);
       } else if (answer === DialogButton.Never) {
