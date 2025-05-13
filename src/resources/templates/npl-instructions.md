@@ -108,134 +108,134 @@ function test_pay_negative_amount(test: Test) -> {
 
 These are critical errors to avoid when working with NPL:
 
-1. **Text, not String**: NPL uses `Text` type, not `String`.
-2. **No null values**: NPL doesn't have `null` or nullable types. Use `Optional<T>` instead.
-3. **Optional handling**: Access optional values with `getOrElse()`, `getOrFail()`, or `computeIfAbsent()`.
-4. **Party limitations**: NEVER store or persist values of the `Party` type in protocol-level variables, collections, or
-   data structures.
-5. **Always use semicolons**: Semicolons are MANDATORY at the end of ALL statements. This includes:
+- **Text, not String**: NPL uses `Text` type, not `String`.
+- **No null values**: NPL doesn't have `null` or nullable types. Use `Optional<T>` instead.
+- **Optional handling**: Access optional values with `getOrElse()`, `getOrFail()`, or `computeIfAbsent()`.
+- **Party limitations**: NEVER store or persist values of the `Party` type in protocol-level variables, collections, or
+  data structures.
+- **Always use semicolons**: Semicolons are MANDATORY at the end of ALL statements. This includes:
 
-   - Return statements inside blocks: `return value;`
-   - Statement blocks inside control structures: `if (condition) { doSomething(); };`
-   - Statements inside functions: `var x = 5;`
+  - Return statements inside blocks: `return value;`
+  - Statement blocks inside control structures: `if (condition) { doSomething(); };`
+  - Statements inside functions: `var x = 5;`
 
-   ```npl
-   // CORRECT - note semicolons after each return and after the entire if-else block
-   var f = function() returns Text -> if (true) { return "foo"; } else { return "bar"; };
+  ```npl
+  // CORRECT - note semicolons after each return and after the entire if-else block
+  var f = function() returns Text -> if (true) { return "foo"; } else { return "bar"; };
 
-   // INCORRECT - missing semicolons after return statements and if-else block
-   var f = function() returns Text -> if (true) { return "foo" } else { return "bar" }
-   ```
+  // INCORRECT - missing semicolons after return statements and if-else block
+  var f = function() returns Text -> if (true) { return "foo" } else { return "bar" }
+  ```
 
-6. **No ternary operators**: Always use if-else statements instead of `?:` syntax.
-7. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition.
-8. **Method hallucinations**: Only use the standard library methods explicitly documented below.
-9. **No imports or mocks**: Define everything you need in the current file.
-10. **Keep implementations simple**: Prefer small applications with less than 200 lines of code.
-11. **Type definitions outside protocols**: Always define types (structs, enums, unions, etc.) at the top level of the
-    file, NEVER inside protocols.
-12. **Struct field syntax**: Struct fields use commas, not semicolons, and don't use `var`:
+- **No ternary operators**: Always use if-else statements instead of `?:` syntax.
+- **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition.
+- **Method hallucinations**: Only use the standard library methods explicitly documented below.
+- **No imports or mocks**: Define everything you need in the current file.
+- **Keep implementations simple**: Prefer small applications with less than 200 lines of code.
+- **Type definitions outside protocols**: Always define types (structs, enums, unions, etc.) at the top level of the
+  file, NEVER inside protocols.
+- **Struct field syntax**: Struct fields use commas, not semicolons, and don't use `var`:
 
-    ```npl
-    // INCORRECT
-    struct Item {
-      var id: Text;
-      var price: Number;
-    };
+  ```npl
+  // INCORRECT
+  struct Item {
+    var id: Text;
+    var price: Number;
+  };
 
-    // CORRECT
-    struct Item {
-      id: Text,
-      price: Number
-    };
-    ```
+  // CORRECT
+  struct Item {
+    id: Text,
+    price: Number
+  };
+  ```
 
-13. **Avoid reserved keywords**: Never use these reserved keywords as variable names, parameter names, or identifiers:
-    `after`, `and`, `become`, `before`, `between`, `const`, `enum`, `else`, `final`, `for`, `function`, `guard`, `in`,
-    `init`, `initial`, `if`, `is`, `match`, `native`, `notification`, `notify`, `identifier`, `obligation`, `optional`,
-    `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
-    `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
+- **Avoid reserved keywords**: Never use these reserved keywords as variable names, parameter names, or identifiers:
+  `after`, `and`, `become`, `before`, `between`, `const`, `enum`, `else`, `final`, `for`, `function`, `guard`, `in`,
+  `init`, `initial`, `if`, `is`, `match`, `native`, `notification`, `notify`, `identifier`, `obligation`, `optional`,
+  `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
+  `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
 
-    **CRITICAL WARNING:** Be especially careful not to use `state` as a variable name. This is one of the most commonly
-    misused reserved keywords. Other frequently misused keywords include `return`, `final`, and `initial`. Reserved
-    keywords should only be used for their intended purpose (e.g., `state` for state declarations:
-    `initial state unpaid;`).
+  **CRITICAL WARNING:** Be especially careful not to use `state` as a variable name. This is one of the most commonly
+  misused reserved keywords. Other frequently misused keywords include `return`, `final`, and `initial`. Reserved
+  keywords should only be used for their intended purpose (e.g., `state` for state declarations:
+  `initial state unpaid;`).
 
-14. **No redundant getters**: Do NOT create permissions or functions that simply return a public protocol field (e.g.,
-    `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
-    accessor when additional logic is required.
+- **No redundant getters**: Do NOT create permissions or functions that simply return a public protocol field (e.g.,
+  `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
+  accessor when additional logic is required.
 
-15. **Unwrap activeState() before comparing**: `activeState()` returns an `Optional<State>`. Use `getOrFail()` (or
-    another optional-handling method) before comparison, and reference the state constant via the `States` enum:
+- **Unwrap activeState() before comparing**: `activeState()` returns an `Optional<State>`. Use `getOrFail()` (or another
+  optional-handling method) before comparison, and reference the state constant via the `States` enum:
 
-    ```npl
-    activeState().getOrFail() == States.stateName; // Correct
-    ```
+  ```npl
+  activeState().getOrFail() == States.stateName; // Correct
+  ```
 
-    Direct comparisons like `activeState() == stateName` are invalid.
+  Direct comparisons like `activeState() == stateName` are invalid.
 
-16. **Boolean operators**: Use `&&` and `||` for logical AND/OR. Keywords `and` and `or` are not valid in NPL.
+- **Boolean operators**: Use `&&` and `||` for logical AND/OR. Keywords `and` and `or` are not valid in NPL.
 
-17. **Permission syntax order**: Always use this exact order in permission declarations:
+- **Permission syntax order**: Always use this exact order in permission declarations:
 
-    ```npl
-    // CORRECT ORDER
-    permission[party] foo(parameters) returns ReturnType | stateName { ... };
+  ```npl
+  // CORRECT ORDER
+  permission[party] foo(parameters) returns ReturnType | stateName { ... };
 
-    // INCORRECT - state constraint after return type
-    permission[party] foo(parameters) | stateName returns ReturnType { ... };
-    ```
+  // INCORRECT - state constraint after return type
+  permission[party] foo(parameters) | stateName returns ReturnType { ... };
+  ```
 
-    The return type (`returns Type`) must always come before the state constraint (`| stateName`).
+  The return type (`returns Type`) must always come before the state constraint (`| stateName`).
 
-18. **Always initialize variables**: ALL variables MUST be initialized when declared. Uninitialized variables are not
-    allowed in NPL.
+- **Always initialize variables**: ALL variables MUST be initialized when declared. Uninitialized variables are not
+  allowed in NPL.
 
-    ```npl
-    // INCORRECT - uninitialized variable
-    private var bookingTime: DateTime;
+  ```npl
+  // INCORRECT - uninitialized variable
+  private var bookingTime: DateTime;
 
-    // CORRECT - variable with initialization
-    private var bookingTime: DateTime = now();
-    ```
+  // CORRECT - variable with initialization
+  private var bookingTime: DateTime = now();
+  ```
 
 ## Key Guidelines
 
-1. All NPL files have the `.npl` extension and must start with a package declaration.
-2. NPL is strongly typed - respect the type system when writing code.
-3. Follow existing code style in the project.
-4. Protocols, permissions, and states are fundamental concepts.
-5. All variables must be initialized when declared.
-6. **Document Everything**: Use Javadoc-style comments (`/** ... */`) for all declarations. Include `@param` and
-   `@return` tags where applicable. Do NOT add Javadoc to variables or `init` blocks.
-7. **Initialization**: Use `init` block for initialization behavior.
-8. **End if statements with semicolons**:
-   ```npl
-   if (amount > 0) { return true; }; // Semicolon required
-   ```
-9. **Use toText(), not toString()** for string conversion.
-10. **Only use for-in loops** - no while loops:
-    ```npl
-    for (item in items) { process(item); }; // Correct
-    ```
-11. **Multiple parties in single permission**: Use `permission[buyer | seller]` not multiple declarations.
-12. **Use length() for Text, not size()**:
-    ```npl
-    var nameCount = name.length(); // Correct
-    ```
-13. **List.without() removes elements, not indices**:
-    ```npl
-    var itemToRemove = items.get(index);
-    items = items.without(itemToRemove); // Correct
-    ```
-14. **Invoke permissions with this. and party**:
-    ```npl
-    this.startProcessing[provider](); // Correct
-    ```
-15. **DateTime methods require inclusive parameter**:
-    ```npl
-    if (deadline.isBefore(now(), false)) { /* Strictly before */ };
-    ```
+- All NPL files have the `.npl` extension and must start with a package declaration.
+- NPL is strongly typed - respect the type system when writing code.
+- Follow existing code style in the project.
+- Protocols, permissions, and states are fundamental concepts.
+- All variables must be initialized when declared.
+- **Document Everything**: Use Javadoc-style comments (`/** ... */`) for all declarations. Include `@param` and
+  `@return` tags where applicable. Do NOT add Javadoc to variables or `init` blocks.
+- **Initialization**: Use `init` block for initialization behavior.
+- **End if statements with semicolons**:
+  ```npl
+  if (amount > 0) { return true; }; // Semicolon required
+  ```
+- **Use toText(), not toString()** for string conversion.
+- **Only use for-in loops** - no while loops:
+  ```npl
+  for (item in items) { process(item); }; // Correct
+  ```
+- **Multiple parties in single permission**: Use `permission[buyer | seller]` not multiple declarations.
+- **Use length() for Text, not size()**:
+  ```npl
+  var nameCount = name.length(); // Correct
+  ```
+- **List.without() removes elements, not indices**:
+  ```npl
+  var itemToRemove = items.get(index);
+  items = items.without(itemToRemove); // Correct
+  ```
+- **Invoke permissions with this. and party**:
+  ```npl
+  this.startProcessing[provider](); // Correct
+  ```
+- **DateTime methods require inclusive parameter**:
+  ```npl
+  if (deadline.isBefore(now(), false)) { /* Strictly before */ };
+  ```
 
 ## Protocol Syntax
 
@@ -306,20 +306,20 @@ NPL has a defined standard library. **Never invent or assume the existence of me
 
 ### Available Types
 
-1. **Basic Types**: `Boolean`, `Number`, `Text`, `DateTime`, `LocalDate`, `Duration`, `Period`, `Blob`, `Unit`
-2. **Collection Types**: `List<T>`, `Set<T>`, `Map<K, V>`
-3. **Complex Types**: `Optional<T>`, `Pair<A, B>`, `Party`, `Test`
-4. **User-Defined Types**: `Enum`, `Struct`, `Union`, `Identifier`, `Symbol`, `Protocol`
+- **Basic Types**: `Boolean`, `Number`, `Text`, `DateTime`, `LocalDate`, `Duration`, `Period`, `Blob`, `Unit`
+- **Collection Types**: `List<T>`, `Set<T>`, `Map<K, V>`
+- **Complex Types**: `Optional<T>`, `Pair<A, B>`, `Party`, `Test`
+- **User-Defined Types**: `Enum`, `Struct`, `Union`, `Identifier`, `Symbol`, `Protocol`
 
 ### Standard Library Functions
 
 > **Note**: The functions listed below are top-level helpers, invoked _directly_ (e.g., `var t = now()`). They are
 > **not** receiver methods—expressions such as `now().millis()` or `someDate.millis()` are invalid.
 
-1. **Logging**: `debug()`, `info()`, `error()`
-2. **Constructors**: `listOf()`, `setOf()`, `mapOf()`, `optionalOf()`, `dateTimeOf()`, `localDateOf()`
-3. **Time and Duration**: `now()`, `millis()`, `seconds()`, `minutes()`, `hours()`, `days()`, `weeks()`, `months()`,
-   `years()`
+- **Logging**: `debug()`, `info()`, `error()`
+- **Constructors**: `listOf()`, `setOf()`, `mapOf()`, `optionalOf()`, `dateTimeOf()`, `localDateOf()`
+- **Time and Duration**: `now()`, `millis()`, `seconds()`, `minutes()`, `hours()`, `days()`, `weeks()`, `months()`,
+  `years()`
 
 ### Type Usage Examples
 
@@ -365,88 +365,88 @@ function calculateTax(amount: Number) returns Number -> {
 
 Use ONLY these methods - do not hallucinate or invent others:
 
-1. **Collection Methods (all collections)**:
+- **Collection Methods (all collections)**:
 
-   - `allMatch()`, `anyMatch()`, `contains()`, `flatMap()`, `fold()`, `forEach()`, `isEmpty()`, `isNotEmpty()`
-   - `map()`, `noneMatch()`, `size()`, `asList()`
-   - Collections of `Number`: `sum()`
+  - `allMatch()`, `anyMatch()`, `contains()`, `flatMap()`, `fold()`, `forEach()`, `isEmpty()`, `isNotEmpty()`
+  - `map()`, `noneMatch()`, `size()`, `asList()`
+  - Collections of `Number`: `sum()`
 
-2. **List Methods**:
+- **List Methods**:
 
-   - `filter()`, `findFirstOrNone()`, `firstOrNone()`, `get()`, `head()`, `indexOfOrNone()`, `lastOrNone()`, `plus()`
-   - `reverse()`, `sort()`, `sortBy()`, `tail()`, `toSet()`, `with()`, `withAt()`, `without()`, `withoutAt()`
-   - `withIndex()`, `zipOrFail()`, `takeFirst()`, `takeLast()`, `toMap()`
+  - `filter()`, `findFirstOrNone()`, `firstOrNone()`, `get()`, `head()`, `indexOfOrNone()`, `lastOrNone()`, `plus()`
+  - `reverse()`, `sort()`, `sortBy()`, `tail()`, `toSet()`, `with()`, `withAt()`, `without()`, `withoutAt()`
+  - `withIndex()`, `zipOrFail()`, `takeFirst()`, `takeLast()`, `toMap()`
 
-3. **Map Methods**:
+- **Map Methods**:
 
-   - `filter()`, `forEach()`, `getOrNone()`, `isEmpty()`, `isNotEmpty()`, `keys()`, `plus()`, `size()`
-   - `mapValues()`, `values()`, `with()`, `without()`, `toList()`
+  - `filter()`, `forEach()`, `getOrNone()`, `isEmpty()`, `isNotEmpty()`, `keys()`, `plus()`, `size()`
+  - `mapValues()`, `values()`, `with()`, `without()`, `toList()`
 
-4. **Set Methods**:
+- **Set Methods**:
 
-   - `filter()`, `plus()`, `toList()`, `with()`, `without()`, `takeFirst()`, `takeLast()`
+  - `filter()`, `plus()`, `toList()`, `with()`, `without()`, `takeFirst()`, `takeLast()`
 
-5. **Text Methods**:
+- **Text Methods**:
 
-   - `plus()`, `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`, `length()`
+  - `plus()`, `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`, `length()`
 
-6. **Number Methods**:
+- **Number Methods**:
 
-   - `isInteger()`, `roundTo()`, `negative()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`
-   - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
+  - `isInteger()`, `roundTo()`, `negative()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`
+  - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
 
-7. **Boolean Methods**:
+- **Boolean Methods**:
 
-   - `not()`
+  - `not()`
 
-8. **DateTime Methods**:
+- **DateTime Methods**:
 
-   - `day()`, `month()`, `year()`, `nano()`, `second()`, `minute()`, `hour()`, `zoneId()`
-   - `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`, `startOfDay()`
-   - `durationUntil()`, `isAfter()`, `isBefore()`, `isBetween()`, `withZoneSameLocal()`, `withZoneSameInstant()`
-   - `plus()`, `minus()`, `toLocalDate()`, `dayOfWeek()`
+  - `day()`, `month()`, `year()`, `nano()`, `second()`, `minute()`, `hour()`, `zoneId()`
+  - `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`, `startOfDay()`
+  - `durationUntil()`, `isAfter()`, `isBefore()`, `isBetween()`, `withZoneSameLocal()`, `withZoneSameInstant()`
+  - `plus()`, `minus()`, `toLocalDate()`, `dayOfWeek()`
 
-9. **Duration Methods**:
+- **Duration Methods**:
 
-   - `toSeconds()`, `plus()`, `minus()`, `multiplyBy()`
+  - `toSeconds()`, `plus()`, `minus()`, `multiplyBy()`
 
-10. **LocalDate Methods**:
+- **LocalDate Methods**:
 
-    - `day()`, `month()`, `year()`, `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`
-    - `isAfter()`, `isBefore()`, `isBetween()`, `plus()`, `minus()`, `periodUntil()`, `atStartOfDay()`, `dayOfWeek()`
+  - `day()`, `month()`, `year()`, `firstDayOfYear()`, `lastDayOfYear()`, `firstDayOfMonth()`, `lastDayOfMonth()`
+  - `isAfter()`, `isBefore()`, `isBetween()`, `plus()`, `minus()`, `periodUntil()`, `atStartOfDay()`, `dayOfWeek()`
 
-11. **Period Methods**:
+- **Period Methods**:
 
-    - `plus()`, `minus()`, `multiplyBy()`
+  - `plus()`, `minus()`, `multiplyBy()`
 
-12. **Optional Methods**:
+- **Optional Methods**:
 
-    - `isPresent()`, `getOrElse()`, `getOrFail()`, `computeIfAbsent()`
+  - `isPresent()`, `getOrElse()`, `getOrFail()`, `computeIfAbsent()`
 
-13. **Party Methods**:
+- **Party Methods**:
 
-    - `sameEntityAs()`, `containsEntityValuesOf()`, `isRepresentableBy()`, `mayRepresent()`, `entity()`, `access()`
+  - `sameEntityAs()`, `containsEntityValuesOf()`, `isRepresentableBy()`, `mayRepresent()`, `entity()`, `access()`
 
-14. **Protocol Methods**:
+- **Protocol Methods**:
 
-    - `parties()`, `activeState()`, `initialState()`, `finalStates()`
+  - `parties()`, `activeState()`, `initialState()`, `finalStates()`
 
-15. **Blob Methods**:
+- **Blob Methods**:
 
-    - `filename()`, `mimeType()`
+  - `filename()`, `mimeType()`
 
-16. **Symbol Methods**:
+- **Symbol Methods**:
 
-    - `toNumber()`, `unit()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`, `negative()`
-    - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
+  - `toNumber()`, `unit()`, `plus()`, `minus()`, `multiplyBy()`, `divideBy()`, `remainder()`, `negative()`
+  - `lessThan()`, `greaterThan()`, `lessThanOrEqual()`, `greaterThanOrEqual()`
 
-17. **General Methods**:
-    - All types: `toText()` - converts value to Text representation
+- **General Methods**:
+  - All types: `toText()` - converts value to Text representation
 
 ### Important Guidelines
 
-1. **Don't hallucinate methods**: Only use methods listed above.
-2. **Immutable collections**: `with()` and `without()` create new collections.
-3. **No advanced functional operations**: No streams, reduce, unless documented above.
+- **Don't hallucinate methods**: Only use methods listed above.
+- **Immutable collections**: `with()` and `without()` create new collections.
+- **No advanced functional operations**: No streams, reduce, unless documented above.
 
 <!-- END NPL DEVELOPMENT SECTION -->
