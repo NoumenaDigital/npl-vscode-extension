@@ -239,11 +239,10 @@ export class InstructionFileManager {
         return content;
       }
 
-      // Fallback content
-      return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
+      throw new Error(`Template file not found: ${templatePath}`);
     } catch (error) {
       console.error(`Error loading template: ${error}`);
-      return `# NPL Development v${this.CURRENT_VERSION}\n\nWhen working with NPL files:\n\n1. NPL is a domain-specific language\n2. Follow existing code style\n\n${this.NPL_SECTION_END}`;
+      throw error;
     }
   }
 
