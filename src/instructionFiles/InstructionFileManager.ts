@@ -41,33 +41,13 @@ export enum EditorType {
 
 interface InstructionFileType {
   path: string;
-  createMessage: string;
-  appendMessage: string;
-  updateMessage: string;
-  templatePath: string;
 }
 
 export class InstructionFileManager {
   private readonly CURRENT_VERSION = NPL_INSTRUCTION_VERSION;
   private readonly NPL_SECTION_START = NPL_SECTION_START_MARKER;
   private readonly NPL_SECTION_END = NPL_SECTION_END_MARKER;
-
-  private readonly instructionTypes = {
-    copilot: {
-      path: COPILOT_INSTRUCTIONS_PATH,
-      createMessage: 'NPL-Dev can create a GitHub Copilot instructions file for better AI assistance in VS Code. Create it?',
-      appendMessage: 'NPL-Dev can add NPL-specific instructions to your GitHub Copilot AI assistant in VS Code. Add them?',
-      updateMessage: 'Your NPL instructions for GitHub Copilot AI in VS Code are outdated (version {0}). Update to the latest version?',
-      templatePath: this.getTemplatePath()
-    },
-    cursor: {
-      path: CURSOR_RULES_PATH,
-      createMessage: 'NPL-Dev can create a Cursor rules file for better AI assistance in Cursor editor. Create it?',
-      appendMessage: 'NPL-Dev can add NPL-specific rules to your Cursor AI assistant. Add them?',
-      updateMessage: 'Your NPL rules for Cursor AI are outdated (version {0}). Update to the latest version?',
-      templatePath: this.getTemplatePath()
-    }
-  };
+  private readonly templatePath = this.getTemplatePath();
 
   private readonly PROMPT_MODES = {
     ASK: 'ask',
@@ -119,45 +99,53 @@ export class InstructionFileManager {
     }
 
     const editorType = this.editorTypeProvider();
+    const filePath = editorType === EditorType.VSCode ?
+      COPILOT_INSTRUCTIONS_PATH :
+      CURSOR_RULES_PATH;
 
-    switch (editorType) {
-      case EditorType.VSCode:
-        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot, promptMode);
-        break;
-      case EditorType.Cursor:
-        await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor, promptMode);
-        break;
-      default:
-        break;
+    await this.checkAndHandleInstructionFile(workspaceFolder, filePath, promptMode);
+  }
+
+  public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    const promptMode = this.getPromptMode();
+    if (promptMode !== this.PROMPT_MODES.DISABLED) {
+      await this.checkAndHandleInstructionFile(workspaceFolder, COPILOT_INSTRUCTIONS_PATH, promptMode);
+    }
+  }
+
+  public async checkAndHandleCursorRules(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    const promptMode = this.getPromptMode();
+    if (promptMode !== this.PROMPT_MODES.DISABLED) {
+      await this.checkAndHandleInstructionFile(workspaceFolder, CURSOR_RULES_PATH, promptMode);
     }
   }
 
   private async checkAndHandleInstructionFile(
     workspaceFolder: vscode.WorkspaceFolder,
-    fileType: InstructionFileType,
+    filePath: string,
     promptMode: string
   ): Promise<void> {
-    const filePath = path.join(workspaceFolder.uri.fsPath, fileType.path);
+    const fullPath = path.join(workspaceFolder.uri.fsPath, filePath);
     const isAutoMode = promptMode === this.PROMPT_MODES.AUTO;
 
-    if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(fullPath)) {
       if (isAutoMode) {
         // Auto mode - create without asking
-        await this.createInstructionFile(filePath, fileType.templatePath);
+        await this.createInstructionFile(fullPath, this.templatePath);
         return;
       }
 
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
-        fileType.createMessage,
+        'Create AI rules file with NPL-specific instructions?',
         DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
-        await this.createInstructionFile(filePath, fileType.templatePath);
+        await this.createInstructionFile(fullPath, this.templatePath);
       } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
-        await this.createInstructionFile(filePath, fileType.templatePath);
+        await this.createInstructionFile(fullPath, this.templatePath);
       } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
@@ -165,25 +153,25 @@ export class InstructionFileManager {
     }
 
     // File exists, check if it has NPL section
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = fs.readFileSync(fullPath, 'utf8');
 
     if (!this.hasNplSection(content)) {
       if (isAutoMode) {
-        await this.appendNplSection(filePath, content, fileType.templatePath);
+        await this.appendNplSection(fullPath, content, this.templatePath);
         return;
       }
 
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
-        fileType.appendMessage,
+        'Add NPL-specific rules to your AI rules file?',
         DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
-        await this.appendNplSection(filePath, content, fileType.templatePath);
+        await this.appendNplSection(fullPath, content, this.templatePath);
       } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
-        await this.appendNplSection(filePath, content, fileType.templatePath);
+        await this.appendNplSection(fullPath, content, this.templatePath);
       } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
@@ -195,37 +183,23 @@ export class InstructionFileManager {
     if (version !== undefined && version < this.CURRENT_VERSION) {
       if (isAutoMode) {
         // Auto mode - update without asking
-        await this.updateNplSection(filePath, content, fileType.templatePath);
+        await this.updateNplSection(fullPath, content, this.templatePath);
         return;
       }
 
       const answer = await this.dialogHandler.showInformationMessage(
-        fileType.updateMessage.replace('{0}', version.toString()),
+        `NPL-specific rules for AI assistance outdated (v${version}). Update to latest?`,
         DialogButton.Yes, DialogButton.Always, DialogButton.Never
       );
 
       if (answer === DialogButton.Yes) {
-        await this.updateNplSection(filePath, content, fileType.templatePath);
+        await this.updateNplSection(fullPath, content, this.templatePath);
       } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
-        await this.updateNplSection(filePath, content, fileType.templatePath);
+        await this.updateNplSection(fullPath, content, this.templatePath);
       } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
-    }
-  }
-
-  public async checkAndHandleCopilotInstructions(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const promptMode = this.getPromptMode();
-    if (promptMode !== this.PROMPT_MODES.DISABLED) {
-      await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot, promptMode);
-    }
-  }
-
-  public async checkAndHandleCursorRules(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    const promptMode = this.getPromptMode();
-    if (promptMode !== this.PROMPT_MODES.DISABLED) {
-      await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor, promptMode);
     }
   }
 

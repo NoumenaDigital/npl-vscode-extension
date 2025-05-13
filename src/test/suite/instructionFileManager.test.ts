@@ -98,7 +98,6 @@ suite('InstructionFileManager Test Suite', () => {
     testDialogHandler.responseToReturn = undefined; // Simulating dialog dismissal
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
     assert.strictEqual(testDialogHandler.messageCount, 1, 'VS Code should show 1 prompt');
-    assert.ok(testDialogHandler.lastMessage?.includes('Copilot'));
 
     testDialogHandler.messageCount = 0;
     instructionFileManager = new InstructionFileManager(
@@ -109,7 +108,6 @@ suite('InstructionFileManager Test Suite', () => {
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
 
     assert.strictEqual(testDialogHandler.messageCount, 1, 'Cursor should show 1 prompt');
-    assert.ok(testDialogHandler.lastMessage?.includes('Cursor rules'), 'Prompt should be about Cursor rules');
     testDialogHandler.messageCount = 0;
 
     instructionFileManager = new InstructionFileManager(
