@@ -78,7 +78,7 @@ protocol[issuer, payee] Iou(var forAmount: Number) {
      * @return The amount owed
      */
     @api
-    permission[issuer | payee] getAmountOwed() returns Number {
+    permission[issuer | payee] getAmountOwed() returns Number | unpaid {
         return amountOwed();
     };
 }
@@ -175,6 +175,18 @@ These are critical errors to avoid when working with NPL:
     Direct comparisons like `activeState() == stateName` are invalid.
 
 16. **Boolean operators**: Use `&&` and `||` for logical AND/OR. Keywords `and` and `or` are not valid in NPL.
+
+17. **Permission syntax order**: Always use this exact order in permission declarations:
+
+    ```npl
+    // CORRECT ORDER
+    permission[party] foo(parameters) returns ReturnType | stateName { ... };
+
+    // INCORRECT - state constraint after return type
+    permission[party] foo(parameters) | stateName returns ReturnType { ... };
+    ```
+
+    The return type (`returns Type`) must always come before the state constraint (`| stateName`).
 
 ## Key Guidelines
 
