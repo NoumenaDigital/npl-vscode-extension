@@ -12,23 +12,26 @@ import {
   NPL_INSTRUCTIONS_TEMPLATE_FILENAME
 } from '../constants';
 
-// Keep track of the extension context for path resolution
+export enum DialogButton {
+  Yes = 'Yes',
+  No = 'No',
+  Always = 'Always',
+  Never = 'Never'
+}
+
 let extensionContext: vscode.ExtensionContext;
 
-// Function to set the extension context
 export function setExtensionContext(context: vscode.ExtensionContext): void {
   extensionContext = context;
 }
 
-// Interface for dialog interactions to make testing easier
 export interface DialogHandler {
-  showInformationMessage(message: string, ...items: string[]): Thenable<string | undefined>;
+  showInformationMessage(message: string, ...items: string[]): Thenable<DialogButton | undefined>;
 }
 
-// Default implementation that uses VS Code's native dialog
 export class VsCodeDialogHandler implements DialogHandler {
-  showInformationMessage(message: string, ...items: string[]): Thenable<string | undefined> {
-    return vscode.window.showInformationMessage(message, ...items);
+  showInformationMessage(message: string, ...items: string[]): Thenable<DialogButton | undefined> {
+    return vscode.window.showInformationMessage(message, ...items) as Thenable<DialogButton | undefined>;
   }
 }
 
@@ -50,7 +53,6 @@ export class InstructionFileManager {
   private readonly NPL_SECTION_START = NPL_SECTION_START_MARKER;
   private readonly NPL_SECTION_END = NPL_SECTION_END_MARKER;
 
-  // Define instruction file types
   private readonly instructionTypes = {
     copilot: {
       path: COPILOT_INSTRUCTIONS_PATH,
@@ -68,14 +70,12 @@ export class InstructionFileManager {
     }
   };
 
-  // Define prompt modes
   private readonly PROMPT_MODES = {
     ASK: 'ask',
     AUTO: 'auto',
     DISABLED: 'disabled'
   };
 
-  // Dependencies injected via constructor
   private readonly dialogHandler: DialogHandler;
   private readonly editorTypeProvider: () => EditorType;
 
@@ -87,11 +87,7 @@ export class InstructionFileManager {
     this.editorTypeProvider = editorTypeProvider || (() => this.detectEditorType());
   }
 
-  /**
-   * Detects whether we're running in VS Code or Cursor
-   */
   private detectEditorType(): EditorType {
-    // Simple detection based on app name
     const appName = vscode.env.appName || '';
 
     if (appName === 'Visual Studio Code') {
@@ -99,39 +95,26 @@ export class InstructionFileManager {
     } else if (appName === 'Cursor') {
       return EditorType.Cursor;
     } else {
-      // For testing or unknown environments, default to VS Code
       return EditorType.VSCode;
     }
   }
 
-  /**
-   * Gets the current prompt mode from configuration
-   */
   private getPromptMode(): string {
     const config = vscode.workspace.getConfiguration('NPL');
     return config.get<string>('instructionPrompts.mode', this.PROMPT_MODES.ASK);
   }
 
-  /**
-   * Sets the prompt mode in the configuration
-   */
   private async setPromptMode(mode: string): Promise<void> {
     const config = vscode.workspace.getConfiguration('NPL');
     await config.update('instructionPrompts.mode', mode, vscode.ConfigurationTarget.Global);
   }
 
-  /**
-   * Checks for instruction files in the workspace and handles them according to requirements
-   */
   public async checkAndHandleInstructionFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     if (!workspaceFolder) {
       return;
     }
 
-    // Check current prompt mode
     const promptMode = this.getPromptMode();
-
-    // If disabled, do nothing
     if (promptMode === this.PROMPT_MODES.DISABLED) {
       return;
     }
@@ -140,22 +123,16 @@ export class InstructionFileManager {
 
     switch (editorType) {
       case EditorType.VSCode:
-        // VS Code only handles Copilot instructions
         await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.copilot, promptMode);
         break;
       case EditorType.Cursor:
-        // Cursor only handles Cursor rules
         await this.checkAndHandleInstructionFile(workspaceFolder, this.instructionTypes.cursor, promptMode);
         break;
       default:
-        // Default case for future-proofing
         break;
     }
   }
 
-  /**
-   * General method to handle any instruction file
-   */
   private async checkAndHandleInstructionFile(
     workspaceFolder: vscode.WorkspaceFolder,
     fileType: InstructionFileType,
@@ -164,7 +141,6 @@ export class InstructionFileManager {
     const filePath = path.join(workspaceFolder.uri.fsPath, fileType.path);
     const isAutoMode = promptMode === this.PROMPT_MODES.AUTO;
 
-    // Check if file exists
     if (!fs.existsSync(filePath)) {
       if (isAutoMode) {
         // Auto mode - create without asking
@@ -175,15 +151,15 @@ export class InstructionFileManager {
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.createMessage,
-        'Yes', 'No', 'Always apply automatically', 'Never ask again'
+        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
       );
 
-      if (answer === 'Yes') {
+      if (answer === DialogButton.Yes) {
         await this.createInstructionFile(filePath, fileType.templatePath);
-      } else if (answer === 'Always apply automatically') {
+      } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
         await this.createInstructionFile(filePath, fileType.templatePath);
-      } else if (answer === 'Never ask again') {
+      } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
       return;
@@ -194,7 +170,6 @@ export class InstructionFileManager {
 
     if (!this.hasNplSection(content)) {
       if (isAutoMode) {
-        // Auto mode - append without asking
         await this.appendNplSection(filePath, content, fileType.templatePath);
         return;
       }
@@ -202,15 +177,15 @@ export class InstructionFileManager {
       // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.appendMessage,
-        'Yes', 'No', 'Always apply automatically', 'Never ask again'
+        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
       );
 
-      if (answer === 'Yes') {
+      if (answer === DialogButton.Yes) {
         await this.appendNplSection(filePath, content, fileType.templatePath);
-      } else if (answer === 'Always apply automatically') {
+      } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
         await this.appendNplSection(filePath, content, fileType.templatePath);
-      } else if (answer === 'Never ask again') {
+      } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
       return;
@@ -225,18 +200,17 @@ export class InstructionFileManager {
         return;
       }
 
-      // Ask mode - prompt the user
       const answer = await this.dialogHandler.showInformationMessage(
         fileType.updateMessage.replace('{0}', version.toString()),
-        'Yes', 'No', 'Always apply automatically', 'Never ask again'
+        DialogButton.Yes, DialogButton.No, DialogButton.Always, DialogButton.Never
       );
 
-      if (answer === 'Yes') {
+      if (answer === DialogButton.Yes) {
         await this.updateNplSection(filePath, content, fileType.templatePath);
-      } else if (answer === 'Always apply automatically') {
+      } else if (answer === DialogButton.Always) {
         await this.setPromptMode(this.PROMPT_MODES.AUTO);
         await this.updateNplSection(filePath, content, fileType.templatePath);
-      } else if (answer === 'Never ask again') {
+      } else if (answer === DialogButton.Never) {
         await this.setPromptMode(this.PROMPT_MODES.DISABLED);
       }
     }
@@ -273,7 +247,6 @@ export class InstructionFileManager {
 
   private getTemplateContent(templatePath: string): string {
     try {
-      // Try primary template path
       if (fs.existsSync(templatePath)) {
         let content = fs.readFileSync(templatePath, 'utf8');
         content = content.replace('{{VERSION}}', this.CURRENT_VERSION.toString());
@@ -347,7 +320,6 @@ export class InstructionFileManager {
     return content.slice(0, startIndex) + this.getTemplateContent(templatePath) + content.slice(endOfSection);
   }
 
-  // Get template path, using extension context if available
   private getTemplatePath(): string {
     if (extensionContext) {
       // Production path

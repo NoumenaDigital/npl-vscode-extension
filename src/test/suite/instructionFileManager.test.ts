@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { DialogHandler, EditorType, InstructionFileManager } from '../../instructionFiles/InstructionFileManager';
+import { DialogButton, DialogHandler, EditorType, InstructionFileManager } from '../../instructionFiles/InstructionFileManager';
 import {
   NPL_INSTRUCTION_VERSION,
   NPL_SECTION_START_MARKER,
@@ -12,14 +12,13 @@ import {
   CURSOR_RULES_PATH
 } from '../../constants';
 
-// Test implementation of DialogHandler that records calls and returns predefined responses
 class TestDialogHandler implements DialogHandler {
   public messageCount = 0;
   public lastMessage?: string;
   public lastOptions?: string[];
-  public responseToReturn: string | undefined = 'Yes';
+  public responseToReturn: DialogButton | undefined = DialogButton.Yes;
 
-  async showInformationMessage(message: string, ...items: string[]): Promise<string | undefined> {
+  async showInformationMessage(message: string, ...items: string[]): Promise<DialogButton | undefined> {
     this.messageCount++;
     this.lastMessage = message;
     this.lastOptions = items;
@@ -27,7 +26,6 @@ class TestDialogHandler implements DialogHandler {
   }
 }
 
-// Mock for configuration settings
 class MockConfiguration {
   private settings: Map<string, any> = new Map();
 
@@ -46,7 +44,6 @@ suite('InstructionFileManager Test Suite', () => {
   let testDialogHandler: TestDialogHandler;
   let instructionFileManager: InstructionFileManager;
 
-  // Use constants from constants.ts
   const NPL_SECTION_START = NPL_SECTION_START_MARKER;
   const NPL_SECTION_END = NPL_SECTION_END_MARKER;
   const cursorrules = CURSOR_RULES_PATH;
@@ -54,35 +51,25 @@ suite('InstructionFileManager Test Suite', () => {
   const expectedVersionString = `${NPL_SECTION_START}${NPL_INSTRUCTION_VERSION}`;
 
   setup(() => {
-    // Create temporary directory for test workspace
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'npl-test-'));
-
-    // Create .github directory for tests
     const githubDir = path.join(tempDir, '.github');
     if (!fs.existsSync(githubDir)) {
       fs.mkdirSync(githubDir, { recursive: true });
     }
 
-    // Create test dialog handler
     testDialogHandler = new TestDialogHandler();
-
-    // Default response is Yes
-    testDialogHandler.responseToReturn = 'Yes';
+    testDialogHandler.responseToReturn = DialogButton.Yes;
   });
 
   teardown(() => {
-    // Clean up temporary directory
     if (fs.existsSync(tempDir)) {
-      // Recursive delete helper function
       const deleteFolderRecursive = (dirPath: string) => {
         if (fs.existsSync(dirPath)) {
           fs.readdirSync(dirPath).forEach((file) => {
             const curPath = path.join(dirPath, file);
             if (fs.lstatSync(curPath).isDirectory()) {
-              // Recurse
               deleteFolderRecursive(curPath);
             } else {
-              // Delete file
               fs.unlinkSync(curPath);
             }
           });
@@ -95,39 +82,25 @@ suite('InstructionFileManager Test Suite', () => {
   });
 
   test('detectEditorType correctly identifies editor', async function() {
-    // Create instance with default editor type detection
     const manager = new InstructionFileManager(testDialogHandler);
-
-    // Use reflection to access the private method
     const detectEditorType = (manager as any).detectEditorType.bind(manager);
-
-    // When run in VS Code Test Runner, it should identify as VS Code
     const result = detectEditorType();
     assert.strictEqual(result, EditorType.VSCode, 'Editor should be identified as VS Code in test environment');
   });
 
   test('checkAndHandleInstructionFiles handles VS Code and Cursor differently', async function() {
-    // Mock workspaceFolder
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
-
-    // Test for VS Code
     instructionFileManager = new InstructionFileManager(
       testDialogHandler,
       () => EditorType.VSCode
     );
 
-    // Set response to No so no files are created
-    testDialogHandler.responseToReturn = 'No';
+    testDialogHandler.responseToReturn = DialogButton.No;
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
-
-    // Should check only for copilot instructions
     assert.strictEqual(testDialogHandler.messageCount, 1, 'VS Code should show 1 prompt');
     assert.ok(testDialogHandler.lastMessage?.includes('Copilot'));
 
-    // Reset count for next test
     testDialogHandler.messageCount = 0;
-
-    // Test for Cursor
     instructionFileManager = new InstructionFileManager(
       testDialogHandler,
       () => EditorType.Cursor
@@ -135,18 +108,13 @@ suite('InstructionFileManager Test Suite', () => {
 
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
 
-    // Should check only for Cursor rules
     assert.strictEqual(testDialogHandler.messageCount, 1, 'Cursor should show 1 prompt');
     assert.ok(testDialogHandler.lastMessage?.includes('Cursor rules'), 'Prompt should be about Cursor rules');
-
-    // Reset count for Unknown editor test - this is now handled as VS Code in our implementation
     testDialogHandler.messageCount = 0;
 
-    // Pass a mock function that would have returned Unknown before
     instructionFileManager = new InstructionFileManager(
       testDialogHandler,
       () => {
-        // Mock what would happen for an unknown app name - should return VSCode now
         const detectEditorType = (new InstructionFileManager(testDialogHandler) as any).detectEditorType.bind({ detectEditorType() {} });
         return detectEditorType();
       }
@@ -154,7 +122,6 @@ suite('InstructionFileManager Test Suite', () => {
 
     await instructionFileManager.checkAndHandleInstructionFiles(workspaceFolder);
 
-    // Unknown editors are treated as VS Code and should show a prompt for Copilot
     assert.strictEqual(testDialogHandler.messageCount, 1, 'Unknown editor should be treated as VS Code');
   });
 
@@ -162,7 +129,7 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = 'Yes';
+    testDialogHandler.responseToReturn = DialogButton.Yes;
 
     await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
@@ -180,12 +147,11 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
     const copilotFile = path.join(tempDir, copilotInstructions);
 
-    // Create copilot file without NPL section
     const initialContent = '# Existing instructions\n\nSome content';
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = 'Yes';
+    testDialogHandler.responseToReturn = DialogButton.Yes;
 
     await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
@@ -201,12 +167,11 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
     const copilotFile = path.join(tempDir, copilotInstructions);
 
-    // Create copilot file with outdated NPL section (version 0)
     const initialContent = `# Instructions\n\n${NPL_SECTION_START}0\nOld content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = 'Yes';
+    testDialogHandler.responseToReturn = DialogButton.Yes;
 
     await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
@@ -221,7 +186,6 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
     const copilotFile = path.join(tempDir, copilotInstructions);
 
-    // Create copilot file with current NPL section
     const initialContent = `# Instructions\n\n${NPL_SECTION_START}${NPL_INSTRUCTION_VERSION}\nCurrent content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
 
@@ -239,7 +203,6 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
     const copilotFile = path.join(tempDir, copilotInstructions);
 
-    // Create copilot file with future NPL section version
     const futureVersion = NPL_INSTRUCTION_VERSION + 1;
     const initialContent = `# Instructions\n\n${NPL_SECTION_START}${futureVersion}\nFuture content\n${NPL_SECTION_END}`;
     fs.writeFileSync(copilotFile, initialContent, 'utf8');
@@ -258,7 +221,7 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = 'Yes';
+    testDialogHandler.responseToReturn = DialogButton.Yes;
 
     await instructionFileManager.checkAndHandleCursorRules(workspaceFolder);
 
@@ -276,7 +239,7 @@ suite('InstructionFileManager Test Suite', () => {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
 
     instructionFileManager = new InstructionFileManager(testDialogHandler);
-    testDialogHandler.responseToReturn = 'No';
+    testDialogHandler.responseToReturn = DialogButton.No;
 
     await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
@@ -289,18 +252,14 @@ suite('InstructionFileManager Test Suite', () => {
   test('user can disable future prompts via "Never ask again"', async function() {
     const workspaceFolder = { uri: vscode.Uri.file(tempDir) } as vscode.WorkspaceFolder;
 
-    // Create a mock configuration
     const mockConfig = new MockConfiguration();
-
-    // Save original workspace.getConfiguration
     const originalGetConfiguration = vscode.workspace.getConfiguration;
 
     try {
-      // Mock workspace.getConfiguration
       vscode.workspace.getConfiguration = () => mockConfig as any;
 
       instructionFileManager = new InstructionFileManager(testDialogHandler);
-      testDialogHandler.responseToReturn = 'Never ask again';
+      testDialogHandler.responseToReturn = DialogButton.Never;
 
       await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
@@ -373,7 +332,7 @@ suite('InstructionFileManager Test Suite', () => {
       vscode.workspace.getConfiguration = () => mockConfig as any;
 
       instructionFileManager = new InstructionFileManager(testDialogHandler);
-      testDialogHandler.responseToReturn = 'Always apply automatically';
+      testDialogHandler.responseToReturn = DialogButton.Always;
 
       await instructionFileManager.checkAndHandleCopilotInstructions(workspaceFolder);
 
