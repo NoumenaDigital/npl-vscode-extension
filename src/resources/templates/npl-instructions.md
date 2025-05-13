@@ -188,6 +188,17 @@ These are critical errors to avoid when working with NPL:
 
     The return type (`returns Type`) must always come before the state constraint (`| stateName`).
 
+18. **Always initialize variables**: ALL variables MUST be initialized when declared. Uninitialized variables are not
+    allowed in NPL.
+
+    ```npl
+    // INCORRECT - uninitialized variable
+    private var bookingTime: DateTime;
+
+    // CORRECT - variable with initialization
+    private var bookingTime: DateTime = now();
+    ```
+
 ## Key Guidelines
 
 1. All NPL files have the `.npl` extension and must start with a package declaration.
