@@ -214,7 +214,7 @@ These are critical errors to avoid when working with NPL:
   if (amount > 0) { return true; }; // Semicolon required
   ```
 - **Use toText(), not toString()** for string conversion.
-- **Only use for-in loops** - no while loops:
+- **Only use for-in loops** - there are no while loops (or other kinds of loops) in NPL:
   ```npl
   for (item in items) { process(item); }; // Correct
   ```
