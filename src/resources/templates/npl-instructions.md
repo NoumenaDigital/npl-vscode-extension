@@ -113,7 +113,20 @@ These are critical errors to avoid when working with NPL:
 3. **Optional handling**: Access optional values with `getOrElse()`, `getOrFail()`, or `computeIfAbsent()`.
 4. **Party limitations**: NEVER store or persist values of the `Party` type in protocol-level variables, collections, or
    data structures.
-5. **Always use semicolons**: Required at the end of statements, permissions, protocols, etc.
+5. **Always use semicolons**: Semicolons are MANDATORY at the end of ALL statements. This includes:
+
+   - Return statements inside blocks: `return value;`
+   - Statement blocks inside control structures: `if (condition) { doSomething(); };`
+   - Statements inside functions: `var x = 5;`
+
+   ```npl
+   // CORRECT - note semicolons after each return and after the entire if-else block
+   var f = function() returns Text -> if (true) { return "foo"; } else { return "bar"; };
+
+   // INCORRECT - missing semicolons after return statements and if-else block
+   var f = function() returns Text -> if (true) { return "foo" } else { return "bar" }
+   ```
+
 6. **No ternary operators**: Always use if-else statements instead of `?:` syntax.
 7. **Otherwise clauses**: In obligations, the `otherwise` clause MUST ONLY contain a state transition.
 8. **Method hallucinations**: Only use the standard library methods explicitly documented below.
