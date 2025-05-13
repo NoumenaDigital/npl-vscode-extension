@@ -271,6 +271,9 @@ NPL has a defined standard library. **Never invent or assume the existence of me
 
 ### Standard Library Functions
 
+> **Note**: The functions listed below are top-level helpers, invoked _directly_ (e.g., `var t = now()`). They are
+> **not** receiver methods—expressions such as `now().millis()` or `someDate.millis()` are invalid.
+
 1. **Logging**: `debug()`, `info()`, `error()`
 2. **Constructors**: `listOf()`, `setOf()`, `mapOf()`, `optionalOf()`, `dateTimeOf()`, `localDateOf()`
 3. **Time and Duration**: `now()`, `millis()`, `seconds()`, `minutes()`, `hours()`, `days()`, `weeks()`, `months()`,
