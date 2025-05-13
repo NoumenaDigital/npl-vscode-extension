@@ -236,6 +236,10 @@ These are critical errors to avoid when working with NPL:
   ```npl
   if (deadline.isBefore(now(), false)) { /* Strictly before */ };
   ```
+- **Don't hallucinate methods**: Only use methods explicitly listed in this document's "Allowed Methods by Type"
+  section.
+- **Immutable collections**: `with()` and `without()` create new collections.
+- **No advanced functional operations**: No streams, reduce, unless documented above.
 
 ## Protocol Syntax
 
@@ -442,11 +446,5 @@ Use ONLY these methods - do not hallucinate or invent others:
 
 - **General Methods**:
   - All types: `toText()` - converts value to Text representation
-
-### Important Guidelines
-
-- **Don't hallucinate methods**: Only use methods listed above.
-- **Immutable collections**: `with()` and `without()` create new collections.
-- **No advanced functional operations**: No streams, reduce, unless documented above.
 
 <!-- END NPL DEVELOPMENT SECTION -->
