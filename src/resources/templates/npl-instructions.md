@@ -156,6 +156,11 @@ These are critical errors to avoid when working with NPL:
     `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
     `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
 
+    **CRITICAL WARNING:** Be especially careful not to use `state` as a variable name. This is one of the most commonly
+    misused reserved keywords. Other frequently misused keywords include `return`, `final`, and `initial`. Reserved
+    keywords should only be used for their intended purpose (e.g., `state` for state declarations:
+    `initial state unpaid;`).
+
 14. **No redundant getters**: Do NOT create permissions or functions that simply return a public protocol field (e.g.,
     `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
     accessor when additional logic is required.
