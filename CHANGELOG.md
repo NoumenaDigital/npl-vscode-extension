@@ -4,7 +4,18 @@ All notable changes to the NPL-Dev for VS Code extension will be documented in t
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.0]
+## Unreleased
+
+[//]: # "Add stuff here"
+
+## [1.2.0] - 2025-05-15
+
+### Added
+
+- NPL-dev will now ask you if you want to create, append to, or update specialized NPL AI instruction files for Cursor
+  and GitHub Copilot.
+
+## [1.1.0] - 2025-04-16
 
 ### Added
 
@@ -25,6 +36,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Folding support. This will be added back in a future release.
 - The `NPL: Open Server Version Settings` command. This is already handled by the `NPL: Select Language Server Version`
   command, which is more user-friendly and provides a visual picker.
+
+## [1.0.1] - 2025-03-25
+
+### Added
+
+- Publication to open-vsx (the extension marketplace used by Cursor, Windsurf, and others)
+- This changelog
 
 ## [1.0.0] - 2025-03-25
 
