@@ -73,6 +73,12 @@
           ],
           "default": "ask",
           "description": "Controls how NPL instruction files for AI assistants are handled"
+        },
+        "NPL.cloud.portalUrl": {
+          "type": "string",
+          "default": "https://portal.noumena.cloud",
+          "description": "Noumena Cloud portal URL",
+          "scope": "resource"
         }
       }
     },
