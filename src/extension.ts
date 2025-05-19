@@ -81,9 +81,11 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.commands.registerCommand('npl.restartServer', restartServer)
     );
 
-    handleWorkspaceInstructionFiles(logger);
+    void handleWorkspaceInstructionFiles(logger);
 
-    await clientManager.start(context);
+    clientManager.start(context).catch(err => {
+      logger.logError('Failed to start NPL Language Server', err);
+    });
 
     // Return API for external consumers (like tests)
     return {
