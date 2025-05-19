@@ -114,7 +114,7 @@
         },
         "noumena.cloud.portalUrl": {
           "type": "string",
-          "default": "https://portal.noumena.cloud",
+          "default": "https://portal.pre.noumena.cloud",
           "description": "Noumena Cloud portal URL",
           "scope": "resource"
         }

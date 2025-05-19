@@ -8,22 +8,26 @@ import { HttpClientFactory } from './utils/HttpClient';
 import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from './instructionFiles/InstructionFileManager';
 import { AuthenticationProvider } from './noumena/AuthenticationProvider';
 import { WelcomeView } from './noumena/WelcomeView';
+import { AuthManager } from './noumena/AuthManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
 let extensionContext: vscode.ExtensionContext;
 let authProvider: AuthenticationProvider;
+let authManager: AuthManager;
+let instructionFileManager: InstructionFileManager;
 
 export interface ExtensionAPI {
   restartServer: () => Promise<void>;
 }
-let instructionFileManager: InstructionFileManager;
 
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
-  const logger = new Logger('NPL Language Server');
-  serverManager = new ServerManager(logger);
-  clientManager = new LanguageClientManager(logger, serverManager);
+  const serverLogger = new Logger('NPL Language Server');
+  const cloudLogger = new Logger('Noumena Cloud');
+
+  serverManager = new ServerManager(serverLogger);
+  clientManager = new LanguageClientManager(serverLogger, serverManager);
 
   setExtensionContext(context);
 
@@ -31,9 +35,12 @@ export async function activate(context: vscode.ExtensionContext) {
     new VsCodeDialogHandler()
   );
 
-  BinaryManager.setLogger(logger);
-  VersionManager.setLogger(logger);
-  HttpClientFactory.setLogger(logger);
+  BinaryManager.setLogger(serverLogger);
+  VersionManager.setLogger(serverLogger);
+  HttpClientFactory.setLogger(serverLogger);
+
+  // Initialize authentication manager
+  authManager = new AuthManager(context, cloudLogger);
 
   try {
     vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
@@ -49,19 +56,10 @@ export async function activate(context: vscode.ExtensionContext) {
       cloudTreeView,
       vscode.window.registerWebviewViewProvider(WelcomeView.viewType, welcomeViewProvider),
       vscode.commands.registerCommand('noumena.cloud.login', () => {
-        // For now, we'll just simulate login with a username
-        vscode.window.showInputBox({ prompt: 'Enter username' }).then(username => {
-          if (username) {
-            authProvider.setLoggedIn(username);
-            vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', true);
-            vscode.window.showInformationMessage(`Logged in as ${username}`);
-          }
-        });
+        authManager.login();
       }),
       vscode.commands.registerCommand('noumena.cloud.logout', () => {
-        authProvider.setLoggedOut();
-        vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
-        vscode.window.showInformationMessage('Logged out successfully');
+        authManager.logout();
       }),
       vscode.commands.registerCommand('npl.selectServerVersion', () => {
         serverManager.showVersionPicker(context);
@@ -71,20 +69,36 @@ export async function activate(context: vscode.ExtensionContext) {
       }),
 
       vscode.commands.registerCommand('npl.selectSources', () => {
-        selectNplWorkspace(logger, 'sources');
+        selectNplWorkspace(serverLogger, 'sources');
       }),
 
       vscode.commands.registerCommand('npl.selectTestSources', () => {
-        selectNplWorkspace(logger, 'testSources');
+        selectNplWorkspace(serverLogger, 'testSources');
       }),
 
       vscode.commands.registerCommand('npl.restartServer', restartServer)
     );
 
-    void handleWorkspaceInstructionFiles(logger);
+    context.subscriptions.push(
+      authManager.onDidLogin(username => {
+        authProvider.setLoggedIn(username);
+        vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', true);
+        vscode.window.showInformationMessage(`Logged in to Noumena Cloud as ${username}`);
+      }),
+      authManager.onDidLogout(() => {
+        authProvider.setLoggedOut();
+        vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
+        vscode.window.showInformationMessage('Logged out of Noumena Cloud');
+      })
+    );
+
+    // Attempt to restore previous session
+    await authManager.initialize();
+
+    void handleWorkspaceInstructionFiles(serverLogger);
 
     clientManager.start(context).catch(err => {
-      logger.logError('Failed to start NPL Language Server', err);
+      serverLogger.logError('Failed to start NPL Language Server', err);
     });
 
     // Return API for external consumers (like tests)
@@ -92,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext) {
       restartServer
     } as ExtensionAPI;
   } catch (err) {
-    logger.logError('Failed to start NPL Language Server', err);
+    serverLogger.logError('Failed to start NPL Language Server', err);
     await clientManager.stop();
     throw err;
   }
