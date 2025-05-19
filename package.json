@@ -117,6 +117,12 @@
           "default": "https://portal.pre.noumena.cloud",
           "description": "Noumena Cloud portal URL",
           "scope": "resource"
+        },
+        "noumena.cloud.keycloakUrl": {
+          "type": "string",
+          "default": "https://keycloak.pre.noumena.cloud",
+          "description": "Noumena Cloud Keycloak URL",
+          "scope": "resource"
         }
       }
     },

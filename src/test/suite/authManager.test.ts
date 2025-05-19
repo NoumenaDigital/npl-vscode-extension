@@ -17,11 +17,6 @@ suite('AuthManager', () => {
   const logger = new Logger('Test');
   const manager: any = new AuthManager(stubContext, logger);
 
-  test('portalToKeycloak replaces portal with keycloak', () => {
-    const url = manager.portalToKeycloak('https://portal.noumena.cloud');
-    assert.strictEqual(url, 'https://keycloak.noumena.cloud');
-  });
-
   test('extractUsername reads preferred_username', () => {
     const payload = {
       preferred_username: 'alice',
@@ -67,8 +62,18 @@ suite('AuthManager', () => {
       // Stub openExternal
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
 
-      // Override config get
-      manager.config = { get: () => portalUrl };
+      const keycloakUrl = 'https://keycloak.pre.noumena.cloud';
+      manager.config = {
+        get: (key: string) => {
+          if (key === 'keycloakUrl') {
+            return keycloakUrl;
+          }
+          if (key === 'portalUrl') {
+            return portalUrl;
+          }
+          return undefined;
+        }
+      } as any;
     });
 
     teardown(() => {
@@ -99,8 +104,19 @@ suite('AuthManager', () => {
       'h.' + Buffer.from(JSON.stringify({ preferred_username: username })).toString('base64url') + '.s';
 
     setup(() => {
+      const keycloakUrl = 'https://keycloak.pre.noumena.cloud';
       // Override config
-      manager.config = { get: () => portalUrl };
+      manager.config = {
+        get: (key: string) => {
+          if (key === 'keycloakUrl') {
+            return keycloakUrl;
+          }
+          if (key === 'portalUrl') {
+            return portalUrl;
+          }
+          return undefined;
+        }
+      } as any;
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
     });
 

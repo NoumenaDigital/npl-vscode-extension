@@ -63,15 +63,14 @@ export class AuthManager {
   }
 
   public async login(): Promise<void> {
-    const portalUrl: string | undefined = this.config.get<string>('portalUrl');
-    if (!portalUrl) {
+    const keycloakBase: string | undefined = this.config.get<string>('keycloakUrl');
+    if (!keycloakBase) {
       void vscode.window.showErrorMessage(
-        'Noumena Cloud portal URL is not configured.'
+        'Noumena Cloud Keycloak URL is not configured.'
       );
       return;
     }
 
-    const keycloakBase = this.portalToKeycloak(portalUrl);
     const deviceEndpoint =
       keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/auth/device';
 
@@ -120,18 +119,6 @@ export class AuthManager {
     this.refreshToken = undefined;
     await this.secrets.delete(AuthManager.REFRESH_TOKEN_SECRET_KEY);
     this._onDidLogout.fire();
-  }
-
-  private portalToKeycloak(portalUrl: string): string {
-    try {
-      const url = new URL(portalUrl);
-      const host = url.host.replace('portal', 'keycloak');
-      url.host = host;
-      return url.origin;
-    } catch {
-      // fallback simple replace
-      return portalUrl.replace('portal', 'keycloak');
-    }
   }
 
   private async requestDeviceCode(endpoint: string): Promise<DeviceCodeResponse> {
@@ -212,16 +199,15 @@ export class AuthManager {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const portalUrl: string | undefined = this.config.get<string>('portalUrl');
-    if (!portalUrl) {
-      throw new Error('Portal URL not configured');
+    const keycloakBase: string | undefined = this.config.get<string>('keycloakUrl');
+    if (!keycloakBase) {
+      throw new Error('Keycloak URL not configured');
     }
 
     if (!this.refreshToken) {
       throw new Error('No refresh token');
     }
 
-    const keycloakBase = this.portalToKeycloak(portalUrl);
     const tokenEndpoint =
       keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/token';
 
