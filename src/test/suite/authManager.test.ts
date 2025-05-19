@@ -34,8 +34,6 @@ suite('AuthManager', () => {
     let fetchStub: sinon.SinonStub;
     let openExternalStub: sinon.SinonStub;
 
-    const portalUrl = 'https://portal.pre.noumena.cloud';
-
     const deviceResponse = {
       device_code: 'code123',
       user_code: 'USER-CODE',
@@ -68,9 +66,6 @@ suite('AuthManager', () => {
           if (key === 'keycloakUrl') {
             return keycloakUrl;
           }
-          if (key === 'portalUrl') {
-            return portalUrl;
-          }
           return undefined;
         }
       } as any;
@@ -98,8 +93,6 @@ suite('AuthManager', () => {
     let fetchStub: sinon.SinonStub;
     let openExternalStub: sinon.SinonStub;
 
-    const portalUrl = 'https://portal.pre.noumena.cloud';
-
     const makeJwt = (username: string) =>
       'h.' + Buffer.from(JSON.stringify({ preferred_username: username })).toString('base64url') + '.s';
 
@@ -110,9 +103,6 @@ suite('AuthManager', () => {
         get: (key: string) => {
           if (key === 'keycloakUrl') {
             return keycloakUrl;
-          }
-          if (key === 'portalUrl') {
-            return portalUrl;
           }
           return undefined;
         }
