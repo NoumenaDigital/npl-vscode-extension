@@ -19,6 +19,44 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "noumena-panel",
+          "title": "Noumena Cloud",
+          "icon": "icon.png",
+          "order": 1
+        }
+      ]
+    },
+    "views": {
+      "noumena-panel": [
+        {
+          "id": "noumena.cloud.welcome",
+          "name": "Welcome",
+          "when": "!noumena.cloud.isLoggedIn",
+          "type": "webview",
+          "visibility": "visible"
+        },
+        {
+          "id": "noumena.cloud.apps",
+          "name": "Applications",
+          "when": "noumena.cloud.isLoggedIn",
+          "type": "tree",
+          "visibility": "visible"
+        }
+      ]
+    },
+
+    "menus": {
+      "view/title": [
+        {
+          "command": "noumena.cloud.logout",
+          "when": "view == noumena.cloud.apps",
+          "group": "navigation"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "npl",
@@ -74,7 +112,7 @@
           "default": "ask",
           "description": "Controls how NPL instruction files for AI assistants are handled"
         },
-        "NPL.cloud.portalUrl": {
+        "noumena.cloud.portalUrl": {
           "type": "string",
           "default": "https://portal.noumena.cloud",
           "description": "Noumena Cloud portal URL",
@@ -98,6 +136,15 @@
       {
         "command": "npl.selectTestSources",
         "title": "NPL: Select NPL test sources"
+      },
+      {
+        "command": "noumena.cloud.login",
+        "title": "Noumena Cloud: Login"
+      },
+      {
+        "command": "noumena.cloud.logout",
+        "title": "Noumena Cloud: Logout",
+        "icon": "$(sign-out)"
       }
     ]
   },
