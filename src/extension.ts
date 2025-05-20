@@ -6,9 +6,9 @@ import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
 import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from './instructionFiles/InstructionFileManager';
-import { AuthenticationProvider } from './noumena/AuthenticationProvider';
-import { WelcomeView } from './noumena/WelcomeView';
-import { AuthManager } from './noumena/AuthManager';
+import { AuthenticationProvider } from './cloud/AuthenticationProvider';
+import { WelcomeView } from './cloud/WelcomeView';
+import { AuthManager } from './cloud/AuthManager';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;

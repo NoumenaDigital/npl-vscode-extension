@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { AuthManager } from '../../noumena/AuthManager';
+import { AuthManager } from '../../cloud/AuthManager';
 import { Logger } from '../../utils/Logger';
 import * as vscode from 'vscode';
 import 'mocha';
