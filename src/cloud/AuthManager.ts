@@ -36,6 +36,8 @@ export class AuthManager {
   private accessTokenExpiry: number | undefined; // epoch millis
   private refreshToken: string | undefined;
 
+  private currentLoginCancel: (() => void) | undefined;
+
   private readonly _onDidLogin = new vscode.EventEmitter<string>();
   private readonly _onDidLogout = new vscode.EventEmitter<void>();
 
@@ -63,6 +65,23 @@ export class AuthManager {
   }
 
   public async login(): Promise<void> {
+    // Cancel any previous login that may still be in progress so we do not end up with
+    // multiple "Waiting for Noumena Cloud authorization…" dialogs stacking up.
+    if (this.currentLoginCancel) {
+      try {
+        this.currentLoginCancel();
+      } catch {
+        // ignore – previous attempt might have already completed
+      }
+      this.currentLoginCancel = undefined;
+    }
+
+    // This flag will be flipped to true if another login attempt supersedes this one.
+    let cancelled = false;
+    this.currentLoginCancel = () => {
+      cancelled = true;
+    };
+
     const keycloakBase: string | undefined = this.config.get<string>('authUrl');
     if (!keycloakBase) {
       void vscode.window.showErrorMessage(
@@ -82,15 +101,23 @@ export class AuthManager {
 
       const access = await this.pollForToken(
         keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/token',
-        deviceRes
+        deviceRes,
+        () => cancelled
       );
 
       await this.handleSuccessfulAuth(access);
+      // Login completed successfully – no longer need the cancel handle.
+      if (this.currentLoginCancel && !cancelled) {
+        this.currentLoginCancel = undefined;
+      }
     } catch (err: any) {
-      this.logger.logError('Login failed', err);
-      void vscode.window.showErrorMessage(
-        `Noumena Cloud login failed: ${err instanceof Error ? err.message : String(err)}`
-      );
+      // Suppress error reporting if this attempt was superseded by a new one.
+      if (!(err instanceof Error && err.message === 'Login attempt superseded')) {
+        this.logger.logError('Login failed', err);
+        void vscode.window.showErrorMessage(
+          `Noumena Cloud login failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
   }
 
@@ -143,7 +170,8 @@ export class AuthManager {
 
   private async pollForToken(
     tokenEndpoint: string,
-    device: DeviceCodeResponse
+    device: DeviceCodeResponse,
+    isCancelled: () => boolean
   ): Promise<TokenSuccessResponse> {
     const params = new URLSearchParams();
     params.set('client_id', AuthManager.CLIENT_ID);
@@ -163,6 +191,9 @@ export class AuthManager {
       },
       async (progress, token) => {
         while (true) {
+          if (isCancelled()) {
+            throw new Error('Login attempt superseded');
+          }
           if (token.isCancellationRequested) {
             throw new Error('Login cancelled');
           }
