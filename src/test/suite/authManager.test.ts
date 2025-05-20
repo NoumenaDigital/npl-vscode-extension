@@ -37,8 +37,8 @@ suite('AuthManager', () => {
     const deviceResponse = {
       device_code: 'code123',
       user_code: 'USER-CODE',
-      verification_uri: 'https://keycloak.pre.noumena.cloud/device',
-      verification_uri_complete: 'https://keycloak.pre.noumena.cloud/device?user_code=USER-CODE',
+      verification_uri: 'https://keycloak.noumena.cloud/device',
+      verification_uri_complete: 'https://keycloak.noumena.cloud/device?user_code=USER-CODE',
       expires_in: 600,
       interval: 1,
     };
@@ -60,7 +60,7 @@ suite('AuthManager', () => {
       // Stub openExternal
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
 
-      const keycloakUrl = 'https://keycloak.pre.noumena.cloud';
+      const keycloakUrl = 'https://keycloak.noumena.cloud';
       manager.config = {
         get: (key: string) => {
           if (key === 'keycloakUrl') {
@@ -97,7 +97,7 @@ suite('AuthManager', () => {
       'h.' + Buffer.from(JSON.stringify({ preferred_username: username })).toString('base64url') + '.s';
 
     setup(() => {
-      const keycloakUrl = 'https://keycloak.pre.noumena.cloud';
+      const keycloakUrl = 'https://keycloak.noumena.cloud';
       // Override config
       manager.config = {
         get: (key: string) => {
