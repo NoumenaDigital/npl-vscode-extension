@@ -63,7 +63,7 @@ export class AuthManager {
   }
 
   public async login(): Promise<void> {
-    const keycloakBase: string | undefined = this.config.get<string>('keycloakUrl');
+    const keycloakBase: string | undefined = this.config.get<string>('authUrl');
     if (!keycloakBase) {
       void vscode.window.showErrorMessage(
         'Noumena Cloud Keycloak URL is not configured.'
@@ -199,7 +199,7 @@ export class AuthManager {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const keycloakBase: string | undefined = this.config.get<string>('keycloakUrl');
+    const keycloakBase: string | undefined = this.config.get<string>('authUrl');
     if (!keycloakBase) {
       throw new Error('Keycloak URL not configured');
     }

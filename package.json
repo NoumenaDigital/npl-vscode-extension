@@ -118,10 +118,10 @@
           "description": "Noumena Cloud portal URL",
           "scope": "resource"
         },
-        "noumena.cloud.keycloakUrl": {
+        "noumena.cloud.authUrl": {
           "type": "string",
           "default": "https://keycloak.noumena.cloud",
-          "description": "Noumena Cloud Keycloak URL",
+          "description": "Noumena Cloud authentication URL",
           "scope": "resource"
         }
       }

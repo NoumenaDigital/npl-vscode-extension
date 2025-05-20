@@ -60,11 +60,11 @@ suite('AuthManager', () => {
       // Stub openExternal
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
 
-      const keycloakUrl = 'https://keycloak.noumena.cloud';
+      const authUrl = 'https://keycloak.noumena.cloud';
       manager.config = {
         get: (key: string) => {
-          if (key === 'keycloakUrl') {
-            return keycloakUrl;
+          if (key === 'authUrl') {
+            return authUrl;
           }
           return undefined;
         }
@@ -97,12 +97,12 @@ suite('AuthManager', () => {
       'h.' + Buffer.from(JSON.stringify({ preferred_username: username })).toString('base64url') + '.s';
 
     setup(() => {
-      const keycloakUrl = 'https://keycloak.noumena.cloud';
+      const authUrl = 'https://keycloak.noumena.cloud';
       // Override config
       manager.config = {
         get: (key: string) => {
-          if (key === 'keycloakUrl') {
-            return keycloakUrl;
+          if (key === 'authUrl') {
+            return authUrl;
           }
           return undefined;
         }
