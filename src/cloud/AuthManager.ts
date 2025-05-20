@@ -30,7 +30,6 @@ export class AuthManager {
 
   private readonly logger: Logger;
   private readonly secrets: vscode.SecretStorage;
-  private readonly config: vscode.WorkspaceConfiguration;
 
   private accessToken: string | undefined;
   private accessTokenExpiry: number | undefined; // epoch millis
@@ -47,7 +46,6 @@ export class AuthManager {
   constructor(private readonly context: vscode.ExtensionContext, logger: Logger) {
     this.logger = logger;
     this.secrets = context.secrets;
-    this.config = vscode.workspace.getConfiguration('noumena.cloud');
   }
 
   /** Attempt to restore existing session using stored refresh token. */
@@ -82,7 +80,7 @@ export class AuthManager {
       cancelled = true;
     };
 
-    const keycloakBase: string | undefined = this.config.get<string>('authUrl');
+    const keycloakBase: string | undefined = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl');
     if (!keycloakBase) {
       void vscode.window.showErrorMessage(
         'Noumena Cloud Keycloak URL is not configured.'
@@ -230,7 +228,7 @@ export class AuthManager {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const keycloakBase: string | undefined = this.config.get<string>('authUrl');
+    const keycloakBase: string | undefined = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl');
     if (!keycloakBase) {
       throw new Error('Keycloak URL not configured');
     }
