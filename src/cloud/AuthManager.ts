@@ -189,7 +189,7 @@ export class AuthManager {
         title: 'Waiting for Noumena Cloud authorization...',
         cancellable: true
       },
-      async (progress, token) => {
+      async (_progress, token) => {
         while (true) {
           if (isCancelled()) {
             throw new Error('Login attempt superseded');
