@@ -89,20 +89,33 @@
           "default": "",
           "description": "Path to the NPL sources. Leave empty to use the current workspace root.",
           "scope": "resource",
-          "order": 0
+          "order": 0,
+          "tags": ["NPL"]
         },
         "NPL.testSources": {
           "type": "string",
           "default": "",
           "description": "Path to the NPL test sources. Leave empty to use the current workspace root.",
           "scope": "resource",
-          "order": 10
+          "order": 10,
+          "tags": ["NPL"]
+        },
+        "NPL.migrationDescriptor": {
+          "type": "string",
+          "description": "Path to the NPL migration descriptor.",
+          "scope": "resource",
+          "additionalProperties": true,
+          "pattern": "^$|.*yaml/migration\\.yml$",
+          "patternErrorMessage": "The migration descriptor must end with yaml/migration.yml",
+          "order": 15,
+          "tags": ["NPL"]
         },
         "NPL.server.version": {
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download.",
-          "order": 20
+          "order": 20,
+          "tags": ["NPL"]
         },
         "NPL.instructionPrompts.mode": {
           "type": "string",
@@ -114,21 +127,26 @@
           ],
           "default": "ask",
           "description": "Controls how NPL instruction files for AI assistants are handled",
-          "order": 30
+          "order": 30,
+          "tags": ["NPL"]
         },
         "noumena.cloud.portalUrl": {
           "type": "string",
           "default": "https://portal.noumena.cloud",
           "description": "Noumena Cloud portal URL",
           "scope": "resource",
-          "order": 100
+          "format": "uri",
+          "order": 100,
+          "tags": ["NPL"]
         },
         "noumena.cloud.authUrl": {
           "type": "string",
           "default": "https://keycloak.noumena.cloud",
           "description": "Noumena Cloud authentication URL",
           "scope": "resource",
-          "order": 110
+          "format": "uri",
+          "order": 110,
+          "tags": ["NPL"]
         }
       }
     },
