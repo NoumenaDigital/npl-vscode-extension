@@ -61,6 +61,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   }
 
   refresh(): void {
+    this.tenants = null;
     this._onDidChangeTreeData.fire();
   }
 

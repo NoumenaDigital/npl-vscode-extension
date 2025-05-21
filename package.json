@@ -51,9 +51,15 @@
     "menus": {
       "view/title": [
         {
+          "command": "noumena.cloud.refresh",
+          "when": "view == noumena.cloud.apps",
+          "group": "navigation",
+          "icon": "$(refresh)"
+        },
+        {
           "command": "noumena.cloud.logout",
           "when": "view == noumena.cloud.apps",
-          "group": "navigation"
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -207,6 +213,12 @@
         "title": "Clear deployed NPL application",
         "category": "Noumena Cloud",
         "icon": "$(trash)"
+      },
+      {
+        "command": "noumena.cloud.refresh",
+        "title": "Refresh applications",
+        "category": "Noumena Cloud",
+        "icon": "$(refresh)"
       }
     ]
   },

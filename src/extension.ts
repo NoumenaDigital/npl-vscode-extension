@@ -72,6 +72,9 @@ export async function activate(context: vscode.ExtensionContext) {
           cloudAppsProvider.clearApplication(item);
         }
       }),
+      vscode.commands.registerCommand('noumena.cloud.refresh', () => {
+        cloudAppsProvider.refresh();
+      }),
       vscode.commands.registerCommand('npl.selectServerVersion', () => {
         serverManager.showVersionPicker(context);
       }),
