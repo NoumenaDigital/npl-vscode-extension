@@ -129,28 +129,34 @@
     "commands": [
       {
         "command": "npl.selectServerVersion",
-        "title": "NPL: Select Language Server version"
+        "title": "Select Language Server version",
+        "category": "NPL"
       },
       {
         "command": "npl.cleanServerFiles",
-        "title": "NPL: Clean Language Server files and reset"
+        "title": "Clean Language Server files and reset",
+        "category": "NPL"
       },
       {
         "command": "npl.selectSources",
-        "title": "NPL: Select NPL sources"
+        "title": "Select NPL sources",
+        "category": "NPL"
       },
       {
         "command": "npl.selectTestSources",
-        "title": "NPL: Select NPL test sources"
+        "title": "Select NPL test sources",
+        "category": "NPL"
       },
       {
         "command": "noumena.cloud.login",
-        "title": "Noumena Cloud: Login"
+        "title": "Login",
+        "category": "Noumena Cloud"
       },
       {
         "command": "noumena.cloud.logout",
-        "title": "Noumena Cloud: Logout",
-        "icon": "$(sign-out)"
+        "title": "Logout",
+        "icon": "$(sign-out)",
+        "category": "Noumena Cloud"
       }
     ]
   },
