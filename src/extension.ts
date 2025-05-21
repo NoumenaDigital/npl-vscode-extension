@@ -9,6 +9,7 @@ import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from
 import { AuthenticationProvider } from './cloud/AuthenticationProvider';
 import { WelcomeView } from './cloud/WelcomeView';
 import { AuthManager } from './cloud/AuthManager';
+import { detectAndSetMigrationDescriptor } from './deploy/MigrationDescriptorDetector';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -96,6 +97,7 @@ export async function activate(context: vscode.ExtensionContext) {
     await authManager.initialize();
 
     void handleWorkspaceInstructionFiles(serverLogger);
+    await detectAndSetMigrationDescriptor(serverLogger);
 
     clientManager.start(context).catch(err => {
       serverLogger.logError('Failed to start NPL Language Server', err);
