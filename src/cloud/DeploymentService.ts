@@ -103,4 +103,35 @@ export class DeploymentService {
       }
     });
   }
+
+  /**
+   * Clears the deployed content of the given application by calling its clear endpoint.
+   */
+  public async clearApplication(appId: string): Promise<void> {
+    const token = await this.authManager.getAccessToken();
+    if (!token) {
+      throw new Error('No access token');
+    }
+
+    const url = `${getApiBase()}/v1/applications/${encodeURIComponent(appId)}/clear`;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Clearing deployed content...',
+      cancellable: false
+    }, async () => {
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Clear failed with status ${res.status}: ${text}`);
+      }
+    });
+  }
 }

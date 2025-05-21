@@ -52,9 +52,11 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
   private readonly logger: Logger;
   private readonly deployer: DeploymentService;
+  private readonly context: vscode.ExtensionContext;
 
-  constructor(private readonly authManager: AuthManager, logger: Logger) {
+  constructor(private readonly authManager: AuthManager, context: vscode.ExtensionContext, logger: Logger) {
     this.logger = logger;
+    this.context = context;
     this.deployer = new DeploymentService(authManager, logger);
   }
 
@@ -194,5 +196,43 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
     void vscode.window.showErrorMessage('NPL.migrationDescriptor is not configured.');
     return undefined;
+  }
+
+  /** Clear deployed content for the given application, with confirmation dialog that can be skipped per app. */
+  public async clearApplication(item: ApplicationItem): Promise<void> {
+    const app = item.application;
+    const skipKey = `noumena.cloud.clear.skip.${app.id}`;
+    const skipConfirm = this.context.globalState.get<boolean>(skipKey);
+
+    let proceed = true;
+
+    if (!skipConfirm) {
+      const choice = await vscode.window.showWarningMessage(
+        `Are you sure you want to clear deployed content for ${app.name}?`,
+        { modal: true },
+        'Clear',
+        "Clear and don't ask again"
+      );
+
+      if (choice === undefined) { // User closed dialog
+        proceed = false;
+      } else if (choice === "Clear and don't ask again") {
+        await this.context.globalState.update(skipKey, true);
+      } else if (choice !== 'Clear') {
+        proceed = false;
+      }
+    }
+
+    if (!proceed) {
+      return;
+    }
+
+    try {
+      await this.deployer.clearApplication(app.id);
+      void vscode.window.showInformationMessage(`Cleared deployed content for ${app.name}.`);
+    } catch (err) {
+      this.logger.logError('Clear deployment failed', err);
+      void vscode.window.showErrorMessage(`Failed to clear deployed content: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 }

@@ -62,6 +62,12 @@
           "when": "view == noumena.cloud.apps && viewItem == application",
           "group": "inline",
           "title": "$(cloud-upload)"
+        },
+        {
+          "command": "noumena.cloud.clear",
+          "when": "view == noumena.cloud.apps && viewItem == application",
+          "group": "inline",
+          "title": "$(trash)"
         }
       ]
     },
@@ -195,6 +201,12 @@
         "title": "Deploy NPL application",
         "category": "Noumena Cloud",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "noumena.cloud.clear",
+        "title": "Clear deployed NPL application",
+        "category": "Noumena Cloud",
+        "icon": "$(trash)"
       }
     ]
   },
