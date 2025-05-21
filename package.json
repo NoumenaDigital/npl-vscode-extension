@@ -55,6 +55,14 @@
           "when": "view == noumena.cloud.apps",
           "group": "navigation"
         }
+      ],
+      "view/item/context": [
+        {
+          "command": "noumena.cloud.deploy",
+          "when": "view == noumena.cloud.apps && viewItem == application",
+          "group": "inline",
+          "title": "$(cloud-upload)"
+        }
       ]
     },
     "languages": [
@@ -181,6 +189,12 @@
         "title": "Logout",
         "icon": "$(sign-out)",
         "category": "Noumena Cloud"
+      },
+      {
+        "command": "noumena.cloud.deploy",
+        "title": "Deploy NPL application",
+        "category": "Noumena Cloud",
+        "icon": "$(cloud-upload)"
       }
     ]
   },
@@ -219,6 +233,7 @@
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "archiver": "^7.0.1"
   }
 }

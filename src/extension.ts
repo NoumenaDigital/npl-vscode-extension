@@ -9,7 +9,7 @@ import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from
 import { CloudAppsProvider } from './cloud/CloudAppsProvider';
 import { WelcomeView } from './cloud/WelcomeView';
 import { AuthManager } from './cloud/AuthManager';
-import { detectAndSetMigrationDescriptor } from './deploy/MigrationDescriptorDetector';
+import { detectAndSetMigrationDescriptor } from './cloud/MigrationDescriptorDetector';
 
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
@@ -46,7 +46,7 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
 
-    cloudAppsProvider = new CloudAppsProvider(authManager);
+    cloudAppsProvider = new CloudAppsProvider(authManager, cloudLogger);
     const cloudTreeView = vscode.window.createTreeView('noumena.cloud.apps', {
       treeDataProvider: cloudAppsProvider
     });
@@ -61,6 +61,11 @@ export async function activate(context: vscode.ExtensionContext) {
       }),
       vscode.commands.registerCommand('noumena.cloud.logout', () => {
         authManager.logout();
+      }),
+      vscode.commands.registerCommand('noumena.cloud.deploy', (item) => {
+        if (item) {
+          cloudAppsProvider.deployApplication(item);
+        }
       }),
       vscode.commands.registerCommand('npl.selectServerVersion', () => {
         serverManager.showVersionPicker(context);

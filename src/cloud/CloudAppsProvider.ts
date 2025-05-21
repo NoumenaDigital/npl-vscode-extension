@@ -1,5 +1,9 @@
 import * as vscode from 'vscode';
 import { AuthManager } from './AuthManager';
+import { Logger } from '../utils/Logger';
+import { createArchiveBuffer } from '../utils/ZipUtil';
+import { DeploymentService } from './DeploymentService';
+import { getApiBase } from '../utils/ApiUtil';
 
 interface Tenant {
   id: string;
@@ -22,7 +26,7 @@ class CloudItem extends vscode.TreeItem {}
 
 class TenantItem extends CloudItem {
   constructor(public readonly tenant: Tenant) {
-    super(tenant.name, vscode.TreeItemCollapsibleState.Collapsed);
+    super(tenant.name, vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = 'tenant';
     this.tooltip = tenant.slug;
     this.id = tenant.id;
@@ -46,7 +50,13 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   private username: string | undefined;
   private tenants: Tenant[] | null = null;
 
-  constructor(private readonly authManager: AuthManager) {}
+  private readonly logger: Logger;
+  private readonly deployer: DeploymentService;
+
+  constructor(private readonly authManager: AuthManager, logger: Logger) {
+    this.logger = logger;
+    this.deployer = new DeploymentService(authManager, logger);
+  }
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -116,7 +126,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     if (!token) {
       throw new Error('No access token');
     }
-    const url = `${this.getApiBase()}/v1/tenants`;
+    const url = `${getApiBase()}/v1/tenants`;
     const res = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -134,7 +144,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     if (!token) {
       throw new Error('No access token');
     }
-    const url = `${this.getApiBase()}/v1/tenants/${encodeURIComponent(tenantId)}/applications`;
+    const url = `${getApiBase()}/v1/tenants/${encodeURIComponent(tenantId)}/applications`;
     const res = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -147,11 +157,42 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     return (await res.json()) as Application[];
   }
 
-  private getApiBase(): string {
-    const portal = vscode.workspace.getConfiguration('noumena.cloud').get<string>('portalUrl');
-    if (portal && portal.trim().length > 0) {
-      return portal.replace(/\/+$/, '') + '/api'; // strip trailing slash
+  /** Deploy selected application by zipping workspace folder determined from migration descriptor. */
+  public async deployApplication(item: ApplicationItem): Promise<void> {
+    try {
+      const rootDir = this.getDeploymentRoot();
+      if (!rootDir) {
+        return; // user cancelled or no descriptor
+      }
+
+      const zipBuffer = await createArchiveBuffer(rootDir);
+
+      await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
+
+      void vscode.window.showInformationMessage(`Deployment to ${item.application.name} completed successfully.`);
+    } catch (err) {
+      this.logger.logError('Deployment failed', err);
+      void vscode.window.showErrorMessage(`Deployment failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-    return 'https://portal.noumena.cloud/api';
+  }
+
+  private getDeploymentRoot(): string | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      void vscode.window.showErrorMessage('No workspace folder open.');
+      return undefined;
+    }
+
+    // Look for the first workspace folder with a configured migration descriptor
+    for (const folder of workspaceFolders) {
+      const descriptor = vscode.workspace.getConfiguration('NPL', folder.uri).get<string>('migrationDescriptor');
+      if (descriptor && descriptor.trim().length > 0) {
+        const path = require('path');
+        return path.dirname(path.dirname(descriptor));
+      }
+    }
+
+    void vscode.window.showErrorMessage('NPL.migrationDescriptor is not configured.');
+    return undefined;
   }
 }

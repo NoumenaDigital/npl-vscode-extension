@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
-import { detectAndSetMigrationDescriptor } from '../../deploy/MigrationDescriptorDetector';
+import { detectAndSetMigrationDescriptor } from '../../cloud/MigrationDescriptorDetector';
 import { Logger } from '../../utils/Logger';
 
 suite('MigrationDescriptorDetector Test Suite', () => {
