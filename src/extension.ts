@@ -6,7 +6,7 @@ import { BinaryManager } from './server/binary/BinaryManager';
 import { VersionManager } from './server/binary/VersionManager';
 import { HttpClientFactory } from './utils/HttpClient';
 import { InstructionFileManager, VsCodeDialogHandler, setExtensionContext } from './instructionFiles/InstructionFileManager';
-import { AuthenticationProvider } from './cloud/AuthenticationProvider';
+import { CloudAppsProvider } from './cloud/CloudAppsProvider';
 import { WelcomeView } from './cloud/WelcomeView';
 import { AuthManager } from './cloud/AuthManager';
 import { detectAndSetMigrationDescriptor } from './deploy/MigrationDescriptorDetector';
@@ -14,7 +14,7 @@ import { detectAndSetMigrationDescriptor } from './deploy/MigrationDescriptorDet
 let clientManager: LanguageClientManager;
 let serverManager: ServerManager;
 let extensionContext: vscode.ExtensionContext;
-let authProvider: AuthenticationProvider;
+let cloudAppsProvider: CloudAppsProvider;
 let authManager: AuthManager;
 let instructionFileManager: InstructionFileManager;
 
@@ -46,9 +46,9 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
 
-    authProvider = new AuthenticationProvider();
+    cloudAppsProvider = new CloudAppsProvider(authManager);
     const cloudTreeView = vscode.window.createTreeView('noumena.cloud.apps', {
-      treeDataProvider: authProvider
+      treeDataProvider: cloudAppsProvider
     });
 
     const welcomeViewProvider = new WelcomeView(context.extensionUri);
@@ -82,12 +82,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
       authManager.onDidLogin(username => {
-        authProvider.setLoggedIn(username);
+        cloudAppsProvider.setLoggedIn(username);
         vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', true);
         vscode.window.showInformationMessage(`Logged in to Noumena Cloud as ${username}`);
       }),
       authManager.onDidLogout(() => {
-        authProvider.setLoggedOut();
+        cloudAppsProvider.setLoggedOut();
         vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
         vscode.window.showInformationMessage('Logged out of Noumena Cloud');
       })
