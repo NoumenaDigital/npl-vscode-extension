@@ -34,7 +34,7 @@ export class AuthenticationProvider implements vscode.TreeDataProvider<AuthItem>
       // Placeholder for applications - will be filled in later
       return Promise.resolve([
         new AuthItem(
-          'Loading applications...',
+          'TODO',
           vscode.TreeItemCollapsibleState.None
         )
       ]);
