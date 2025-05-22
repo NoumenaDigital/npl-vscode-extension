@@ -73,7 +73,7 @@
           "command": "noumena.cloud.clear",
           "when": "view == noumena.cloud.apps && viewItem == application",
           "group": "inline",
-          "title": "$(trash)"
+          "title": "$(clear-all)"
         }
       ]
     },
@@ -212,7 +212,7 @@
         "command": "noumena.cloud.clear",
         "title": "Clear deployed NPL application",
         "category": "Noumena Cloud",
-        "icon": "$(trash)"
+        "icon": "$(clear-all)"
       },
       {
         "command": "noumena.cloud.refresh",
