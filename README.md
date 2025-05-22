@@ -1,10 +1,10 @@
 # NPL-Dev for VS Code
 
-A VS Code extension providing support for the Noumena Protocol Language (NPL), with language server integration.
+A VS Code extension providing support for the NOUMENA Protocol Language (NPL), with language server integration.
 
 ## Overview
 
-This extension provides support for the Noumena Protocol Language (NPL) in VS Code (and VS Code forks such as Cursor).
+This extension provides support for the NOUMENA Protocol Language (NPL) in VS Code (and VS Code forks such as Cursor).
 
 Available for installation from the
 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=noumenadigital.npl-dev-vscode-extension), or
@@ -30,12 +30,17 @@ These are the same errors and warnings you would get when compiling your NPL cod
 <img alt="Selecting the language server version" src="img.png" width="50%"/>
 
 You can easily switch between different versions of the NPL Language Server to match your project's needs (e.g. using
-deprecated syntax). The versions correspond to Noumena Platform releases.
+deprecated syntax). The versions correspond to NOUMENA Platform releases.
 
 ### Workspace management
 
 Run the NPL source management commands in order to restrict diagnostics to specific folders. By default, all NPL files
 in your project are considered, so this is useful to avoid redefinition errors and improve performance.
+
+### NOUMENA Cloud integration
+
+You can access the NOUMENA Cloud view via the activity bar. It allows you to login to your Noumena Account and deploy
+new NPL code to your NOUMENA Cloud applications.
 
 ## Commands
 

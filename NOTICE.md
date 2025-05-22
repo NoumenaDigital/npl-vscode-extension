@@ -1,1 +1,1 @@
-Copyright 2025, Noumena Digital AG <info@noumenadigital.com>
+Copyright 2025, NOUMENA Digital AG <info@noumenadigital.com>
