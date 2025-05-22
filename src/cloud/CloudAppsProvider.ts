@@ -30,8 +30,10 @@ class CloudItem extends vscode.TreeItem {}
 class TenantItem extends CloudItem {
   constructor(public readonly tenant: Tenant) {
     super(tenant.name, vscode.TreeItemCollapsibleState.Expanded);
-    this.contextValue = 'tenant';
+    const stateNorm = (tenant.state ?? '').toLowerCase();
+    this.contextValue = `tenant-${stateNorm || 'unknown'}`;
     this.id = tenant.id;
+    this.iconPath = getStateIcon(tenant.state);
 
     const lines: string[] = [];
     const fieldsToDisplay: { displayName: string; getValue: (tenant: Tenant) => string | undefined }[] = [
@@ -62,8 +64,10 @@ class TenantItem extends CloudItem {
 class ApplicationItem extends CloudItem {
   constructor(public readonly application: Application) {
     super(application.name, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = 'application';
+    const stateNorm = (application.state ?? '').toLowerCase();
+    this.contextValue = `application-${stateNorm || 'unknown'}`;
     this.id = application.id;
+    this.iconPath = getStateIcon(application.state);
 
     const lines: string[] = [];
     const fieldsToDisplay: { displayName: string; getValue: (app: Application) => string | undefined }[] = [
@@ -91,6 +95,21 @@ class ApplicationItem extends CloudItem {
     markdown.isTrusted = true;
 
     this.tooltip = markdown;
+  }
+}
+
+// Helper to render a colored state icon that works across all tree items
+function getStateIcon(state: string | undefined): vscode.ThemeIcon {
+  const normalized = (state ?? '').toLowerCase();
+  switch (normalized) {
+    case 'active':
+      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
+    case 'pending':
+      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.yellow'));
+    case 'deactivated':
+      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('disabledForeground'));
+    default:
+      return new vscode.ThemeIcon('circle-outline');
   }
 }
 

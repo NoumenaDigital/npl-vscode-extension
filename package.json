@@ -65,13 +65,13 @@
       "view/item/context": [
         {
           "command": "noumena.cloud.deploy",
-          "when": "view == noumena.cloud.apps && viewItem == application",
+          "when": "view == noumena.cloud.apps && viewItem =~ /application-/",
           "group": "inline",
           "title": "$(cloud-upload)"
         },
         {
           "command": "noumena.cloud.clear",
-          "when": "view == noumena.cloud.apps && viewItem == application",
+          "when": "view == noumena.cloud.apps && viewItem =~ /application-/",
           "group": "inline",
           "title": "$(clear-all)"
         }
@@ -207,14 +207,14 @@
         "title": "Deploy NPL application",
         "category": "NOUMENA Cloud",
         "icon": "$(cloud-upload)",
-        "enablement": "view == noumena.cloud.apps && viewItem == application"
+        "enablement": "view == noumena.cloud.apps && viewItem == application-active"
       },
       {
         "command": "noumena.cloud.clear",
         "title": "Clear deployed NPL application",
         "category": "NOUMENA Cloud",
         "icon": "$(clear-all)",
-        "enablement": "view == noumena.cloud.apps && viewItem == application"
+        "enablement": "view == noumena.cloud.apps && viewItem == application-active"
       },
       {
         "command": "noumena.cloud.refresh",
