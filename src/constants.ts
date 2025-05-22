@@ -1,5 +1,5 @@
 // NPL instruction file versioning
-export const NPL_INSTRUCTION_VERSION = 1;
+export const NPL_INSTRUCTION_VERSION = 2;
 
 // NPL section markers
 export const NPL_SECTION_START_MARKER = '# NPL Development v';

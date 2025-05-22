@@ -156,10 +156,10 @@ These are critical errors to avoid when working with NPL:
   `otherwise`, `package`, `permission`, `private`, `protocol`, `require`, `resume`, `return`, `returns`, `state`,
   `struct`, `symbol`, `this`, `union`, `use`, `var`, `vararg`, `with`, `copy`
 
-  **CRITICAL WARNING:** Be especially careful not to use `state` as a variable name. This is one of the most commonly
-  misused reserved keywords. Other frequently misused keywords include `return`, `final`, and `initial`. Reserved
-  keywords should only be used for their intended purpose (e.g., `state` for state declarations:
-  `initial state unpaid;`).
+  **CRITICAL WARNING:** Be especially careful not to use `state` or `symbol` as variable names. These are two of the
+  most commonly misused reserved keywords. Other frequently misused keywords include `return`, `final`, and `initial`.
+  Reserved keywords should only be used for their intended purpose (e.g., `state` for state declarations:
+  `initial state unpaid;`; `symbol` for declaring new symbol types: `symbol chf;`).
 
 - **No redundant getters**: Do NOT create permissions or functions that simply return a public protocol field (e.g.,
   `getAmount()`). All non-private top-level variables are already queryable via the API. Only introduce a separate
@@ -240,6 +240,25 @@ These are critical errors to avoid when working with NPL:
   section.
 - **Immutable collections**: `with()` and `without()` create new collections.
 - **No advanced functional operations**: No streams, reduce, unless documented above.
+
+## Folder Structure Guidelines
+
+When organizing your NPL project, adhere to the following folder structure:
+
+- **Source Files**:
+
+  - New NPL files and packages should primarily be created within a dedicated `npl` directory, typically located at
+    `src/main/npl/`. For example, a new package `my_package` would reside in `src/main/npl/my_package/`.
+  - If a general `npl` directory (e.g., `src/main/npl/`) is not available or suitable, place new files and packages
+    within the directory corresponding to the _latest version_ of your NPL environment. For instance, if the latest
+    version is `141.2`, new packages would go into `src/main/npl-141.2/my_package/`.
+  - Always create a new package (a new sub-directory) within these preferred locations when implementing new, distinct
+    functionality.
+
+- **Test Files**:
+  - Test files should be placed in a separate `test` directory, usually found at `src/test/npl/`. The package structure
+    within the `test` directory should mirror the structure of the source files they are testing. For example, tests for
+    `src/main/npl/my_package/MyProtocol.npl` would be located in `src/test/npl/my_package/MyProtocolTests.npl`.
 
 ## Protocol Syntax
 
