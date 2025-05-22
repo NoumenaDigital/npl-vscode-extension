@@ -19,6 +19,44 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "noumena-panel",
+          "title": "Noumena Cloud",
+          "icon": "icon.png",
+          "order": 1
+        }
+      ]
+    },
+    "views": {
+      "noumena-panel": [
+        {
+          "id": "noumena.cloud.welcome",
+          "name": "Welcome",
+          "when": "!noumena.cloud.isLoggedIn",
+          "type": "webview",
+          "visibility": "visible"
+        },
+        {
+          "id": "noumena.cloud.apps",
+          "name": "Applications",
+          "when": "noumena.cloud.isLoggedIn",
+          "type": "tree",
+          "visibility": "visible"
+        }
+      ]
+    },
+
+    "menus": {
+      "view/title": [
+        {
+          "command": "noumena.cloud.logout",
+          "when": "view == noumena.cloud.apps",
+          "group": "navigation"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "npl",
@@ -46,22 +84,25 @@
     "configuration": {
       "title": "NPL",
       "properties": {
-        "NPL.server.version": {
-          "type": "string",
-          "default": "latest",
-          "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download."
-        },
         "NPL.sources": {
           "type": "string",
           "default": "",
           "description": "Path to the NPL sources. Leave empty to use the current workspace root.",
-          "scope": "resource"
+          "scope": "resource",
+          "order": 0
         },
         "NPL.testSources": {
           "type": "string",
           "default": "",
           "description": "Path to the NPL test sources. Leave empty to use the current workspace root.",
-          "scope": "resource"
+          "scope": "resource",
+          "order": 10
+        },
+        "NPL.server.version": {
+          "type": "string",
+          "default": "latest",
+          "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download.",
+          "order": 20
         },
         "NPL.instructionPrompts.mode": {
           "type": "string",
@@ -72,26 +113,56 @@
             "Never create or update instruction files"
           ],
           "default": "ask",
-          "description": "Controls how NPL instruction files for AI assistants are handled"
+          "description": "Controls how NPL instruction files for AI assistants are handled",
+          "order": 30
+        },
+        "noumena.cloud.portalUrl": {
+          "type": "string",
+          "default": "https://portal.noumena.cloud",
+          "description": "Noumena Cloud portal URL",
+          "scope": "resource",
+          "order": 100
+        },
+        "noumena.cloud.authUrl": {
+          "type": "string",
+          "default": "https://keycloak.noumena.cloud",
+          "description": "Noumena Cloud authentication URL",
+          "scope": "resource",
+          "order": 110
         }
       }
     },
     "commands": [
       {
         "command": "npl.selectServerVersion",
-        "title": "NPL: Select Language Server version"
+        "title": "Select Language Server version",
+        "category": "NPL"
       },
       {
         "command": "npl.cleanServerFiles",
-        "title": "NPL: Clean Language Server files and reset"
+        "title": "Clean Language Server files and reset",
+        "category": "NPL"
       },
       {
         "command": "npl.selectSources",
-        "title": "NPL: Select NPL sources"
+        "title": "Select NPL sources",
+        "category": "NPL"
       },
       {
         "command": "npl.selectTestSources",
-        "title": "NPL: Select NPL test sources"
+        "title": "Select NPL test sources",
+        "category": "NPL"
+      },
+      {
+        "command": "noumena.cloud.login",
+        "title": "Login",
+        "category": "Noumena Cloud"
+      },
+      {
+        "command": "noumena.cloud.logout",
+        "title": "Logout",
+        "icon": "$(sign-out)",
+        "category": "Noumena Cloud"
       }
     ]
   },
