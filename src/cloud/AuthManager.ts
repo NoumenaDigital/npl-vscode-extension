@@ -95,7 +95,10 @@ export class AuthManager {
       const deviceRes = await this.requestDeviceCode(deviceEndpoint);
 
       // Prompt user to complete auth in browser
-      await vscode.env.openExternal(vscode.Uri.parse(deviceRes.verification_uri_complete));
+      const opened = await vscode.env.openExternal(vscode.Uri.parse(deviceRes.verification_uri_complete));
+      if (!opened) {
+        throw new Error('Failed to open browser for authentication');
+      }
 
       const access = await this.pollForToken(
         keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/token',
