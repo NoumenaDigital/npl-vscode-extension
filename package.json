@@ -206,19 +206,22 @@
         "command": "noumena.cloud.deploy",
         "title": "Deploy NPL application",
         "category": "NOUMENA Cloud",
-        "icon": "$(cloud-upload)"
+        "icon": "$(cloud-upload)",
+        "enablement": "view == noumena.cloud.apps && viewItem == application"
       },
       {
         "command": "noumena.cloud.clear",
         "title": "Clear deployed NPL application",
         "category": "NOUMENA Cloud",
-        "icon": "$(clear-all)"
+        "icon": "$(clear-all)",
+        "enablement": "view == noumena.cloud.apps && viewItem == application"
       },
       {
         "command": "noumena.cloud.refresh",
         "title": "Refresh applications",
         "category": "NOUMENA Cloud",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "enablement": "view == noumena.cloud.apps"
       }
     ]
   },
