@@ -163,7 +163,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   /** Deploy selected application by zipping workspace folder determined from migration descriptor. */
   public async deployApplication(item: ApplicationItem): Promise<void> {
     try {
-      const rootDir = this.getDeploymentRoot();
+      const rootDir = await this.getDeploymentRoot();
       if (!rootDir) {
         return; // user cancelled or no descriptor
       }
@@ -179,7 +179,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     }
   }
 
-  private getDeploymentRoot(): string | undefined {
+  private async getDeploymentRoot(): Promise<string | undefined> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       void vscode.window.showErrorMessage('No workspace folder open.');
@@ -195,7 +195,10 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       }
     }
 
-    void vscode.window.showErrorMessage('NPL.migrationDescriptor is not configured.');
+    const choice = await vscode.window.showErrorMessage('The path to the migration needs to be configured.', 'Configure', 'Cancel');
+    if (choice === 'Configure') {
+      void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.migrationDescriptor');
+    }
     return undefined;
   }
 
