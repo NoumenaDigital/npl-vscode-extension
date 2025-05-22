@@ -20,6 +20,8 @@ interface TokenSuccessResponse {
 
 export class AuthManager {
   private static readonly REFRESH_TOKEN_SECRET_KEY = 'noumena.cloud.refreshToken';
+  private static readonly ACCESS_TOKEN_SECRET_KEY = 'noumena.cloud.accessToken';
+  private static readonly ACCESS_TOKEN_EXPIRY_SECRET_KEY = 'noumena.cloud.accessTokenExpiry';
   private static readonly CLIENT_ID = 'paas';
   private static readonly CLIENT_SECRET = 'paas';
   private static readonly GRANT_TYPE_DEVICE =
@@ -54,6 +56,18 @@ export class AuthManager {
       this.refreshToken = await this.secrets.get(
         AuthManager.REFRESH_TOKEN_SECRET_KEY
       );
+      const storedAccessToken = await this.secrets.get(AuthManager.ACCESS_TOKEN_SECRET_KEY);
+      const storedAccessTokenExpiry = await this.secrets.get(AuthManager.ACCESS_TOKEN_EXPIRY_SECRET_KEY);
+
+      if (storedAccessToken && storedAccessTokenExpiry && Date.now() < parseInt(storedAccessTokenExpiry, 10) - 10000) {
+        this.accessToken = storedAccessToken;
+        this.accessTokenExpiry = parseInt(storedAccessTokenExpiry, 10);
+        const username = this.extractUsername(this.accessToken);
+        this._onDidLogin.fire(username ?? '');
+        this.logger.log(`Restored NOUMENA Cloud session as ${username ?? 'unknown user'} from stored access token`);
+        return;
+      }
+
       if (this.refreshToken) {
         await this.refreshAccessToken();
       }
@@ -146,7 +160,10 @@ export class AuthManager {
     this.accessTokenExpiry = undefined;
     this.refreshToken = undefined;
     await this.secrets.delete(AuthManager.REFRESH_TOKEN_SECRET_KEY);
+    await this.secrets.delete(AuthManager.ACCESS_TOKEN_SECRET_KEY);
+    await this.secrets.delete(AuthManager.ACCESS_TOKEN_EXPIRY_SECRET_KEY);
     this._onDidLogout.fire();
+    this.logger.log('Logged out from NOUMENA Cloud');
   }
 
   private async requestDeviceCode(endpoint: string): Promise<DeviceCodeResponse> {
@@ -274,6 +291,14 @@ export class AuthManager {
     await this.secrets.store(
       AuthManager.REFRESH_TOKEN_SECRET_KEY,
       this.refreshToken
+    );
+    await this.secrets.store(
+      AuthManager.ACCESS_TOKEN_SECRET_KEY,
+      this.accessToken
+    );
+    await this.secrets.store(
+      AuthManager.ACCESS_TOKEN_EXPIRY_SECRET_KEY,
+      this.accessTokenExpiry.toString()
     );
 
     const username = this.extractUsername(this.accessToken);
