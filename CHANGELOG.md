@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   browser, using device code flow), you will be able to view your tenants and application, and deploy new code to them
   or clear their contents. The sources that get deployed are determined by the path specified in
   `NPL.migrationDescriptor` setting (which we will automatically populate if you have exactly one
-  `**/yaml/migration.yaml` file).
+  `**/yaml/migration.yml` file).
 
 ## [1.2.0]
 
