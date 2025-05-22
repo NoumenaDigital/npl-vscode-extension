@@ -107,7 +107,7 @@
         "NPL.sources": {
           "type": "string",
           "default": "",
-          "description": "Path to the NPL sources. Leave empty to use the current workspace root.",
+          "description": "Absolute path to the NPL sources. Leave empty to use the current workspace root.",
           "scope": "resource",
           "order": 0,
           "tags": ["NPL"]
@@ -115,14 +115,14 @@
         "NPL.testSources": {
           "type": "string",
           "default": "",
-          "description": "Path to the NPL test sources. Leave empty to use the current workspace root.",
+          "description": "Absolute path to the NPL test sources. Leave empty to use the current workspace root.",
           "scope": "resource",
           "order": 10,
           "tags": ["NPL"]
         },
         "NPL.migrationDescriptor": {
           "type": "string",
-          "description": "Path to the NPL migration descriptor. Determines the sources that get deployed to your applications.",
+          "description": "Absolute path to the NPL migration descriptor. Determines the sources that get deployed to your applications.",
           "scope": "resource",
           "additionalProperties": true,
           "pattern": "^$|.*yaml/migration\\.yml$",
