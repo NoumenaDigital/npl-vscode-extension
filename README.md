@@ -37,6 +37,11 @@ deprecated syntax). The versions correspond to Noumena Platform releases.
 Run the NPL source management commands in order to restrict diagnostics to specific folders. By default, all NPL files
 in your project are considered, so this is useful to avoid redefinition errors and improve performance.
 
+### Noumena Cloud integration
+
+You can access the Noumena Cloud view via the activity bar. It allows you to login to your Noumena Account and deploy
+new NPL code to your Noumena Cloud applications.
+
 ## Commands
 
 Available commands can be accessed by opening the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on

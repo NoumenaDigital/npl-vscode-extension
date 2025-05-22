@@ -2,7 +2,7 @@
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
   "description": "Noumena Protocol Language (NPL) development support for VS Code",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "icon": "icon.png",
   "publisher": "noumenadigital",
   "license": "Apache-2.0",
@@ -122,7 +122,7 @@
         },
         "NPL.migrationDescriptor": {
           "type": "string",
-          "description": "Path to the NPL migration descriptor.",
+          "description": "Path to the NPL migration descriptor. Determines the sources that get deployed to your applications.",
           "scope": "resource",
           "additionalProperties": true,
           "pattern": "^$|.*yaml/migration\\.yml$",
