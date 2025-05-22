@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /**
- * Returns the Noumena Cloud portal API base URL, ensuring no trailing slash and appending `/api`.
+ * Returns the NOUMENA Cloud portal API base URL, ensuring no trailing slash and appending `/api`.
  */
 export function getApiBase(): string {
   const portal = vscode.workspace.getConfiguration('noumena.cloud').get<string>('portalUrl');

@@ -1,7 +1,7 @@
 {
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
-  "description": "Noumena Protocol Language (NPL) development support for VS Code",
+  "description": "NOUMENA Protocol Language (NPL) development support for VS Code",
   "version": "1.3.0",
   "icon": "icon.png",
   "publisher": "noumenadigital",
@@ -23,7 +23,7 @@
       "activitybar": [
         {
           "id": "noumena-panel",
-          "title": "Noumena Cloud",
+          "title": "NOUMENA Cloud",
           "icon": "icon.png",
           "order": 1
         }
@@ -153,7 +153,7 @@
         "noumena.cloud.portalUrl": {
           "type": "string",
           "default": "https://portal.noumena.cloud",
-          "description": "Noumena Cloud portal URL",
+          "description": "NOUMENA Cloud portal URL",
           "scope": "resource",
           "format": "uri",
           "order": 100,
@@ -162,7 +162,7 @@
         "noumena.cloud.authUrl": {
           "type": "string",
           "default": "https://keycloak.noumena.cloud",
-          "description": "Noumena Cloud authentication URL",
+          "description": "NOUMENA Cloud authentication URL",
           "scope": "resource",
           "format": "uri",
           "order": 110,
@@ -194,30 +194,30 @@
       {
         "command": "noumena.cloud.login",
         "title": "Login",
-        "category": "Noumena Cloud"
+        "category": "NOUMENA Cloud"
       },
       {
         "command": "noumena.cloud.logout",
         "title": "Logout",
         "icon": "$(sign-out)",
-        "category": "Noumena Cloud"
+        "category": "NOUMENA Cloud"
       },
       {
         "command": "noumena.cloud.deploy",
         "title": "Deploy NPL application",
-        "category": "Noumena Cloud",
+        "category": "NOUMENA Cloud",
         "icon": "$(cloud-upload)"
       },
       {
         "command": "noumena.cloud.clear",
         "title": "Clear deployed NPL application",
-        "category": "Noumena Cloud",
+        "category": "NOUMENA Cloud",
         "icon": "$(clear-all)"
       },
       {
         "command": "noumena.cloud.refresh",
         "title": "Refresh applications",
-        "category": "Noumena Cloud",
+        "category": "NOUMENA Cloud",
         "icon": "$(refresh)"
       }
     ]

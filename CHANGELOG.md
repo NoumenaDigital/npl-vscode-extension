@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.3.0]
 
-- Added a Noumena Cloud view, accessible from the activity bar. After logging in to your Noumena Cloud account (via your
+- Added a NOUMENA Cloud view, accessible from the activity bar. After logging in to your NOUMENA Cloud account (via your
   browser, using device code flow), you will be able to view your tenants and application, and deploy new code to them
   or clear their contents. The sources that get deployed are determined by the path specified in
   `NPL.migrationDescriptor` setting (which we will automatically populate if you have exactly one

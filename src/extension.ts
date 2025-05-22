@@ -25,7 +25,7 @@ export interface ExtensionAPI {
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   const serverLogger = new Logger('NPL Language Server');
-  const cloudLogger = new Logger('Noumena Cloud');
+  const cloudLogger = new Logger('NOUMENA Cloud');
 
   serverManager = new ServerManager(serverLogger);
   clientManager = new LanguageClientManager(serverLogger, serverManager);
@@ -97,12 +97,12 @@ export async function activate(context: vscode.ExtensionContext) {
       authManager.onDidLogin(username => {
         cloudAppsProvider.setLoggedIn(username);
         vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', true);
-        vscode.window.showInformationMessage(`Logged in to Noumena Cloud as ${username}`);
+        vscode.window.showInformationMessage(`Logged in to NOUMENA Cloud as ${username}`);
       }),
       authManager.onDidLogout(() => {
         cloudAppsProvider.setLoggedOut();
         vscode.commands.executeCommand('setContext', 'noumena.cloud.isLoggedIn', false);
-        vscode.window.showInformationMessage('Logged out of Noumena Cloud');
+        vscode.window.showInformationMessage('Logged out of NOUMENA Cloud');
       })
     );
 

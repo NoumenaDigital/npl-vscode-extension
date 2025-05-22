@@ -58,13 +58,13 @@ export class AuthManager {
         await this.refreshAccessToken();
       }
     } catch (err) {
-      this.logger.logError('Failed to restore Noumena Cloud session', err);
+      this.logger.logError('Failed to restore NOUMENA Cloud session', err);
     }
   }
 
   public async login(): Promise<void> {
     // Cancel any previous login that may still be in progress so we do not end up with
-    // multiple "Waiting for Noumena Cloud authorization…" dialogs stacking up.
+    // multiple "Waiting for NOUMENA Cloud authorization…" dialogs stacking up.
     if (this.currentLoginCancel) {
       try {
         this.currentLoginCancel();
@@ -83,7 +83,7 @@ export class AuthManager {
     const keycloakBase: string | undefined = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl');
     if (!keycloakBase) {
       void vscode.window.showErrorMessage(
-        'Noumena Cloud Keycloak URL is not configured.'
+        'NOUMENA Cloud Keycloak URL is not configured.'
       );
       return;
     }
@@ -116,7 +116,7 @@ export class AuthManager {
       if (!(err instanceof Error && err.message === 'Login attempt superseded')) {
         this.logger.logError('Login failed', err);
         void vscode.window.showErrorMessage(
-          `Noumena Cloud login failed: ${err instanceof Error ? err.message : String(err)}`
+          `NOUMENA Cloud login failed: ${err instanceof Error ? err.message : String(err)}`
         );
       }
     }
@@ -187,7 +187,7 @@ export class AuthManager {
     return await vscode.window.withProgress<TokenSuccessResponse>(
       {
         location: vscode.ProgressLocation.Notification,
-        title: 'Waiting for Noumena Cloud authorization...',
+        title: 'Waiting for NOUMENA Cloud authorization...',
         cancellable: true
       },
       async (_progress, token) => {
@@ -278,7 +278,7 @@ export class AuthManager {
 
     const username = this.extractUsername(this.accessToken);
     this._onDidLogin.fire(username ?? '');
-    this.logger.log(`Logged in to Noumena Cloud as ${username ?? 'unknown user'}`);
+    this.logger.log(`Logged in to NOUMENA Cloud as ${username ?? 'unknown user'}`);
   }
 
   private extractUsername(jwt: string): string | undefined {
