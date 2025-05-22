@@ -18,7 +18,10 @@ interface Application {
   id: string;
   name: string;
   slug: string;
+  provider?: string;
+  engine_version?: { version: string; deprecated?: boolean; [key: string]: any };
   state?: string;
+  deployed_at?: string;
   [key: string]: any;
 }
 
@@ -28,8 +31,31 @@ class TenantItem extends CloudItem {
   constructor(public readonly tenant: Tenant) {
     super(tenant.name, vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = 'tenant';
-    this.tooltip = tenant.slug;
     this.id = tenant.id;
+
+    const lines: string[] = [];
+    const fieldsToDisplay: { displayName: string; getValue: (tenant: Tenant) => string | undefined }[] = [
+      { displayName: 'Slug', getValue: tenant => tenant.slug },
+      { displayName: 'State', getValue: tenant => tenant.state }
+    ];
+
+    for (const field of fieldsToDisplay) {
+      const value = field.getValue(this.tenant);
+
+      if (value === null || value === undefined || value.trim() === '') {
+        continue;
+      }
+
+      let entryString = `**${field.displayName}**:`;
+      entryString += ` ${String(value)}`;
+      lines.push(entryString);
+    }
+
+    const tooltipMarkdown = lines.join('\n\n');
+    const markdown = new vscode.MarkdownString(tooltipMarkdown, true);
+    markdown.isTrusted = true;
+
+    this.tooltip = markdown;
   }
 }
 
@@ -37,8 +63,34 @@ class ApplicationItem extends CloudItem {
   constructor(public readonly application: Application) {
     super(application.name, vscode.TreeItemCollapsibleState.None);
     this.contextValue = 'application';
-    this.tooltip = application.slug;
     this.id = application.id;
+
+    const lines: string[] = [];
+    const fieldsToDisplay: { displayName: string; getValue: (app: Application) => string | undefined }[] = [
+      { displayName: 'Slug', getValue: app => app.slug },
+      { displayName: 'Provider', getValue: app => app.provider },
+      { displayName: 'Engine version', getValue: app => app.engine_version?.version },
+      { displayName: 'State', getValue: app => app.state },
+      { displayName: 'Deployed at', getValue: app => app.deployed_at }
+    ];
+
+    for (const field of fieldsToDisplay) {
+      const value = field.getValue(this.application);
+
+      if (value === null || value === undefined || value.trim() === '') {
+        continue;
+      }
+
+      let entryString = `**${field.displayName}**:`;
+      entryString += ` ${String(value)}`;
+      lines.push(entryString);
+    }
+
+    const tooltipMarkdown = lines.join('\n\n');
+    const markdown = new vscode.MarkdownString(tooltipMarkdown, true);
+    markdown.isTrusted = true;
+
+    this.tooltip = markdown;
   }
 }
 
@@ -47,7 +99,6 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   readonly onDidChangeTreeData: vscode.Event<CloudItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
   private isLoggedIn = false;
-  private username: string | undefined;
   private tenants: Tenant[] | null = null;
 
   private readonly logger: Logger;
@@ -84,14 +135,12 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
   setLoggedIn(username: string): void {
     this.isLoggedIn = true;
-    this.username = username;
     this.tenants = null;
     this.refresh();
   }
 
   setLoggedOut(): void {
     this.isLoggedIn = false;
-    this.username = undefined;
     this.tenants = null;
     this.refresh();
   }
