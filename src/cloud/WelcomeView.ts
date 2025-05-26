@@ -37,7 +37,7 @@ export class WelcomeView implements vscode.WebviewViewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Noumena Cloud</title>
+      <title>NOUMENA Cloud</title>
       <style>
         body {
           font-family: var(--vscode-font-family);
@@ -84,9 +84,9 @@ export class WelcomeView implements vscode.WebviewViewProvider {
     </head>
     <body>
       <div class="container">
-        <h2>Welcome to Noumena Cloud</h2>
-        <p>Connect to your Noumena Cloud account to view applications to which you can deploy your NPL code.</p>
-        <button class="button" id="login-button">Sign in to Noumena Cloud</button>
+        <h2>Welcome to NOUMENA Cloud</h2>
+        <p>Connect to your NOUMENA Cloud account to view applications to which you can deploy your NPL code.</p>
+        <button class="button" id="login-button">Sign in to NOUMENA Cloud</button>
       </div>
 
       <script>
