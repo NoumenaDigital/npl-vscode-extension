@@ -2,7 +2,7 @@
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
   "description": "NOUMENA Protocol Language (NPL) development support for VS Code",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "icon": "icon.png",
   "publisher": "noumenadigital",
   "license": "Apache-2.0",
@@ -227,7 +227,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && npm run copy-resources",
+    "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
@@ -235,7 +235,6 @@
     "package": "vsce package",
     "publish:vsce": "vsce publish",
     "publish:ovsx": "ovsx publish *.vsix",
-    "copy-resources": "mkdirp out/resources/templates && cpy src/resources/templates/npl-instructions.md out/resources/templates/",
     "clean": "rimraf out"
   },
   "devDependencies": {

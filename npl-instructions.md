@@ -1,4 +1,4 @@
-# NPL Development v{{VERSION}}
+# NPL Development v2
 
 NPL (NOUMENA Protocol Language) has unique syntax for defining protocol types and operations, strong typing, and a
 distinct approach to modeling permissions and state transitions.

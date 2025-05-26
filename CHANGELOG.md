@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [//]: # "Add stuff here"
 
+## [1.3.1]
+
+- Fixed issues with the AI instruction file management
+
 ## [1.3.0]
 
 - Added a Noumena Cloud view accessible from the activity bar. After logging into your Noumena Cloud account via your
