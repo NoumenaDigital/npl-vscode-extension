@@ -3,9 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import {
-  NPL_INSTRUCTION_VERSION,
   NPL_SECTION_START_MARKER,
   NPL_SECTION_END_MARKER,
+  NPL_INSTRUCTION_FILE_URL,
   COPILOT_INSTRUCTIONS_PATH,
   CURSOR_RULES_PATH
 } from '../constants';
@@ -39,10 +39,9 @@ export enum EditorType {
 }
 
 export class InstructionFileManager {
-  private readonly CURRENT_VERSION = NPL_INSTRUCTION_VERSION;
   private readonly NPL_SECTION_START = NPL_SECTION_START_MARKER;
   private readonly NPL_SECTION_END = NPL_SECTION_END_MARKER;
-  private readonly INSTRUCTION_URL = 'https://raw.githubusercontent.com/NoumenaDigital/npl-vscode-extension/refs/heads/ST-4691_fix_instruction_file_location/npl-instructions.md';
+  private readonly INSTRUCTION_URL = NPL_INSTRUCTION_FILE_URL;
 
   private readonly PROMPT_MODES = {
     ASK: 'ask',
@@ -53,6 +52,7 @@ export class InstructionFileManager {
   private readonly dialogHandler: DialogHandler;
   private readonly editorTypeProvider: () => EditorType;
   private instructionContentCache: string | null = null;
+  private remoteVersionCache: number | null = null;
 
   constructor(
     dialogHandler: DialogHandler = new VsCodeDialogHandler(),
@@ -174,9 +174,10 @@ export class InstructionFileManager {
       return;
     }
 
-    const version = this.getNplSectionVersion(content);
+    const localVersion = this.getNplSectionVersion(content);
+    const remoteVersion = await this.getRemoteVersion();
 
-    if (version !== undefined && version < this.CURRENT_VERSION) {
+    if (localVersion !== undefined && remoteVersion !== null && localVersion < remoteVersion) {
       if (isAutoMode) {
         // Auto mode - update without asking
         await this.updateNplSection(fullPath, content);
@@ -184,7 +185,7 @@ export class InstructionFileManager {
       }
 
       const answer = await this.dialogHandler.showInformationMessage(
-        `NPL-specific rules for AI assistance outdated (v${version}). Update to latest?`,
+        `NPL-specific rules for AI assistance outdated (v${localVersion}). Update to latest (v${remoteVersion})?`,
         DialogButton.Yes, DialogButton.AlwaysUpdate, DialogButton.Never
       );
 
@@ -228,7 +229,7 @@ export class InstructionFileManager {
     }
   }
 
-  private async fetchTextContent(url: string): Promise<string> {
+  protected async fetchTextContent(url: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const req = https.get(url, (res: any) => {
         if (res.statusCode === 302 || res.statusCode === 301) {
@@ -302,5 +303,21 @@ export class InstructionFileManager {
     const endOfSection = endIndex + this.NPL_SECTION_END.length;
     const instructionContent = await this.getInstructionContent();
     return content.slice(0, startIndex) + instructionContent + content.slice(endOfSection);
+  }
+
+  private async getRemoteVersion(): Promise<number | null> {
+    if (this.remoteVersionCache !== null) {
+      return this.remoteVersionCache;
+    }
+
+    try {
+      const content = await this.getInstructionContent();
+      const version = this.getNplSectionVersion(content);
+      this.remoteVersionCache = version ?? null;
+      return this.remoteVersionCache;
+    } catch (error) {
+      console.error('Error getting remote version:', error);
+      return null;
+    }
   }
 }
