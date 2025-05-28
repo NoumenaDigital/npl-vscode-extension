@@ -8,11 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [//]: # "Add stuff here"
 
+## [1.3.2]
+
+### Changed
+
+- NPL-dev now gets activated whenever a workspace contains NPL files, not just when you open them.
+
 ## [1.3.1]
+
+### Fixed
 
 - Fixed issues with the AI instruction file management
 
 ## [1.3.0]
+
+### Added
 
 - Added a Noumena Cloud view accessible from the activity bar. After logging into your Noumena Cloud account via your
   browser (using the device code flow), you can view your tenants and applications, deploy code, or clear their
