@@ -105,7 +105,7 @@
       },
       {
         "scopeName": "markdown.npl.injection",
-        "path": "./syntaxes/npl-markdown-injection.json",
+        "path": "./syntaxes/npl-markdown-injection.tmLanguage.json",
         "injectTo": ["text.html.markdown"],
         "embeddedLanguages": {
           "meta.embedded.block.npl": "npl"
