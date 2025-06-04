@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [//]: # "Add stuff here"
 
+## [1.3.3]
+
+### Changed
+
+- NPL syntax highlighting now works for NPL code blocks in Markdown files
+- Made some minor improvements to the AI instructions file.
+
 ## [1.3.2]
 
 ### Changed
