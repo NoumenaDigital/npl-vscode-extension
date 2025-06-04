@@ -1,4 +1,4 @@
-# NPL Development v2
+# NPL Development v3
 
 NPL (NOUMENA Protocol Language) has unique syntax for defining protocol types and operations, strong typing, and a
 distinct approach to modeling permissions and state transitions.
@@ -199,6 +199,18 @@ These are critical errors to avoid when working with NPL:
   private var bookingTime: DateTime = now();
   ```
 
+- **No comments before package declaration**: NOTHING should appear before the package statement. No comments, no
+  docstrings, no whitespace. The package declaration must be the very first line of any NPL file.
+
+  ```npl
+  // INCORRECT - comment before package
+  /** File documentation */
+  package mypackage
+
+  // CORRECT - package is first
+  package mypackage
+  ```
+
 ## Key Guidelines
 
 - All NPL files have the `.npl` extension and must start with a package declaration.
@@ -207,7 +219,8 @@ These are critical errors to avoid when working with NPL:
 - Protocols, permissions, and states are fundamental concepts.
 - All variables must be initialized when declared.
 - **Document Everything**: Use Javadoc-style comments (`/** ... */`) for all declarations. Include `@param` and
-  `@return` tags where applicable. Do NOT add Javadoc to variables or `init` blocks.
+  `@return` tags where applicable. Do NOT add Javadoc to variables or `init` blocks. Place docstrings directly above the
+  element they document (protocols, functions, structs, etc.), never at the top of the file.
 - **Initialization**: Use `init` block for initialization behavior.
 - **End if statements with semicolons**:
   ```npl
