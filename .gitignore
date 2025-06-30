@@ -18,3 +18,4 @@ bin/
 src/test/fixtures/.vscode/
 .env
 .cursorrules
+.github/copilot-instructions.md

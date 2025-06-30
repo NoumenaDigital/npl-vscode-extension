@@ -27,7 +27,7 @@ suite('MigrationDescriptorDetector Test Suite', () => {
   test('Automatically sets migrationDescriptor when exactly one file is found', async () => {
     const wsFolder = createWorkspaceFolder('/tmp/project');
 
-    const fileUri = vscode.Uri.file('/tmp/project/yaml/migration.yml');
+    const fileUri = vscode.Uri.file('/tmp/project/migration.yml');
     sandbox.stub(vscode.workspace, 'findFiles').resolves([fileUri]);
 
     const getStub = sandbox.stub().withArgs('migrationDescriptor').returns(undefined);
@@ -44,8 +44,8 @@ suite('MigrationDescriptorDetector Test Suite', () => {
   test('Does nothing when multiple migration files are found', async () => {
     const wsFolder = createWorkspaceFolder('/tmp/project');
 
-    const fileUri1 = vscode.Uri.file('/tmp/project/yaml/migration.yml');
-    const fileUri2 = vscode.Uri.file('/tmp/project/other/yaml/migration.yml');
+    const fileUri1 = vscode.Uri.file('/tmp/project/migration.yml');
+    const fileUri2 = vscode.Uri.file('/tmp/project/other/migration.yml');
     sandbox.stub(vscode.workspace, 'findFiles').resolves([fileUri1, fileUri2]);
 
     const getStub = sandbox.stub().withArgs('migrationDescriptor').returns(undefined);
