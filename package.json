@@ -18,7 +18,8 @@
     "Linters"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.npl"
+    "workspaceContains:**/*.npl",
+    "workspaceContains:**/npl*/**"
   ],
   "main": "./out/extension.js",
   "contributes": {
