@@ -137,8 +137,8 @@
           "description": "Absolute path to the NPL migration descriptor. Determines the sources that get deployed to your applications.",
           "scope": "resource",
           "additionalProperties": true,
-          "pattern": "^$|.*yaml/migration\\.yml$",
-          "patternErrorMessage": "The migration descriptor must end with yaml/migration.yml",
+          "pattern": "^$|.*/migration\\.yml$",
+          "patternErrorMessage": "The migration descriptor must end with migration.yml",
           "order": 15,
           "tags": ["NPL"]
         },

@@ -6,7 +6,7 @@ import { Logger } from '../utils/Logger';
  *
  * For every workspace folder this will:
  *   1. Check if the setting is already present – if so, leave it untouched.
- *   2. Look for exactly one file whose relative path matches .../yaml/migration.yml
+ *   2. Look for exactly one file whose relative path matches .../migration.yml
  *   3. If exactly one match is found, set the setting to the absolute path of that file at
  *      *workspace folder* scope.
  *
@@ -31,7 +31,7 @@ export async function detectAndSetMigrationDescriptor(
       }
 
       // Search for yaml/migration.yml inside this workspace folder
-      const searchPattern = new vscode.RelativePattern(folder, '**/yaml/migration.yml');
+      const searchPattern = new vscode.RelativePattern(folder, '**/migration.yml');
       const found = await vscode.workspace.findFiles(searchPattern, '**/node_modules/**', 2);
 
       if (found.length === 1) {
