@@ -8,12 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 [//]: # "Add stuff here"
 
-## [1.3.4]
+## [1.3.5]
 
 ### Changed
 
-- AI instructions improvement
-- Activated NPL-dev for all workspaces containing NPL files
+- The `NPL.migrationDescriptor` must now specify a `migration.yml` file that lives in the _root_ of the directory to be
+  deployed. It can no longer be placed in subdirectories.
+
+### Added
+
+- An activation event for `npl*` directories, such that the extension starts even if no `*.npl` files have been created
+  in the project yet.
+
+## [1.3.4]
+
+Nothing!
 
 ## [1.3.3]
 
@@ -41,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added a Noumena Cloud view accessible from the activity bar. After logging into your Noumena Cloud account via your
   browser (using the device code flow), you can view your tenants and applications, deploy code, or clear their
   contents. The sources deployed are determined by the path specified in the `NPL.migrationDescriptor` setting, which we
-  automatically populate if exactly one `**/yaml/migration.yml` file exists in the workspace.
+  automatically populate if exactly one `**/migration.yml` file exists in the workspace.
 
 ## [1.2.0]
 
