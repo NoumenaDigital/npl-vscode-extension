@@ -70,14 +70,14 @@
         {
           "command": "noumena.cloud.deploy",
           "when": "view == noumena.cloud.apps && viewItem =~ /application-/",
-          "group": "inline",
-          "title": "$(cloud-upload)"
+          "group": "inline@1",
+          "title": "$(cloud-upload) Deploy"
         },
         {
           "command": "noumena.cloud.clear",
           "when": "view == noumena.cloud.apps && viewItem =~ /application-/",
-          "group": "inline",
-          "title": "$(clear-all)"
+          "group": "inline@2",
+          "title": "$(clear-all) Clear"
         }
       ]
     },
@@ -113,6 +113,7 @@
         }
       }
     ],
+
     "configuration": {
       "title": "NPL",
       "properties": {
@@ -134,12 +135,20 @@
         },
         "NPL.migrationDescriptor": {
           "type": "string",
-          "description": "Absolute path to the NPL migration descriptor. Determines the sources that get deployed to your applications.",
+          "description": "Absolute path to the NPL migration descriptor. Determines the backend sources that get deployed to your applications.",
           "scope": "resource",
           "additionalProperties": true,
           "pattern": "^$|.*/migration\\.yml$",
           "patternErrorMessage": "The migration descriptor must end with migration.yml",
           "order": 15,
+          "tags": ["NPL"]
+        },
+        "NPL.frontendSources": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the frontend sources (HTML, JS, CSS, etc.) to deploy. Leave empty to use the current workspace root.",
+          "scope": "resource",
+          "order": 16,
           "tags": ["NPL"]
         },
         "NPL.server.version": {
@@ -204,6 +213,11 @@
         "category": "NPL"
       },
       {
+        "command": "npl.selectFrontendSources",
+        "title": "Select frontend sources",
+        "category": "NPL"
+      },
+      {
         "command": "noumena.cloud.login",
         "title": "Login",
         "category": "NOUMENA Cloud"
@@ -216,7 +230,7 @@
       },
       {
         "command": "noumena.cloud.deploy",
-        "title": "Deploy NPL application",
+        "title": "Deploy application",
         "category": "NOUMENA Cloud",
         "icon": "$(cloud-upload)",
         "enablement": "view == noumena.cloud.apps && viewItem == application-active"

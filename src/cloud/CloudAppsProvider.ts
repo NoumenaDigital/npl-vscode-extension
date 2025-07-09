@@ -228,6 +228,73 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     return (await res.json()) as Application[];
   }
 
+  /** Show deployment options and handle the selected deployment type. */
+  public async showDeployOptions(item: ApplicationItem): Promise<void> {
+    const options = [
+      {
+        label: '$(server) NPL Backend',
+        description: 'Deploy NPL backend code',
+        detail: 'Uses migration.yml to deploy server-side logic',
+        value: 'backend'
+      },
+      {
+        label: '$(globe) Static Frontend',
+        description: 'Deploy static website files',
+        detail: 'Deploy HTML, CSS, JS files to web server',
+        value: 'frontend'
+      },
+      {
+        label: '$(rocket) Deploy Both',
+        description: 'Deploy backend and frontend together',
+        detail: 'Deploy both NPL backend and static frontend',
+        value: 'both'
+      }
+    ];
+
+    const selected = await vscode.window.showQuickPick(options, {
+      placeHolder: `Select deployment type for ${item.application.name}`,
+      ignoreFocusOut: true
+    });
+
+    if (!selected) {
+      return; // User cancelled
+    }
+
+    try {
+      switch (selected.value) {
+        case 'backend':
+          await this.deployApplication(item);
+          break;
+        case 'frontend':
+          await this.deployFrontendApplication(item);
+          break;
+        case 'both':
+          await this.deployBoth(item);
+          break;
+      }
+    } catch (err) {
+      this.logger.logError('Deployment failed', err);
+      void vscode.window.showErrorMessage(`Deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /** Deploy both backend and frontend applications. */
+  private async deployBoth(item: ApplicationItem): Promise<void> {
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Deploying backend and frontend...',
+      cancellable: false
+    }, async (progress) => {
+      progress.report({ message: 'Deploying backend...' });
+      await this.deployApplication(item);
+
+      progress.report({ message: 'Deploying frontend...' });
+      await this.deployFrontendApplication(item);
+    });
+
+    void vscode.window.showInformationMessage(`Full deployment to ${item.application.name} completed successfully.`);
+  }
+
   /** Deploy selected application by zipping workspace folder determined from migration descriptor. */
   public async deployApplication(item: ApplicationItem): Promise<void> {
     try {
@@ -240,10 +307,29 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
       await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
 
-      void vscode.window.showInformationMessage(`Deployment to ${item.application.name} completed successfully.`);
+      void vscode.window.showInformationMessage(`Backend deployment to ${item.application.name} completed successfully.`);
     } catch (err) {
-      this.logger.logError('Deployment failed', err);
-      void vscode.window.showErrorMessage(`Deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.logError('Backend deployment failed', err);
+      void vscode.window.showErrorMessage(`Backend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /** Deploy frontend by zipping the configured frontend sources directory. */
+  public async deployFrontendApplication(item: ApplicationItem): Promise<void> {
+    try {
+      const rootDir = await this.getFrontendDeploymentRoot();
+      if (!rootDir) {
+        return; // user cancelled or no frontend sources configured
+      }
+
+      const zipBuffer = await createArchiveBuffer(rootDir);
+
+      await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
+
+      void vscode.window.showInformationMessage(`Frontend deployment to ${item.application.name} completed successfully.`);
+    } catch (err) {
+      this.logger.logError('Frontend deployment failed', err);
+      void vscode.window.showErrorMessage(`Frontend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -267,6 +353,96 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     if (choice === 'Configure') {
       void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.migrationDescriptor');
     }
+    return undefined;
+  }
+
+  private async getFrontendDeploymentRoot(): Promise<string | undefined> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      void vscode.window.showErrorMessage('No workspace folder open.');
+      return undefined;
+    }
+
+    // Look for the first workspace folder with configured frontend sources
+    for (const folder of workspaceFolders) {
+      const frontendSources = vscode.workspace.getConfiguration('NPL', folder.uri).get<string>('frontendSources');
+      if (frontendSources && frontendSources.trim().length > 0) {
+        return frontendSources;
+      }
+    }
+
+    // Check for common frontend build directories
+    const path = require('path');
+    const fs = require('fs');
+    for (const folder of workspaceFolders) {
+      // First check for frontend/dist (most common for built files)
+      const frontendDistPath = path.join(folder.uri.fsPath, 'frontend', 'dist');
+      try {
+        const stat = await fs.promises.stat(frontendDistPath);
+        if (stat.isDirectory()) {
+          const choice = await vscode.window.showInformationMessage(
+            `Found a 'frontend/dist' folder. Would you like to deploy from there?`,
+            'Use Frontend/Dist',
+            'Configure Different Folder',
+            'Cancel'
+          );
+
+          if (choice === 'Use Frontend/Dist') {
+            // Save this choice for future deployments
+            const config = vscode.workspace.getConfiguration('NPL', folder.uri);
+            await config.update('frontendSources', frontendDistPath, vscode.ConfigurationTarget.WorkspaceFolder);
+            return frontendDistPath;
+          } else if (choice === 'Configure Different Folder') {
+            void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
+            return undefined;
+          } else {
+            return undefined;
+          }
+        }
+      } catch (err) {
+        // Directory doesn't exist, continue checking
+      }
+
+      // Fallback: check for just 'frontend' folder
+      const frontendPath = path.join(folder.uri.fsPath, 'frontend');
+      try {
+        const stat = await fs.promises.stat(frontendPath);
+        if (stat.isDirectory()) {
+          const choice = await vscode.window.showInformationMessage(
+            `Found a 'frontend' folder. Would you like to deploy from there?`,
+            'Use Frontend Folder',
+            'Configure Different Folder',
+            'Cancel'
+          );
+
+          if (choice === 'Use Frontend Folder') {
+            // Save this choice for future deployments
+            const config = vscode.workspace.getConfiguration('NPL', folder.uri);
+            await config.update('frontendSources', frontendPath, vscode.ConfigurationTarget.WorkspaceFolder);
+            return frontendPath;
+          } else if (choice === 'Configure Different Folder') {
+            void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
+            return undefined;
+          } else {
+            return undefined;
+          }
+        }
+      } catch (err) {
+        // Directory doesn't exist, continue checking
+      }
+    }
+
+    // No frontend folder found, prompt to configure
+    const choice = await vscode.window.showErrorMessage(
+      'No frontend sources configured and no "frontend/dist" or "frontend" folder found in the workspace. Please configure the frontend sources path.',
+      'Configure',
+      'Cancel'
+    );
+
+    if (choice === 'Configure') {
+      void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
+    }
+
     return undefined;
   }
 

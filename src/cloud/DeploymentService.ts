@@ -104,6 +104,50 @@ export class DeploymentService {
     });
   }
 
+  /** Deploys a website archive (static frontend) to the application. */
+  public async deployWebsiteBuffer(appId: string, zipBuffer: Buffer, filename = 'website.zip'): Promise<void> {
+    const token = await this.authManager.getAccessToken();
+    if (!token) {
+      throw new Error('No access token');
+    }
+
+    const boundary = `----NoumenaBoundary${Math.random().toString(16).slice(2)}`;
+
+    const preamble = Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="website_zip"; filename="${filename}"\r\n` +
+      `Content-Type: application/zip\r\n\r\n`,
+      'utf8'
+    );
+
+    const epilogue = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8');
+
+    const bodyBuffer = Buffer.concat([preamble, zipBuffer, epilogue]);
+
+    const url = `${getApiBase()}/v1/applications/${encodeURIComponent(appId)}/uploadwebsite`;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Uploading frontend website...',
+      cancellable: false
+    }, async () => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': bodyBuffer.length.toString()
+        },
+        body: bodyBuffer
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Website upload failed with status ${res.status}: ${text}`);
+      }
+    });
+  }
+
   /**
    * Clears the deployed content of the given application by calling its clear endpoint.
    */
