@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
-[//]: # "Add stuff here"
+## [1.3.6]
+
+### Changed
+
+- `noumena.cloud.authUrl` and `noumena.cloud.portalUrl` have been removed in favor of `noumena.cloud.domain`
+
+### Added
+
+- Support for deploying static frontends. The deploy button now asks you which kind of application you would like to
+  deploy. If you deploy an NPL backend, it will also ask you if you want to create a typescript configuration file
+  that's useful for integrating frontends.
 
 ## [1.3.5]
 
