@@ -237,4 +237,181 @@ suite('CloudAppsProvider', () => {
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('frontend'));
     });
   });
+
+  suite('offerFrontendConfig', () => {
+    test('shows dialog after successful backend deployment', async () => {
+      showInformationMessageStub.resolves('Create Config');
+
+      const createConfigStub = sinon.stub(provider as any, 'createFrontendConfig').resolves();
+
+      await (provider as any).offerFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('frontend configuration file'));
+      assert.ok(createConfigStub.calledOnce);
+    });
+
+    test('does nothing when user declines', async () => {
+      showInformationMessageStub.resolves('Not Now');
+
+      const createConfigStub = sinon.stub(provider as any, 'createFrontendConfig').resolves();
+
+      await (provider as any).offerFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(createConfigStub.notCalled);
+    });
+
+    test('handles errors when creating config', async () => {
+      showInformationMessageStub.resolves('Create Config');
+
+      const createConfigStub = sinon.stub(provider as any, 'createFrontendConfig').rejects(new Error('Config creation failed'));
+
+      await (provider as any).offerFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Failed to create frontend config'));
+    });
+  });
+
+  suite('createFrontendConfig', () => {
+    test('creates frontend config file with correct content', async () => {
+      // Remove existing stubs to avoid conflicts
+      sinon.restore();
+
+      // Re-stub VS Code APIs
+      showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage');
+      const openTextDocumentStub = sinon.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
+      const showTextDocumentStub = sinon.stub(vscode.window, 'showTextDocument').resolves();
+      const applyEditStub = sinon.stub(vscode.workspace, 'applyEdit').resolves(true);
+      const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('iou');
+
+      // Stub workspace folders with a real vscode.Uri
+      sinon.stub(vscode.workspace, 'workspaceFolders').value([{
+        uri: vscode.Uri.file('/workspace')
+      }]);
+
+      // Stub workspace configuration
+      const configStub = sinon.stub(vscode.workspace, 'getConfiguration');
+      configStub.withArgs('noumena.cloud').returns({
+        get: (key: string) => {
+          if (key === 'portalUrl') {return 'https://portal.noumena.cloud';}
+          if (key === 'authUrl') {return 'https://keycloak.noumena.cloud';}
+          return undefined;
+        }
+      } as any);
+
+      // Stub tenant lookup
+      const getTenantStub = sinon.stub(provider as any, 'getTenantForApplication').resolves({
+        id: 'tenant-123',
+        name: 'Test Tenant',
+        slug: 'testtenant'
+      });
+
+      await (provider as any).createFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showInputBoxStub.calledOnce);
+      assert.ok(applyEditStub.calledOnce);
+      assert.ok(openTextDocumentStub.calledOnce);
+      assert.ok(showTextDocumentStub.calledOnce);
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('Frontend configuration created'));
+
+      // Verify the content contains the correct tenant-specific URLs
+      const editCall = applyEditStub.firstCall;
+      const edit = editCall.args[0];
+      const insertEdit = edit.entries()[0][1][0];
+      const content = insertEdit.newText;
+
+      assert.ok(content.includes('https://engine-testtenant-iou.noumena.cloud'));
+      assert.ok(content.includes('https://keycloak-testtenant-iou.noumena.cloud'));
+      assert.ok(content.includes('NPL_CLIENT_ID = "iou"'));
+      assert.ok(content.includes('/npl/iou/-/openapi.json'));
+    });
+
+    test('skips creation when file already exists', async () => {
+      // Remove existing stubs to avoid conflicts
+      sinon.restore();
+
+      // Re-stub VS Code APIs
+      showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage');
+
+      // Stub workspace folders with a real vscode.Uri
+      sinon.stub(vscode.workspace, 'workspaceFolders').value([{
+        uri: vscode.Uri.file('/workspace')
+      }]);
+
+      // Stub tenant lookup
+      const getTenantStub = sinon.stub(provider as any, 'getTenantForApplication').resolves({
+        id: 'tenant-123',
+        name: 'Test Tenant',
+        slug: 'testtenant'
+      });
+
+      // Mock the file system check to simulate file exists
+      const originalFsStat = vscode.workspace.fs.stat;
+      vscode.workspace.fs.stat = async () => ({} as any);
+
+      try {
+        await (provider as any).createFrontendConfig(mockApplicationItem as any);
+
+        assert.ok(showInformationMessageStub.calledOnce);
+        assert.ok(showInformationMessageStub.firstCall.args[0].includes('already exists'));
+        assert.ok(showInformationMessageStub.firstCall.args[0].includes('Skipping creation'));
+      } finally {
+        // Restore original function
+        vscode.workspace.fs.stat = originalFsStat;
+      }
+    });
+
+    test('cancels creation when user cancels package name input', async () => {
+      // Remove existing stubs to avoid conflicts
+      sinon.restore();
+
+      // Re-stub VS Code APIs
+      showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage');
+      const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves(undefined); // User cancels
+      const applyEditStub = sinon.stub(vscode.workspace, 'applyEdit').resolves(true);
+
+      // Stub workspace folders with a real vscode.Uri
+      sinon.stub(vscode.workspace, 'workspaceFolders').value([{
+        uri: vscode.Uri.file('/workspace')
+      }]);
+
+      // Stub tenant lookup
+      const getTenantStub = sinon.stub(provider as any, 'getTenantForApplication').resolves({
+        id: 'tenant-123',
+        name: 'Test Tenant',
+        slug: 'testtenant'
+      });
+
+      await (provider as any).createFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showInputBoxStub.calledOnce);
+      assert.ok(applyEditStub.notCalled);
+      assert.ok(showInformationMessageStub.notCalled);
+    });
+
+    test('shows error when no workspace folder', async () => {
+      sinon.stub(vscode.workspace, 'workspaceFolders').value([]);
+
+      await (provider as any).createFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('No workspace folder open'));
+    });
+
+    test('shows error when tenant not found', async () => {
+      sinon.stub(vscode.workspace, 'workspaceFolders').value([{
+        uri: { fsPath: '/workspace', scheme: 'file' }
+      }]);
+
+      const getTenantStub = sinon.stub(provider as any, 'getTenantForApplication').resolves(null);
+
+      await (provider as any).createFrontendConfig(mockApplicationItem as any);
+
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Could not find tenant information'));
+    });
+  });
 });
