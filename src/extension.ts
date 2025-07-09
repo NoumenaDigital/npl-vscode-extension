@@ -64,7 +64,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }),
       vscode.commands.registerCommand('noumena.cloud.deploy', (item) => {
         if (item) {
-          cloudAppsProvider.deployApplication(item);
+          cloudAppsProvider.showDeployOptions(item);
         }
       }),
       vscode.commands.registerCommand('noumena.cloud.clear', (item) => {
@@ -88,6 +88,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
       vscode.commands.registerCommand('npl.selectTestSources', () => {
         selectNplWorkspace(serverLogger, 'testSources');
+      }),
+
+      vscode.commands.registerCommand('npl.selectFrontendSources', () => {
+        selectNplWorkspace(serverLogger, 'frontendSources');
       }),
 
       vscode.commands.registerCommand('npl.restartServer', restartServer)
@@ -142,7 +146,7 @@ export async function restartServer(): Promise<void> {
   }
 }
 
-async function selectNplWorkspace(logger: Logger, type: 'sources' | 'testSources'): Promise<void> {
+async function selectNplWorkspace(logger: Logger, type: 'sources' | 'testSources' | 'frontendSources'): Promise<void> {
   try {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
