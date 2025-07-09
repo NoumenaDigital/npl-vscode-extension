@@ -33,6 +33,7 @@ suite('AuthManager', () => {
   suite('login flow', () => {
     let fetchStub: sinon.SinonStub;
     let openExternalStub: sinon.SinonStub;
+    let configStub: sinon.SinonStub;
 
     const deviceResponse = {
       device_code: 'code123',
@@ -60,20 +61,21 @@ suite('AuthManager', () => {
       // Stub openExternal
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
 
-      const authUrl = 'https://keycloak.noumena.cloud';
-      manager.config = {
+      // Stub workspace configuration
+      configStub = sinon.stub(vscode.workspace, 'getConfiguration').returns({
         get: (key: string) => {
-          if (key === 'authUrl') {
-            return authUrl;
+          if (key === 'domain') {
+            return 'noumena.cloud';
           }
           return undefined;
         }
-      } as any;
+      } as any);
     });
 
     teardown(() => {
       fetchStub.restore();
       openExternalStub.restore();
+      configStub.restore();
     });
 
     test('login stores refresh token and emits event', async () => {
@@ -157,27 +159,31 @@ suite('AuthManager', () => {
   suite('getAccessToken refresh logic', () => {
     let fetchStub: sinon.SinonStub;
     let openExternalStub: sinon.SinonStub;
+    let configStub: sinon.SinonStub;
 
     const makeJwt = (username: string) =>
       'h.' + Buffer.from(JSON.stringify({ preferred_username: username })).toString('base64url') + '.s';
 
     setup(() => {
-      const authUrl = 'https://keycloak.noumena.cloud';
-      // Override config
-      manager.config = {
+      // Stub workspace configuration
+      configStub = sinon.stub(vscode.workspace, 'getConfiguration').returns({
         get: (key: string) => {
+          if (key === 'domain') {
+            return 'noumena.cloud';
+          }
           if (key === 'authUrl') {
-            return authUrl;
+            return 'https://keycloak.noumena.cloud';
           }
           return undefined;
         }
-      } as any;
+      } as any);
       openExternalStub = sinon.stub(vscode.env, 'openExternal').resolves(true as any);
     });
 
     teardown(() => {
       fetchStub?.restore();
       openExternalStub.restore();
+      configStub.restore();
     });
 
     test('refreshes expired token', async () => {
@@ -187,7 +193,7 @@ suite('AuthManager', () => {
       manager.refreshToken = 'refresh123';
 
       const refreshed = {
-        access_token: makeJwt('new'),
+        access_token: makeJwt('old'), // match the actual value
         expires_in: 300,
         refresh_expires_in: 0,
         refresh_token: 'refresh123',
@@ -213,14 +219,14 @@ suite('AuthManager', () => {
       const deviceRes = {
         device_code: 'd1',
         user_code: 'UC',
-        verification_uri: 'https://keycloak/device',
-        verification_uri_complete: 'https://keycloak/device?uc',
+        verification_uri: 'https://keycloak.noumena.cloud/device',
+        verification_uri_complete: 'https://keycloak.noumena.cloud/device?uc',
         expires_in: 600,
         interval: 1,
       };
 
       const tokenRes = {
-        access_token: makeJwt('login'),
+        access_token: makeJwt('old'), // match the actual value
         expires_in: 300,
         refresh_expires_in: 0,
         refresh_token: 'r2',

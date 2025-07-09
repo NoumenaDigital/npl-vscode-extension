@@ -94,13 +94,8 @@ export class AuthManager {
       cancelled = true;
     };
 
-    const keycloakBase: string | undefined = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl');
-    if (!keycloakBase) {
-      void vscode.window.showErrorMessage(
-        'NOUMENA Cloud Keycloak URL is not configured.'
-      );
-      return;
-    }
+    const domain = vscode.workspace.getConfiguration('noumena.cloud').get<string>('domain') || 'noumena.cloud';
+    const keycloakBase = `https://keycloak.${domain}`;
 
     const deviceEndpoint =
       keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/auth/device';

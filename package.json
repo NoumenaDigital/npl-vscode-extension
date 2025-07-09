@@ -171,22 +171,12 @@
           "order": 30,
           "tags": ["NPL"]
         },
-        "noumena.cloud.portalUrl": {
+        "noumena.cloud.domain": {
           "type": "string",
-          "default": "https://portal.noumena.cloud",
-          "description": "NOUMENA Cloud portal URL",
+          "default": "noumena.cloud",
+          "description": "NOUMENA Cloud domain",
           "scope": "resource",
-          "format": "uri",
           "order": 100,
-          "tags": ["NPL"]
-        },
-        "noumena.cloud.authUrl": {
-          "type": "string",
-          "default": "https://keycloak.noumena.cloud",
-          "description": "NOUMENA Cloud authentication URL",
-          "scope": "resource",
-          "format": "uri",
-          "order": 110,
           "tags": ["NPL"]
         }
       }

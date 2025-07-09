@@ -532,17 +532,12 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       return; // User cancelled
     }
 
-    // Get configuration URLs
-    const portalUrl = vscode.workspace.getConfiguration('noumena.cloud').get<string>('portalUrl') || 'https://portal.noumena.cloud';
-    const authUrl = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl') || 'https://keycloak.noumena.cloud';
-
-    // Extract base URLs and construct tenant-specific URLs
-    const portalUrlObj = new URL(portalUrl);
-    const authUrlObj = new URL(authUrl);
+        // Get domain configuration
+    const domain = vscode.workspace.getConfiguration('noumena.cloud').get<string>('domain') || 'noumena.cloud';
 
     // Construct tenant-specific URLs
-    const engineUrl = `https://engine-${tenant.slug}-${item.application.slug}.noumena.cloud`;
-    const keycloakUrl = `https://keycloak-${tenant.slug}-${item.application.slug}.noumena.cloud`;
+    const engineUrl = `https://engine-${tenant.slug}-${item.application.slug}.${domain}`;
+    const keycloakUrl = `https://keycloak-${tenant.slug}-${item.application.slug}.${domain}`;
 
     // Generate configuration content
     const configContent = `export const NPL_APPLICATION_URL = "${engineUrl}";
