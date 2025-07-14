@@ -184,47 +184,42 @@ suite('CloudAppsProvider', () => {
       assert.ok(showInformationMessageStub.firstCall.args[0].includes('frontend/dist'));
     });
 
-    test('falls back to frontend folder when dist not found', async () => {
+    test('shows error when frontend/dist not found', async () => {
       const fs = require('fs');
       const path = require('path');
 
-      // Stub fs.stat to fail for frontend/dist but succeed for frontend
-      const statStub = sinon.stub(fs.promises, 'stat')
-        .onFirstCall().rejects(new Error('Not found'))
-        .onSecondCall().resolves({ isDirectory: () => true });
+      // Stub fs.stat to fail for frontend/dist
+      const statStub = sinon.stub(fs.promises, 'stat').rejects(new Error('Not found'));
 
       // Stub workspace folders
       sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/workspace' } }]);
 
-      // Stub path.join to return expected paths
-      const pathJoinStub = sinon.stub(path, 'join')
-        .onFirstCall().returns('/workspace/frontend/dist')
-        .onSecondCall().returns('/workspace/frontend');
+      // Stub path.join to return expected path
+      const pathJoinStub = sinon.stub(path, 'join').returns('/workspace/frontend/dist');
 
-      showInformationMessageStub.resolves('Use Frontend Folder');
+      showErrorMessageStub.resolves('Configure');
 
       const result = await (provider as any).getFrontendDeploymentRoot();
 
-      assert.strictEqual(result, '/workspace/frontend');
-      assert.ok(statStub.calledTwice);
-      assert.ok(showInformationMessageStub.calledOnce);
-      assert.ok(showInformationMessageStub.firstCall.args[0].includes('frontend'));
+      assert.strictEqual(result, undefined);
+      assert.ok(statStub.calledOnce);
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('frontend/dist'));
+      assert.ok(!showErrorMessageStub.firstCall.args[0].includes('frontend folder'));
     });
 
-    test('shows error when no frontend folders found', async () => {
+    test('shows error when no frontend/dist folder found', async () => {
       const fs = require('fs');
       const path = require('path');
 
-      // Stub fs.stat to fail for both paths
+      // Stub fs.stat to fail for frontend/dist
       sinon.stub(fs.promises, 'stat').rejects(new Error('Not found'));
 
       // Stub workspace folders
       sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/workspace' } }]);
 
       // Stub path.join
-      sinon.stub(path, 'join')
-        .onFirstCall().returns('/workspace/frontend/dist')
-        .onSecondCall().returns('/workspace/frontend');
+      sinon.stub(path, 'join').returns('/workspace/frontend/dist');
 
       showErrorMessageStub.resolves('Configure');
 
@@ -233,7 +228,7 @@ suite('CloudAppsProvider', () => {
       assert.strictEqual(result, undefined);
       assert.ok(showErrorMessageStub.calledOnce);
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('frontend/dist'));
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('frontend'));
+      assert.ok(!showErrorMessageStub.firstCall.args[0].includes('frontend folder'));
     });
   });
 

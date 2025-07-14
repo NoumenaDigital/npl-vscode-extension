@@ -380,64 +380,41 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     for (const folder of workspaceFolders) {
       // First check for frontend/dist (most common for built files)
       const frontendDistPath = path.join(folder.uri.fsPath, 'frontend', 'dist');
+      let frontendDistExists = false;
       try {
         const stat = await fs.promises.stat(frontendDistPath);
-        if (stat.isDirectory()) {
-          const choice = await vscode.window.showInformationMessage(
-            `Found a 'frontend/dist' folder. Would you like to deploy from there?`,
-            'Use frontend/dist',
-            'Configure Different Folder',
-            'Cancel'
-          );
-
-          if (choice === 'Use frontend/dist') {
-            // Save this choice for future deployments
-            const config = vscode.workspace.getConfiguration('NPL', folder.uri);
-            await config.update('frontendSources', frontendDistPath, vscode.ConfigurationTarget.WorkspaceFolder);
-            return frontendDistPath;
-          } else if (choice === 'Configure Different Folder') {
-            void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
-            return undefined;
-          } else {
-            return undefined;
-          }
-        }
+        frontendDistExists = stat.isDirectory();
       } catch (err) {
-        // Directory doesn't exist, continue checking
+        // Directory doesn't exist
       }
 
-      // Fallback: check for just 'frontend' folder
-      const frontendPath = path.join(folder.uri.fsPath, 'frontend');
-      try {
-        const stat = await fs.promises.stat(frontendPath);
-        if (stat.isDirectory()) {
-          const choice = await vscode.window.showInformationMessage(
-            `Found a 'frontend' folder. Would you like to deploy from there?`,
-            'Use Frontend Folder',
-            'Configure Different Folder',
-            'Cancel'
-          );
+      if (frontendDistExists) {
+        const choice = await vscode.window.showInformationMessage(
+          `Found a 'frontend/dist' folder. Would you like to deploy from there?`,
+          'Use frontend/dist',
+          'Configure Different Folder',
+          'Cancel'
+        );
 
-          if (choice === 'Use Frontend Folder') {
-            // Save this choice for future deployments
-            const config = vscode.workspace.getConfiguration('NPL', folder.uri);
-            await config.update('frontendSources', frontendPath, vscode.ConfigurationTarget.WorkspaceFolder);
-            return frontendPath;
-          } else if (choice === 'Configure Different Folder') {
-            void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
-            return undefined;
-          } else {
-            return undefined;
-          }
+        if (choice === 'Use frontend/dist') {
+          // Save this choice for future deployments
+          const config = vscode.workspace.getConfiguration('NPL', folder.uri);
+          await config.update('frontendSources', frontendDistPath, vscode.ConfigurationTarget.WorkspaceFolder);
+          return frontendDistPath;
+        } else if (choice === 'Configure Different Folder') {
+          void vscode.commands.executeCommand('workbench.action.openSettings', 'NPL.frontendSources');
+          return undefined;
+        } else {
+          return undefined;
         }
-      } catch (err) {
-        // Directory doesn't exist, continue checking
       }
+
+
     }
 
-    // No frontend folder found, prompt to configure
+    // No frontend/dist folder found, prompt to configure
     const choice = await vscode.window.showErrorMessage(
-      'No frontend sources configured and no "frontend/dist" or "frontend" folder found in the workspace. Please configure the frontend sources path.',
+      'No sources configured and no "frontend/dist" folder found in the workspace. Please configure the sources path.',
       'Configure',
       'Cancel'
     );

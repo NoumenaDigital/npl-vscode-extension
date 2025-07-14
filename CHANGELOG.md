@@ -4,11 +4,18 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). -->
 
-## [1.3.7]
+## [1.3.8]
 
 ### Fixed
 
 - Fixed a bug where the wrong NPL directory was being deployed to NOUMENA cloud.
+
+## [1.3.7]
+
+### Fixed
+
+- When deploying static frontends, we now only attempt to detect if you have a "frontend/dist" folder, and don't care if
+  you have a "frontend" folder as such.
 
 ## [1.3.6]
 
