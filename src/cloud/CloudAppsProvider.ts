@@ -348,7 +348,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       const descriptor = vscode.workspace.getConfiguration('NPL', folder.uri).get<string>('migrationDescriptor');
       if (descriptor && descriptor.trim().length > 0) {
         const path = require('path');
-        return path.dirname(path.dirname(descriptor));
+        return path.dirname(descriptor);
       }
     }
 
@@ -385,12 +385,12 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
         if (stat.isDirectory()) {
           const choice = await vscode.window.showInformationMessage(
             `Found a 'frontend/dist' folder. Would you like to deploy from there?`,
-            'Use Frontend/Dist',
+            'Use frontend/dist',
             'Configure Different Folder',
             'Cancel'
           );
 
-          if (choice === 'Use Frontend/Dist') {
+          if (choice === 'Use frontend/dist') {
             // Save this choice for future deployments
             const config = vscode.workspace.getConfiguration('NPL', folder.uri);
             await config.update('frontendSources', frontendDistPath, vscode.ConfigurationTarget.WorkspaceFolder);
