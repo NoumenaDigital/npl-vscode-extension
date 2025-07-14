@@ -174,7 +174,7 @@ suite('CloudAppsProvider', () => {
       // Stub path.join to return expected path
       const pathJoinStub = sinon.stub(path, 'join').returns('/workspace/frontend/dist');
 
-      showInformationMessageStub.resolves('Use Frontend/Dist');
+      showInformationMessageStub.resolves('Use frontend/dist');
 
       const result = await (provider as any).getFrontendDeploymentRoot();
 

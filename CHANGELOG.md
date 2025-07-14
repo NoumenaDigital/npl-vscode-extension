@@ -4,6 +4,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). -->
 
+## [1.3.8]
+
+### Fixed
+
+- Fixed a bug where the wrong NPL directory was being deployed to NOUMENA cloud.
+
 ## [1.3.7]
 
 ### Fixed
