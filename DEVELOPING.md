@@ -21,6 +21,8 @@
 
 ## Testing
 
+### Unit Tests
+
 - Run `npm run watch` to start the TypeScript compiler in watch mode (needed to automatically compile code changes
   before testing)
 - Run tests with `npm run test`
@@ -47,6 +49,9 @@ limiting.
 - Run `npm run compile` or `npm run vscode:prepublish` to compile the extension
   - This generates JavaScript files in the `out/` directory (notably `out/extension.js`)
 - Run `npm run package` to create a .vsix file for distribution
+
+To test the extension, install the .vsix file in the `out/` directory by opening the command palette and running
+`Extensions: Install from VSIX...` and selecting the file.
 
 ## Versioning and Publishing
 
