@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 <!-- Uncomment if merging without releasing -->
 <!-- ## [Unreleased] -->
 
+## [1.3.10]
+
+### Added
+
+- Extended the AI instructions with rules for generating frontends for NPL.
+
 ## [1.3.9]
 
 ### Fixed
