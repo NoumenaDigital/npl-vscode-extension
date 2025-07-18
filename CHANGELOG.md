@@ -4,6 +4,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). -->
 
+<!-- Uncomment if merging without releasing -->
+<!-- ## [Unreleased] -->
+
+## [1.3.9]
+
+### Fixed
+
+- Fixed a bug that was forcing users to login to NOUMENA cloud again all the time.
+
 ## [1.3.8]
 
 ### Fixed
