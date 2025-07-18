@@ -21,6 +21,8 @@
 
 ## Testing
 
+### Unit Tests
+
 - Run `npm run watch` to start the TypeScript compiler in watch mode (needed to automatically compile code changes
   before testing)
 - Run tests with `npm run test`

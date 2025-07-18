@@ -243,14 +243,12 @@ export class AuthManager {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const keycloakBase: string | undefined = vscode.workspace.getConfiguration('noumena.cloud').get<string>('authUrl');
-    if (!keycloakBase) {
-      throw new Error('Keycloak URL not configured');
-    }
-
     if (!this.refreshToken) {
       throw new Error('No refresh token');
     }
+
+    const domain = vscode.workspace.getConfiguration('noumena.cloud').get<string>('domain') || 'noumena.cloud';
+    const keycloakBase = `https://keycloak.${domain}`;
 
     const tokenEndpoint =
       keycloakBase + AuthManager.KEYCLOAK_REALM_PATH + '/token';
