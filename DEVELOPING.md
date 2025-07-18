@@ -50,9 +50,6 @@ limiting.
   - This generates JavaScript files in the `out/` directory (notably `out/extension.js`)
 - Run `npm run package` to create a .vsix file for distribution
 
-To test the extension, install the .vsix file in the `out/` directory by opening the command palette and running
-`Extensions: Install from VSIX...` and selecting the file.
-
 ## Versioning and Publishing
 
 When you want to publish a new version of the extension:
