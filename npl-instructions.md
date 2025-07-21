@@ -1,4 +1,4 @@
-# NPL Development v3
+# NPL Development v4
 
 NPL (NOUMENA Protocol Language) has unique syntax for defining protocol types and operations, strong typing, and a
 distinct approach to modeling permissions and state transitions.
@@ -103,6 +103,8 @@ function test_pay_negative_amount(test: Test) -> {
     test.assertFails(function() -> iou.pay['issuer'](-10), "Paying negative amounts should fail");
 };
 ```
+
+Do NOT generate tests unless explicitly asked to.
 
 ## Common mistakes to avoid
 
@@ -258,20 +260,26 @@ These are critical errors to avoid when working with NPL:
 
 When organizing your NPL project, adhere to the following folder structure:
 
+- **Entry Point**:
+
+  - The project entry point is always a `migration.yml` file that defines migration changesets.
+  - This file is often located at `*/src/main/migration.yml` and references the source directories.
+
 - **Source Files**:
 
-  - New NPL files and packages should primarily be created within a dedicated `npl` directory, typically located at
-    `src/main/npl/`. For example, a new package `my_package` would reside in `src/main/npl/my_package/`.
-  - If a general `npl` directory (e.g., `src/main/npl/`) is not available or suitable, place new files and packages
-    within the directory corresponding to the _latest version_ of your NPL environment. For instance, if the latest
-    version is `141.2`, new packages would go into `src/main/npl-141.2/my_package/`.
-  - Always create a new package (a new sub-directory) within these preferred locations when implementing new, distinct
+  - NPL source files are organized in versioned directories (e.g., `npl-1.0.0/`) as specified in the migration.yml file.
+  - New NPL files and packages should be created within the appropriate versioned directory (e.g.,
+    `src/main/npl-1.0.0/my_package/`).
+  - Always create a new package (a new sub-directory) within the versioned directory when implementing new, distinct
     functionality.
 
 - **Test Files**:
+
   - Test files should be placed in a separate `test` directory, usually found at `src/test/npl/`. The package structure
     within the `test` directory should mirror the structure of the source files they are testing. For example, tests for
-    `src/main/npl/my_package/MyProtocol.npl` would be located in `src/test/npl/my_package/MyProtocolTests.npl`.
+    `src/main/npl-1.0.0/my_package/MyProtocol.npl` would be located in `src/test/npl/my_package/MyProtocolTests.npl`.
+
+Don't generate tests unless explicitly asked to.
 
 ## Protocol Syntax
 
@@ -478,5 +486,60 @@ Use ONLY these methods - do not hallucinate or invent others:
 
 - **General Methods**:
   - All types: `toText()` - converts value to Text representation
+
+# NPL frontend generation
+
+NPL frontend applications must adhere to the following principles and workflow:
+
+## Project Initialization
+
+- **If starting from scratch:**
+  - Run the following command to scaffold a new frontend project:
+    - `npx create-npl --tenant $TENANT --app $APP --name $DIR --package $PKG`
+    - Replace `$TENANT`, `$APP`, `$DIR`, and `$PKG` with the appropriate values for your deployment. If these are
+      unknown, prompt the user to provide them.
+    - `$DIR` can be any suitable directory in the project; it does not need to be a special or fixed value.
+- **If a frontend folder with a baseline already exists:**
+  - Use the existing frontend folder as your starting point. Do not re-initialize or overwrite the baseline.
+
+## OpenAPI Integration
+
+- All backend API endpoints are defined in the OpenAPI specification. Do not invent or hallucinate endpoints.
+- Only use the functions provided in the generated OpenAPI client (typically found in `generated/api.ts`).
+- Ensure all API payloads and return types strictly match the OpenAPI specification.
+
+## Minimal Use-Case Focus
+
+- Implement only the most minimal use-case required for the application.
+- Avoid adding unnecessary features, mock data, or extraneous UI elements.
+
+## Party Representation
+
+- Party objects identify users and must use the following structure: `{ "entity": { "key": ["value"] }, "access": {} }`
+- For individuals, use the email key: `{ "entity": { "email": ["user@example.com"] }, "access": {} }`
+- For groups, use the relevant identifying attribute as the key.
+- Leave claims empty for parties accessible by all users.
+
+## Frontend Development Rules
+
+- Use React with TypeScript and functional components.
+- Use React Hooks for state and effect management.
+- Use React Hook Form for form handling.
+- Implement proper TypeScript types and interfaces throughout.
+- Implement error boundaries for robust error handling.
+- Create reusable UI components and follow component composition best practices.
+- Separate logic, presentation, and data concerns.
+- Organize components in logical folders, separating utilities, types, and services.
+- Use index files for clean imports and follow naming conventions (PascalCase for components, camelCase for functions).
+- Implement responsive design and maintain consistent spacing and typography.
+
+## Authorization
+
+- Use OIDC (OpenID Connect) standard flow for authentication and authorization.
+
+## Build and Deployment
+
+- After implementing or updating the frontend, always run `npm run build` in the frontend folder to generate the
+  production-ready `dist` directory for deployment.
 
 <!-- END NPL DEVELOPMENT SECTION -->
