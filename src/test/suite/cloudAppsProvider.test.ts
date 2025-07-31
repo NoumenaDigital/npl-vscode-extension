@@ -74,13 +74,17 @@ suite('CloudAppsProvider', () => {
       assert.ok(showInformationMessageStub.notCalled);
     });
 
-    test('throws error when no deployment root found', async () => {
+    test('returns silently when no deployment root found', async () => {
       sinon.stub(provider as any, 'getDeploymentRoot').resolves(undefined);
+      const createArchiveStub = sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer');
+      const deployArchiveStub = sinon.stub((provider as any).deployer, 'deployArchiveBuffer');
 
-      await assert.rejects(
-        () => provider.deployApplication(mockApplicationItem as any),
-        /No deployment root found/
-      );
+      await provider.deployApplication(mockApplicationItem as any);
+
+      // Should return without calling archive creation or deployment
+      assert.ok(createArchiveStub.notCalled);
+      assert.ok(deployArchiveStub.notCalled);
+      assert.ok(showInformationMessageStub.notCalled);
     });
   });
 
@@ -107,13 +111,17 @@ suite('CloudAppsProvider', () => {
       assert.ok(showInformationMessageStub.notCalled);
     });
 
-    test('throws error when no frontend deployment root found', async () => {
+    test('returns silently when no frontend deployment root found', async () => {
       sinon.stub(provider as any, 'getFrontendDeploymentRoot').resolves(undefined);
+      const createArchiveStub = sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer');
+      const deployWebsiteStub = sinon.stub((provider as any).deployer, 'deployWebsiteBuffer');
 
-      await assert.rejects(
-        () => provider.deployFrontendApplication(mockApplicationItem as any),
-        /No frontend deployment root found/
-      );
+      await provider.deployFrontendApplication(mockApplicationItem as any);
+
+      // Should return without calling archive creation or deployment
+      assert.ok(createArchiveStub.notCalled);
+      assert.ok(deployWebsiteStub.notCalled);
+      assert.ok(showInformationMessageStub.notCalled);
     });
   });
 
