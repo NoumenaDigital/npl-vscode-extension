@@ -321,7 +321,8 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   public async deployApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
     const rootDir = await this.getDeploymentRoot();
     if (!rootDir) {
-      throw new Error('No deployment root found');
+      // User cancelled or no root found - return silently
+      return;
     }
 
     const zipBuffer = await createArchiveBuffer(rootDir);
@@ -337,7 +338,8 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
   public async deployFrontendApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
     const rootDir = await this.getFrontendDeploymentRoot();
     if (!rootDir) {
-      throw new Error('No frontend deployment root found');
+      // User cancelled or no root found - return silently
+      return;
     }
 
     const zipBuffer = await createArchiveBuffer(rootDir);
