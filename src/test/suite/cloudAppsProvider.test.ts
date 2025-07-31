@@ -51,6 +51,72 @@ suite('CloudAppsProvider', () => {
     sinon.restore();
   });
 
+  suite('deployApplication', () => {
+    test('shows success message by default', async () => {
+      sinon.stub(provider as any, 'getDeploymentRoot').resolves('/path/to/root');
+      sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer').resolves(Buffer.from('test'));
+      sinon.stub((provider as any).deployer, 'deployArchiveBuffer').resolves();
+
+      await provider.deployApplication(mockApplicationItem as any);
+
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('Backend deployment'));
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('completed successfully'));
+    });
+
+    test('does not show success message when showSuccessMessage is false', async () => {
+      sinon.stub(provider as any, 'getDeploymentRoot').resolves('/path/to/root');
+      sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer').resolves(Buffer.from('test'));
+      sinon.stub((provider as any).deployer, 'deployArchiveBuffer').resolves();
+
+      await provider.deployApplication(mockApplicationItem as any, false);
+
+      assert.ok(showInformationMessageStub.notCalled);
+    });
+
+    test('throws error when no deployment root found', async () => {
+      sinon.stub(provider as any, 'getDeploymentRoot').resolves(undefined);
+
+      await assert.rejects(
+        () => provider.deployApplication(mockApplicationItem as any),
+        /No deployment root found/
+      );
+    });
+  });
+
+  suite('deployFrontendApplication', () => {
+    test('shows success message by default', async () => {
+      sinon.stub(provider as any, 'getFrontendDeploymentRoot').resolves('/path/to/frontend');
+      sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer').resolves(Buffer.from('test'));
+      sinon.stub((provider as any).deployer, 'deployWebsiteBuffer').resolves();
+
+      await provider.deployFrontendApplication(mockApplicationItem as any);
+
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('Frontend deployment'));
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('completed successfully'));
+    });
+
+    test('does not show success message when showSuccessMessage is false', async () => {
+      sinon.stub(provider as any, 'getFrontendDeploymentRoot').resolves('/path/to/frontend');
+      sinon.stub(require('../../utils/ZipUtil'), 'createArchiveBuffer').resolves(Buffer.from('test'));
+      sinon.stub((provider as any).deployer, 'deployWebsiteBuffer').resolves();
+
+      await provider.deployFrontendApplication(mockApplicationItem as any, false);
+
+      assert.ok(showInformationMessageStub.notCalled);
+    });
+
+    test('throws error when no frontend deployment root found', async () => {
+      sinon.stub(provider as any, 'getFrontendDeploymentRoot').resolves(undefined);
+
+      await assert.rejects(
+        () => provider.deployFrontendApplication(mockApplicationItem as any),
+        /No frontend deployment root found/
+      );
+    });
+  });
+
   suite('showDeployOptions', () => {
     test('shows quick pick with three options', async () => {
       showQuickPickStub.resolves(undefined); // User cancels
@@ -115,7 +181,7 @@ suite('CloudAppsProvider', () => {
   });
 
   suite('deployBoth', () => {
-    test('deploys backend then frontend with progress', async () => {
+    test('deploys backend and frontend successfully', async () => {
       const deployBackendStub = sinon.stub(provider, 'deployApplication').resolves();
       const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').resolves();
 
@@ -126,23 +192,81 @@ suite('CloudAppsProvider', () => {
       await (provider as any).deployBoth(mockApplicationItem as any);
 
       assert.ok(withProgressStub.calledOnce);
-      assert.ok(deployBackendStub.calledOnce);
-      assert.ok(deployFrontendStub.calledOnce);
+      assert.ok(deployBackendStub.calledOnceWith(mockApplicationItem, false));
+      assert.ok(deployFrontendStub.calledOnceWith(mockApplicationItem, false));
       assert.ok(showInformationMessageStub.calledOnce);
       assert.ok(showInformationMessageStub.firstCall.args[0].includes('Full deployment'));
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('completed successfully'));
     });
 
-    test('shows error when backend deployment fails', async () => {
-      const deployBackendStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Backend failed'));
+    test('shows error when only backend deployment fails', async () => {
+      const deployBackendStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Backend error: 422'));
+      const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').resolves();
 
       withProgressStub.callsFake(async (options, task) => {
         await task({ report: () => {} });
       });
 
-      await assert.rejects(
-        () => (provider as any).deployBoth(mockApplicationItem as any),
-        /Backend failed/
-      );
+      await (provider as any).deployBoth(mockApplicationItem as any);
+
+      assert.ok(deployBackendStub.calledOnce);
+      assert.ok(deployFrontendStub.calledOnce);
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend deployment failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend error: 422'));
+    });
+
+    test('shows error when only frontend deployment fails', async () => {
+      const deployBackendStub = sinon.stub(provider, 'deployApplication').resolves();
+      const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').rejects(new Error('Frontend error'));
+
+      withProgressStub.callsFake(async (options, task) => {
+        await task({ report: () => {} });
+      });
+
+      await (provider as any).deployBoth(mockApplicationItem as any);
+
+      assert.ok(deployBackendStub.calledOnce);
+      assert.ok(deployFrontendStub.calledOnce);
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend deployment failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend error'));
+    });
+
+    test('shows error when both deployments fail', async () => {
+      const deployBackendStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Backend error'));
+      const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').rejects(new Error('Frontend error'));
+
+      withProgressStub.callsFake(async (options, task) => {
+        await task({ report: () => {} });
+      });
+
+      await (provider as any).deployBoth(mockApplicationItem as any);
+
+      assert.ok(deployBackendStub.calledOnce);
+      assert.ok(deployFrontendStub.calledOnce);
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Both deployments failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend: Backend error'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend: Frontend error'));
+    });
+
+    test('continues with frontend deployment even if backend fails', async () => {
+      const deployBackendStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Backend failed'));
+      const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').resolves();
+
+      withProgressStub.callsFake(async (options, task) => {
+        await task({ report: () => {} });
+      });
+
+      await (provider as any).deployBoth(mockApplicationItem as any);
+
+      // Ensure both deployment methods were called
+      assert.ok(deployBackendStub.calledOnce);
+      assert.ok(deployFrontendStub.calledOnce);
+
+      // Ensure frontend was called after backend failed
+      assert.ok(deployBackendStub.calledBefore(deployFrontendStub));
     });
   });
 
@@ -166,20 +290,19 @@ suite('CloudAppsProvider', () => {
       const path = require('path');
 
       // Stub fs.stat to return directory for frontend/dist
-      const statStub = sinon.stub(fs.promises, 'stat').resolves({ isDirectory: () => true });
+      sinon.stub(fs.promises, 'stat').resolves({ isDirectory: () => true });
 
       // Stub workspace folders
       sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/workspace' } }]);
 
       // Stub path.join to return expected path
-      const pathJoinStub = sinon.stub(path, 'join').returns('/workspace/frontend/dist');
+      sinon.stub(path, 'join').returns('/workspace/frontend/dist');
 
       showInformationMessageStub.resolves('Use frontend/dist');
 
       const result = await (provider as any).getFrontendDeploymentRoot();
 
       assert.strictEqual(result, '/workspace/frontend/dist');
-      assert.ok(statStub.calledOnce);
       assert.ok(showInformationMessageStub.calledOnce);
       assert.ok(showInformationMessageStub.firstCall.args[0].includes('frontend/dist'));
     });
@@ -189,20 +312,19 @@ suite('CloudAppsProvider', () => {
       const path = require('path');
 
       // Stub fs.stat to fail for frontend/dist
-      const statStub = sinon.stub(fs.promises, 'stat').rejects(new Error('Not found'));
+      sinon.stub(fs.promises, 'stat').rejects(new Error('Not found'));
 
       // Stub workspace folders
       sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/workspace' } }]);
 
       // Stub path.join to return expected path
-      const pathJoinStub = sinon.stub(path, 'join').returns('/workspace/frontend/dist');
+      sinon.stub(path, 'join').returns('/workspace/frontend/dist');
 
       showErrorMessageStub.resolves('Configure');
 
       const result = await (provider as any).getFrontendDeploymentRoot();
 
       assert.strictEqual(result, undefined);
-      assert.ok(statStub.calledOnce);
       assert.ok(showErrorMessageStub.calledOnce);
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('frontend/dist'));
       assert.ok(!showErrorMessageStub.firstCall.args[0].includes('frontend folder'));

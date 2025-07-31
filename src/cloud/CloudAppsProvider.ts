@@ -280,57 +280,72 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
   /** Deploy both backend and frontend applications. */
   private async deployBoth(item: ApplicationItem): Promise<void> {
+    const results = { backend: null as Error | null, frontend: null as Error | null };
+
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Deploying backend and frontend...',
       cancellable: false
     }, async (progress) => {
       progress.report({ message: 'Deploying backend...' });
-      await this.deployApplication(item);
+      try {
+        await this.deployApplication(item, false);
+      } catch (err) {
+        results.backend = err instanceof Error ? err : new Error(String(err));
+      }
 
       progress.report({ message: 'Deploying frontend...' });
-      await this.deployFrontendApplication(item);
+      try {
+        await this.deployFrontendApplication(item, false);
+      } catch (err) {
+        results.frontend = err instanceof Error ? err : new Error(String(err));
+      }
     });
 
-    void vscode.window.showInformationMessage(`Full deployment to ${item.application.name} completed successfully.`);
+    // Report results
+    const backendFailed = results.backend !== null;
+    const frontendFailed = results.frontend !== null;
+
+    if (!backendFailed && !frontendFailed) {
+      void vscode.window.showInformationMessage(`Full deployment to ${item.application.name} completed successfully.`);
+    } else if (backendFailed && !frontendFailed) {
+      void vscode.window.showErrorMessage(`Backend deployment failed: ${results.backend!.message}`);
+    } else if (!backendFailed && frontendFailed) {
+      void vscode.window.showErrorMessage(`Frontend deployment failed: ${results.frontend!.message}`);
+    } else {
+      void vscode.window.showErrorMessage(`Both deployments failed. Backend: ${results.backend!.message}. Frontend: ${results.frontend!.message}`);
+    }
   }
 
   /** Deploy selected application by zipping workspace folder determined from migration descriptor. */
-  public async deployApplication(item: ApplicationItem): Promise<void> {
-    try {
-      const rootDir = await this.getDeploymentRoot();
-      if (!rootDir) {
-        return; // user cancelled or no descriptor
-      }
+  public async deployApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
+    const rootDir = await this.getDeploymentRoot();
+    if (!rootDir) {
+      throw new Error('No deployment root found');
+    }
 
-      const zipBuffer = await createArchiveBuffer(rootDir);
+    const zipBuffer = await createArchiveBuffer(rootDir);
 
-      await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
+    await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
 
+    if (showSuccessMessage) {
       void vscode.window.showInformationMessage(`Backend deployment to ${item.application.name} completed successfully.`);
-
-    } catch (err) {
-      this.logger.logError('Backend deployment failed', err);
-      void vscode.window.showErrorMessage(`Backend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   /** Deploy frontend by zipping the configured frontend sources directory. */
-  public async deployFrontendApplication(item: ApplicationItem): Promise<void> {
-    try {
-      const rootDir = await this.getFrontendDeploymentRoot();
-      if (!rootDir) {
-        return; // user cancelled or no frontend sources configured
-      }
+  public async deployFrontendApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
+    const rootDir = await this.getFrontendDeploymentRoot();
+    if (!rootDir) {
+      throw new Error('No frontend deployment root found');
+    }
 
-      const zipBuffer = await createArchiveBuffer(rootDir);
+    const zipBuffer = await createArchiveBuffer(rootDir);
 
-      await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
+    await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
 
+    if (showSuccessMessage) {
       void vscode.window.showInformationMessage(`Frontend deployment to ${item.application.name} completed successfully.`);
-    } catch (err) {
-      this.logger.logError('Frontend deployment failed', err);
-      void vscode.window.showErrorMessage(`Frontend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
