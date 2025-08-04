@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 <!-- Uncomment if merging without releasing -->
 <!-- ## [Unreleased] -->
 
+## [1.3.11]
+
+### Fixed
+
+- Fixed deployment error handling. If either the frontend or backend deployment fails, you should now see an appropriate
+  final error message.
+
 ## [1.3.10]
 
 ### Added

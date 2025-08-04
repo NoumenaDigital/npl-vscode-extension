@@ -62,7 +62,7 @@ class TenantItem extends CloudItem {
 }
 
 class ApplicationItem extends CloudItem {
-  constructor(public readonly application: Application) {
+  constructor(public readonly application: Application, public readonly tenantSlug: string) {
     super(application.name, vscode.TreeItemCollapsibleState.None);
     const stateNorm = (application.state ?? '').toLowerCase();
     this.contextValue = `application-${stateNorm || 'unknown'}`;
@@ -95,6 +95,10 @@ class ApplicationItem extends CloudItem {
     markdown.isTrusted = true;
 
     this.tooltip = markdown;
+  }
+
+  get tenantAppSlug(): string {
+    return `${this.tenantSlug}/${this.application.slug}`;
   }
 }
 
@@ -189,7 +193,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
         tenant.applications = [];
       }
     }
-    return (tenant.applications ?? []).map(a => new ApplicationItem(a));
+    return (tenant.applications ?? []).map(a => new ApplicationItem(a, tenant.slug));
   }
 
   private async fetchTenants(): Promise<Tenant[]> {
@@ -252,7 +256,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     ];
 
     const selected = await vscode.window.showQuickPick(options, {
-      placeHolder: `Select deployment type for ${item.application.name}`,
+      placeHolder: `Select deployment type for ${item.tenantAppSlug}`,
       ignoreFocusOut: true
     });
 
@@ -274,63 +278,109 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       }
     } catch (err) {
       this.logger.logError('Deployment failed', err);
-      void vscode.window.showErrorMessage(`Deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+      const deploymentType = selected.value === 'backend' ? 'Backend' :
+                            selected.value === 'frontend' ? 'Frontend' :
+                            'Full';
+      void vscode.window.showErrorMessage(`${deploymentType} deployment to ${item.tenantAppSlug} failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   /** Deploy both backend and frontend applications. */
   private async deployBoth(item: ApplicationItem): Promise<void> {
+    const results = { backend: null as Error | null, frontend: null as Error | null };
+
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Deploying backend and frontend...',
       cancellable: false
     }, async (progress) => {
       progress.report({ message: 'Deploying backend...' });
-      await this.deployApplication(item);
+      try {
+        await this.deployApplication(item, false);
+        progress.report({ message: 'Backend deployed successfully.' });
+      } catch (err) {
+        results.backend = err instanceof Error ? err : new Error(String(err));
+        progress.report({ message: 'Backend deployment failed.' });
+      }
 
-      progress.report({ message: 'Deploying frontend...' });
-      await this.deployFrontendApplication(item);
+      if (results.backend) {
+        progress.report({ message: 'Deploying frontend (backend failed)...' });
+      } else {
+        progress.report({ message: 'Deploying frontend...' });
+      }
+
+      try {
+        await this.deployFrontendApplication(item, false);
+        progress.report({ message: 'Frontend deployed successfully.' });
+      } catch (err) {
+        results.frontend = err instanceof Error ? err : new Error(String(err));
+        progress.report({ message: 'Frontend deployment failed.' });
+      }
     });
 
-    void vscode.window.showInformationMessage(`Full deployment to ${item.application.name} completed successfully.`);
+    // Report results
+    this.showDeploymentResults(item, results);
+  }
+
+  /** Show appropriate notifications based on deployment results. */
+  private showDeploymentResults(item: ApplicationItem, results: { backend: Error | null, frontend: Error | null }): void {
+    const deployments = [
+      { name: 'Backend', error: results.backend },
+      { name: 'Frontend', error: results.frontend }
+    ];
+
+    const successes = deployments.filter(d => !d.error);
+    const failures = deployments.filter(d => d.error);
+
+    if (failures.length === 0) {
+      // All succeeded
+      vscode.window.showInformationMessage(`Full deployment to ${item.tenantAppSlug} completed successfully.`);
+    } else if (successes.length === 0) {
+      // All failed
+      const errorDetails = failures.map(f => `${f.name}: ${f.error!.message}`).join('. ');
+      vscode.window.showErrorMessage(`Both deployments to ${item.tenantAppSlug} failed. ${errorDetails}`);
+    } else {
+      // Mixed results - show individual messages
+      successes.forEach(s =>
+        vscode.window.showInformationMessage(`${s.name} deployment to ${item.tenantAppSlug} completed successfully.`)
+      );
+      failures.forEach(f =>
+        vscode.window.showErrorMessage(`${f.name} deployment to ${item.tenantAppSlug} failed: ${f.error!.message}`)
+      );
+    }
   }
 
   /** Deploy selected application by zipping workspace folder determined from migration descriptor. */
-  public async deployApplication(item: ApplicationItem): Promise<void> {
-    try {
-      const rootDir = await this.getDeploymentRoot();
-      if (!rootDir) {
-        return; // user cancelled or no descriptor
-      }
+  public async deployApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
+    const rootDir = await this.getDeploymentRoot();
+    if (!rootDir) {
+      // User cancelled or no root found - return silently
+      return;
+    }
 
-      const zipBuffer = await createArchiveBuffer(rootDir);
+    const zipBuffer = await createArchiveBuffer(rootDir);
 
-      await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
+    await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
 
-      void vscode.window.showInformationMessage(`Backend deployment to ${item.application.name} completed successfully.`);
-
-    } catch (err) {
-      this.logger.logError('Backend deployment failed', err);
-      void vscode.window.showErrorMessage(`Backend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+    if (showSuccessMessage) {
+      void vscode.window.showInformationMessage(`Backend deployment to ${item.tenantAppSlug} completed successfully.`);
     }
   }
 
   /** Deploy frontend by zipping the configured frontend sources directory. */
-  public async deployFrontendApplication(item: ApplicationItem): Promise<void> {
-    try {
-      const rootDir = await this.getFrontendDeploymentRoot();
-      if (!rootDir) {
-        return; // user cancelled or no frontend sources configured
-      }
+  public async deployFrontendApplication(item: ApplicationItem, showSuccessMessage: boolean = true): Promise<void> {
+    const rootDir = await this.getFrontendDeploymentRoot();
+    if (!rootDir) {
+      // User cancelled or no root found - return silently
+      return;
+    }
 
-      const zipBuffer = await createArchiveBuffer(rootDir);
+    const zipBuffer = await createArchiveBuffer(rootDir);
 
-      await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
+    await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
 
-      void vscode.window.showInformationMessage(`Frontend deployment to ${item.application.name} completed successfully.`);
-    } catch (err) {
-      this.logger.logError('Frontend deployment failed', err);
-      void vscode.window.showErrorMessage(`Frontend deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+    if (showSuccessMessage) {
+      void vscode.window.showInformationMessage(`Frontend deployment to ${item.tenantAppSlug} completed successfully.`);
     }
   }
 
@@ -434,7 +484,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
     if (!skipConfirm) {
       const choice = await vscode.window.showWarningMessage(
-        `Are you sure you want to clear deployed content for ${app.name}?`,
+        `Are you sure you want to clear deployed content for ${item.tenantAppSlug}?`,
         { modal: true },
         'Clear',
         "Clear and don't ask again"
@@ -455,10 +505,10 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
     try {
       await this.deployer.clearApplication(app.id);
-      void vscode.window.showInformationMessage(`Cleared deployed content for ${app.name}.`);
+      void vscode.window.showInformationMessage(`Cleared deployed content for ${item.tenantAppSlug}.`);
     } catch (err) {
       this.logger.logError('Clear deployment failed', err);
-      void vscode.window.showErrorMessage(`Failed to clear deployed content: ${err instanceof Error ? err.message : String(err)}`);
+      void vscode.window.showErrorMessage(`Failed to clear deployed content for ${item.tenantAppSlug}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
