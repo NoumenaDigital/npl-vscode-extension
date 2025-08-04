@@ -294,15 +294,24 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       progress.report({ message: 'Deploying backend...' });
       try {
         await this.deployApplication(item, false);
+        progress.report({ message: 'Backend deployed successfully.' });
       } catch (err) {
         results.backend = err instanceof Error ? err : new Error(String(err));
+        progress.report({ message: 'Backend deployment failed.' });
       }
 
-      progress.report({ message: 'Deploying frontend...' });
+      if (results.backend) {
+        progress.report({ message: 'Deploying frontend (backend failed)...' });
+      } else {
+        progress.report({ message: 'Deploying frontend...' });
+      }
+
       try {
         await this.deployFrontendApplication(item, false);
+        progress.report({ message: 'Frontend deployed successfully.' });
       } catch (err) {
         results.frontend = err instanceof Error ? err : new Error(String(err));
+        progress.report({ message: 'Frontend deployment failed.' });
       }
     });
 
