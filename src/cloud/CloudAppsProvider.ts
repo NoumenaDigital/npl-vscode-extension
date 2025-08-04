@@ -278,7 +278,10 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       }
     } catch (err) {
       this.logger.logError('Deployment failed', err);
-      void vscode.window.showErrorMessage(`Deployment to ${item.tenantAppSlug} failed: ${err instanceof Error ? err.message : String(err)}`);
+      const deploymentType = selected.value === 'backend' ? 'Backend' :
+                            selected.value === 'frontend' ? 'Frontend' :
+                            'Full';
+      void vscode.window.showErrorMessage(`${deploymentType} deployment to ${item.tenantAppSlug} failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

@@ -178,7 +178,7 @@ suite('CloudAppsProvider', () => {
       assert.ok(deployBothStub.calledOnceWith(mockApplicationItem));
     });
 
-    test('shows error when deployment fails', async () => {
+    test('shows error when backend deployment fails', async () => {
       showQuickPickStub.resolves({ value: 'backend' });
 
       const deployStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Deployment failed'));
@@ -186,7 +186,29 @@ suite('CloudAppsProvider', () => {
       await provider.showDeployOptions(mockApplicationItem as any);
 
       assert.ok(showErrorMessageStub.calledOnce);
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Deployment to test-tenant/test-app failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend deployment to test-tenant/test-app failed'));
+    });
+
+    test('shows error when frontend deployment fails', async () => {
+      showQuickPickStub.resolves({ value: 'frontend' });
+
+      const deployStub = sinon.stub(provider, 'deployFrontendApplication').rejects(new Error('Frontend failed'));
+
+      await provider.showDeployOptions(mockApplicationItem as any);
+
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend deployment to test-tenant/test-app failed'));
+    });
+
+    test('shows error when both deployment fails', async () => {
+      showQuickPickStub.resolves({ value: 'both' });
+
+      const deployStub = sinon.stub(provider as any, 'deployBoth').rejects(new Error('Both failed'));
+
+      await provider.showDeployOptions(mockApplicationItem as any);
+
+      assert.ok(showErrorMessageStub.calledOnce);
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Full deployment to test-tenant/test-app failed'));
     });
   });
 
