@@ -256,7 +256,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     ];
 
     const selected = await vscode.window.showQuickPick(options, {
-      placeHolder: `Select deployment type for ${item.application.name}`,
+      placeHolder: `Select deployment type for ${item.tenantAppSlug}`,
       ignoreFocusOut: true
     });
 
@@ -278,7 +278,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
       }
     } catch (err) {
       this.logger.logError('Deployment failed', err);
-      void vscode.window.showErrorMessage(`Deployment failed: ${err instanceof Error ? err.message : String(err)}`);
+      void vscode.window.showErrorMessage(`Deployment to ${item.tenantAppSlug} failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -464,7 +464,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
     if (!skipConfirm) {
       const choice = await vscode.window.showWarningMessage(
-        `Are you sure you want to clear deployed content for ${app.name}?`,
+        `Are you sure you want to clear deployed content for ${item.tenantAppSlug}?`,
         { modal: true },
         'Clear',
         "Clear and don't ask again"

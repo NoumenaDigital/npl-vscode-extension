@@ -186,7 +186,7 @@ suite('CloudAppsProvider', () => {
       await provider.showDeployOptions(mockApplicationItem as any);
 
       assert.ok(showErrorMessageStub.calledOnce);
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Deployment failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Deployment to test-tenant/test-app failed'));
     });
   });
 
