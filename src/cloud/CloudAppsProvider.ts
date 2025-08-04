@@ -316,17 +316,34 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     });
 
     // Report results
-    const backendFailed = results.backend !== null;
-    const frontendFailed = results.frontend !== null;
+    this.showDeploymentResults(item, results);
+  }
 
-    if (!backendFailed && !frontendFailed) {
-      void vscode.window.showInformationMessage(`Full deployment to ${item.tenantAppSlug} completed successfully.`);
-    } else if (backendFailed && !frontendFailed) {
-      void vscode.window.showErrorMessage(`Backend deployment to ${item.tenantAppSlug} failed: ${results.backend!.message}`);
-    } else if (!backendFailed && frontendFailed) {
-      void vscode.window.showErrorMessage(`Frontend deployment to ${item.tenantAppSlug} failed: ${results.frontend!.message}`);
+  /** Show appropriate notifications based on deployment results. */
+  private showDeploymentResults(item: ApplicationItem, results: { backend: Error | null, frontend: Error | null }): void {
+    const deployments = [
+      { name: 'Backend', error: results.backend },
+      { name: 'Frontend', error: results.frontend }
+    ];
+
+    const successes = deployments.filter(d => !d.error);
+    const failures = deployments.filter(d => d.error);
+
+    if (failures.length === 0) {
+      // All succeeded
+      vscode.window.showInformationMessage(`Full deployment to ${item.tenantAppSlug} completed successfully.`);
+    } else if (successes.length === 0) {
+      // All failed
+      const errorDetails = failures.map(f => `${f.name}: ${f.error!.message}`).join('. ');
+      vscode.window.showErrorMessage(`Both deployments to ${item.tenantAppSlug} failed. ${errorDetails}`);
     } else {
-      void vscode.window.showErrorMessage(`Both deployments to ${item.tenantAppSlug} failed. Backend: ${results.backend!.message}. Frontend: ${results.frontend!.message}`);
+      // Mixed results - show individual messages
+      successes.forEach(s =>
+        vscode.window.showInformationMessage(`${s.name} deployment to ${item.tenantAppSlug} completed successfully.`)
+      );
+      failures.forEach(f =>
+        vscode.window.showErrorMessage(`${f.name} deployment to ${item.tenantAppSlug} failed: ${f.error!.message}`)
+      );
     }
   }
 

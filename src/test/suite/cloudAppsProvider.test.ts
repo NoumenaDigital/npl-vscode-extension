@@ -209,7 +209,7 @@ suite('CloudAppsProvider', () => {
       assert.ok(showInformationMessageStub.firstCall.args[0].includes('completed successfully'));
     });
 
-    test('shows error when only backend deployment fails', async () => {
+    test('shows both success and error messages when only backend deployment fails', async () => {
       const deployBackendStub = sinon.stub(provider, 'deployApplication').rejects(new Error('Backend error: 422'));
       const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').resolves();
 
@@ -221,12 +221,17 @@ suite('CloudAppsProvider', () => {
 
       assert.ok(deployBackendStub.calledOnce);
       assert.ok(deployFrontendStub.calledOnce);
+
+      // Should show both success message for frontend and error message for backend
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('Frontend deployment to test-tenant/test-app completed successfully'));
+
       assert.ok(showErrorMessageStub.calledOnce);
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend deployment to test-tenant/test-app failed'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend error: 422'));
     });
 
-    test('shows error when only frontend deployment fails', async () => {
+    test('shows both success and error messages when only frontend deployment fails', async () => {
       const deployBackendStub = sinon.stub(provider, 'deployApplication').resolves();
       const deployFrontendStub = sinon.stub(provider, 'deployFrontendApplication').rejects(new Error('Frontend error'));
 
@@ -238,6 +243,11 @@ suite('CloudAppsProvider', () => {
 
       assert.ok(deployBackendStub.calledOnce);
       assert.ok(deployFrontendStub.calledOnce);
+
+      // Should show both success message for backend and error message for frontend
+      assert.ok(showInformationMessageStub.calledOnce);
+      assert.ok(showInformationMessageStub.firstCall.args[0].includes('Backend deployment to test-tenant/test-app completed successfully'));
+
       assert.ok(showErrorMessageStub.calledOnce);
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend deployment to test-tenant/test-app failed'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend error'));
