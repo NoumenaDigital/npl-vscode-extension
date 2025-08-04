@@ -28,7 +28,9 @@ suite('CloudAppsProvider', () => {
       name: 'Test App',
       slug: 'test-app',
       state: 'active'
-    }
+    },
+    tenantSlug: 'test-tenant',
+    tenantAppSlug: 'test-tenant/test-app'
   };
 
   setup(() => {
@@ -220,7 +222,7 @@ suite('CloudAppsProvider', () => {
       assert.ok(deployBackendStub.calledOnce);
       assert.ok(deployFrontendStub.calledOnce);
       assert.ok(showErrorMessageStub.calledOnce);
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend deployment failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend deployment to test-tenant/test-app failed'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend error: 422'));
     });
 
@@ -237,7 +239,7 @@ suite('CloudAppsProvider', () => {
       assert.ok(deployBackendStub.calledOnce);
       assert.ok(deployFrontendStub.calledOnce);
       assert.ok(showErrorMessageStub.calledOnce);
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend deployment failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend deployment to test-tenant/test-app failed'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend error'));
     });
 
@@ -254,7 +256,7 @@ suite('CloudAppsProvider', () => {
       assert.ok(deployBackendStub.calledOnce);
       assert.ok(deployFrontendStub.calledOnce);
       assert.ok(showErrorMessageStub.calledOnce);
-      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Both deployments failed'));
+      assert.ok(showErrorMessageStub.firstCall.args[0].includes('Both deployments to test-tenant/test-app failed'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Backend: Backend error'));
       assert.ok(showErrorMessageStub.firstCall.args[0].includes('Frontend: Frontend error'));
     });

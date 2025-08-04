@@ -62,7 +62,7 @@ class TenantItem extends CloudItem {
 }
 
 class ApplicationItem extends CloudItem {
-  constructor(public readonly application: Application) {
+  constructor(public readonly application: Application, public readonly tenantSlug: string) {
     super(application.name, vscode.TreeItemCollapsibleState.None);
     const stateNorm = (application.state ?? '').toLowerCase();
     this.contextValue = `application-${stateNorm || 'unknown'}`;
@@ -95,6 +95,10 @@ class ApplicationItem extends CloudItem {
     markdown.isTrusted = true;
 
     this.tooltip = markdown;
+  }
+
+  get tenantAppSlug(): string {
+    return `${this.tenantSlug}/${this.application.slug}`;
   }
 }
 
@@ -189,7 +193,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
         tenant.applications = [];
       }
     }
-    return (tenant.applications ?? []).map(a => new ApplicationItem(a));
+    return (tenant.applications ?? []).map(a => new ApplicationItem(a, tenant.slug));
   }
 
   private async fetchTenants(): Promise<Tenant[]> {
@@ -307,13 +311,13 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     const frontendFailed = results.frontend !== null;
 
     if (!backendFailed && !frontendFailed) {
-      void vscode.window.showInformationMessage(`Full deployment to ${item.application.name} completed successfully.`);
+      void vscode.window.showInformationMessage(`Full deployment to ${item.tenantAppSlug} completed successfully.`);
     } else if (backendFailed && !frontendFailed) {
-      void vscode.window.showErrorMessage(`Backend deployment failed: ${results.backend!.message}`);
+      void vscode.window.showErrorMessage(`Backend deployment to ${item.tenantAppSlug} failed: ${results.backend!.message}`);
     } else if (!backendFailed && frontendFailed) {
-      void vscode.window.showErrorMessage(`Frontend deployment failed: ${results.frontend!.message}`);
+      void vscode.window.showErrorMessage(`Frontend deployment to ${item.tenantAppSlug} failed: ${results.frontend!.message}`);
     } else {
-      void vscode.window.showErrorMessage(`Both deployments failed. Backend: ${results.backend!.message}. Frontend: ${results.frontend!.message}`);
+      void vscode.window.showErrorMessage(`Both deployments to ${item.tenantAppSlug} failed. Backend: ${results.backend!.message}. Frontend: ${results.frontend!.message}`);
     }
   }
 
@@ -330,7 +334,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     await this.deployer.deployArchiveBuffer(item.application.id, zipBuffer);
 
     if (showSuccessMessage) {
-      void vscode.window.showInformationMessage(`Backend deployment to ${item.application.name} completed successfully.`);
+      void vscode.window.showInformationMessage(`Backend deployment to ${item.tenantAppSlug} completed successfully.`);
     }
   }
 
@@ -347,7 +351,7 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
     await this.deployer.deployWebsiteBuffer(item.application.id, zipBuffer, 'frontend.zip');
 
     if (showSuccessMessage) {
-      void vscode.window.showInformationMessage(`Frontend deployment to ${item.application.name} completed successfully.`);
+      void vscode.window.showInformationMessage(`Frontend deployment to ${item.tenantAppSlug} completed successfully.`);
     }
   }
 
@@ -472,10 +476,10 @@ export class CloudAppsProvider implements vscode.TreeDataProvider<CloudItem> {
 
     try {
       await this.deployer.clearApplication(app.id);
-      void vscode.window.showInformationMessage(`Cleared deployed content for ${app.name}.`);
+      void vscode.window.showInformationMessage(`Cleared deployed content for ${item.tenantAppSlug}.`);
     } catch (err) {
       this.logger.logError('Clear deployment failed', err);
-      void vscode.window.showErrorMessage(`Failed to clear deployed content: ${err instanceof Error ? err.message : String(err)}`);
+      void vscode.window.showErrorMessage(`Failed to clear deployed content for ${item.tenantAppSlug}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
