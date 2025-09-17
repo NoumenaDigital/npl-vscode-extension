@@ -1,4 +1,4 @@
-# NPL Development v4
+# NPL Development v5
 
 NPL (NOUMENA Protocol Language) has unique syntax for defining protocol types and operations, strong typing, and a
 distinct approach to modeling permissions and state transitions.
@@ -255,6 +255,7 @@ These are critical errors to avoid when working with NPL:
   section.
 - **Immutable collections**: `with()` and `without()` create new collections.
 - **No advanced functional operations**: No streams, reduce, unless documented above.
+- **No `Any` type**: Always use the most specific type for a variable.
 
 ## Folder Structure Guidelines
 
@@ -293,6 +294,7 @@ Don't generate tests unless explicitly asked to.
  */
 @api  // Required for API instantiation
 protocol[party1, party2] ProtocolName(
+  // The var keyword makes the variable accessible to the protocol body
   var initialValue: Number,
   var textParameter: Text
 ) {
@@ -469,7 +471,7 @@ Use ONLY these methods - do not hallucinate or invent others:
 
 - **Party Methods**:
 
-  - `sameEntityAs()`, `containsEntityValuesOf()`, `isRepresentableBy()`, `mayRepresent()`, `entity()`, `access()`
+  - `isRepresentableBy()`, `mayRepresent()`, `claims()`
 
 - **Protocol Methods**:
 
@@ -515,8 +517,8 @@ NPL frontend applications must adhere to the following principles and workflow:
 
 ## Party Representation
 
-- Party objects identify users and must use the following structure: `{ "entity": { "key": ["value"] }, "access": {} }`
-- For individuals, use the email key: `{ "entity": { "email": ["user@example.com"] }, "access": {} }`
+- Party objects identify users and must use the following structure: `{ "claims": { "key": ["value"] } }`
+- For individuals, use the email key: `{ "claims": { "email": ["user@example.com"] } }`
 - For groups, use the relevant identifying attribute as the key.
 - Leave claims empty for parties accessible by all users.
 
