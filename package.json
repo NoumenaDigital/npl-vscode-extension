@@ -158,6 +158,14 @@
           "order": 20,
           "tags": ["NPL"]
         },
+        "NPL.server.debouncing.time.ms": {
+          "type": "string",
+          "title": "NPL Server Debounce Time (ms)",
+          "default": "300",
+          "description": "Delay in milliseconds to debounce document change events (didChange). Higher values reduce update frequency but may increase latency.",
+          "order": 20,
+          "tags": ["NPL"]
+        },
         "NPL.instructionPrompts.mode": {
           "type": "string",
           "enum": ["ask", "auto", "disabled"],
