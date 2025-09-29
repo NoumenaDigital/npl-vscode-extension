@@ -61,7 +61,8 @@ export class LanguageClientManager {
         maxRestartCount: 3
       },
       initializationOptions: {
-        effectiveWorkspaceFolders: workspaceFoldersToProcess.map(wf => ({ uri: wf.uri.toString(), name: wf.name }))
+        effectiveWorkspaceFolders: workspaceFoldersToProcess.map(wf => ({ uri: wf.uri.toString(), name: wf.name })),
+        nplServerDebouncingTimeMs: vscode.workspace.getConfiguration('NPL').get<number>('server.debouncing.time.ms', 300),
       },
       errorHandler: {
         error: (error, message) => {
