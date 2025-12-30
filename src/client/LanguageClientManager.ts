@@ -45,6 +45,7 @@ export class LanguageClientManager {
     const config = vscode.workspace.getConfiguration('NPL', workspaceFolders[0].uri);
     const sourcesSetting = config.get<string>('sources');
     const testSourcesSetting = config.get<string>('testSources');
+    const nplContribLibraries = config.get<string[]>('contribLibraries');
 
     // Build the list of workspace folders to process
     const workspaceFoldersToProcess: vscode.WorkspaceFolder[] = this.buildWorkspaceFoldersList(
@@ -63,6 +64,7 @@ export class LanguageClientManager {
       initializationOptions: {
         effectiveWorkspaceFolders: workspaceFoldersToProcess.map(wf => ({ uri: wf.uri.toString(), name: wf.name })),
         nplServerDebouncingTimeMs: vscode.workspace.getConfiguration('NPL').get<number>('server.debouncing.time.ms', 300),
+        nplContribLibraries: nplContribLibraries
       },
       errorHandler: {
         error: (error, message) => {
@@ -87,7 +89,7 @@ export class LanguageClientManager {
     );
 
     this.configChangeListener = vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('NPL.sources') || e.affectsConfiguration('NPL.testSources')) {
+      if (e.affectsConfiguration('NPL.sources') || e.affectsConfiguration('NPL.testSources')|| e.affectsConfiguration('NPL.contribLibraries')) {
         this.logger.log('NPL workspace settings have changed. Restarting the language server...');
 
         // Stop and restart the client

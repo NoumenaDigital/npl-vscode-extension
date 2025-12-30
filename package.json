@@ -133,6 +133,17 @@
           "order": 10,
           "tags": ["NPL"]
         },
+        "NPL.contribLibraries": {
+          "type": "array",
+          "default": [],
+          "description": "Paths to NPL contrib library ZIP folders, relative to the NPL source roots.",
+          "items": {
+            "type": "string"
+          },
+          "scope": "resource",
+          "order": 15,
+          "tags": ["NPL"]
+        },
         "NPL.migrationDescriptor": {
           "type": "string",
           "description": "Absolute path to the NPL migration descriptor. Determines the backend sources that get deployed to your applications.",
