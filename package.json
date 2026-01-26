@@ -2,7 +2,7 @@
   "name": "npl-dev-vscode-extension",
   "displayName": "NPL-Dev for VS Code",
   "description": "NOUMENA Protocol Language (NPL) development support for VS Code",
-  "version": "1.3.12",
+  "version": "1.4.0",
   "icon": "icon.png",
   "publisher": "noumenadigital",
   "license": "Apache-2.0",
@@ -51,7 +51,6 @@
         }
       ]
     },
-
     "menus": {
       "view/title": [
         {
@@ -107,13 +106,14 @@
       {
         "scopeName": "markdown.npl.injection",
         "path": "./syntaxes/npl-markdown-injection.tmLanguage.json",
-        "injectTo": ["text.html.markdown"],
+        "injectTo": [
+          "text.html.markdown"
+        ],
         "embeddedLanguages": {
           "meta.embedded.block.npl": "npl"
         }
       }
     ],
-
     "configuration": {
       "title": "NPL",
       "properties": {
@@ -123,7 +123,9 @@
           "description": "Absolute path to the NPL sources. Leave empty to use the current workspace root.",
           "scope": "resource",
           "order": 0,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.testSources": {
           "type": "string",
@@ -131,7 +133,9 @@
           "description": "Absolute path to the NPL test sources. Leave empty to use the current workspace root.",
           "scope": "resource",
           "order": 10,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.contribLibraries": {
           "type": "array",
@@ -142,7 +146,9 @@
           },
           "scope": "resource",
           "order": 15,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.migrationDescriptor": {
           "type": "string",
@@ -152,7 +158,9 @@
           "pattern": "^$|.*/migration\\.yml$",
           "patternErrorMessage": "The migration descriptor must end with migration.yml",
           "order": 15,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.frontendSources": {
           "type": "string",
@@ -160,14 +168,18 @@
           "description": "Absolute path to the frontend sources (HTML, JS, CSS, etc.) to deploy. Leave empty to use the current workspace root.",
           "scope": "resource",
           "order": 16,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.server.version": {
           "type": "string",
           "default": "latest",
           "description": "Version of the language server to use. Use 'latest' for the most recent version, or run the 'NPL: Select Language Server Version' command for a visual picker with auto-download.",
           "order": 20,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.server.debouncing.time.ms": {
           "type": "integer",
@@ -176,11 +188,17 @@
           "exclusiveMinimum": 0,
           "description": "Delay in milliseconds to debounce document change events (didChange). Higher values reduce update frequency but may increase latency.",
           "order": 20,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "NPL.instructionPrompts.mode": {
           "type": "string",
-          "enum": ["ask", "auto", "disabled"],
+          "enum": [
+            "ask",
+            "auto",
+            "disabled"
+          ],
           "enumDescriptions": [
             "Ask before creating or updating instruction files",
             "Automatically create or update instruction files without prompting",
@@ -189,7 +207,9 @@
           "default": "ask",
           "description": "Controls how NPL instruction files for AI assistants are handled",
           "order": 30,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         },
         "noumena.cloud.domain": {
           "type": "string",
@@ -197,7 +217,9 @@
           "description": "NOUMENA Cloud domain",
           "scope": "resource",
           "order": 100,
-          "tags": ["NPL"]
+          "tags": [
+            "NPL"
+          ]
         }
       }
     },

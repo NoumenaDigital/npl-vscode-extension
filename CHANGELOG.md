@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 <!-- Uncomment if merging without releasing -->
 <!-- ## [Unreleased] -->
 
+## [1.4.0]
+
+### Added
+
+- Added support for NPL contrib libraries. You can now specify paths to NPL contrib library ZIP folders via the
+  `NPL.contribLibraries` setting.
+
+## [1.3.12]
+
+### Added
+
+- Added debouncing configuration for NPL server document change events via the `NPL.server.debouncing.time.ms` setting.
+
 ## [1.3.11]
 
 ### Fixed
